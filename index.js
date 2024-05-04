@@ -1,4 +1,4 @@
-require ('dotenv').config();                                // Import dotenv module to read .env file
+require ('dotenv').config();                                // Import dotenv module to read ..env file
 require ('./utils');                                        // Import utils.js file to define include function
 const express = require('express');                         // Import express module to create server
 const session = require('express-session');                 // Import express-session module to manage session
@@ -12,9 +12,9 @@ app.use(express.static('public'));                          // serve static imag
 app.use(express.static('css'));                             // serve static css files
 app.use(express.static('js'));                              // serve static js files
 
-const port = process.env.PORT || 3000;                      // Set port to 3000 if not defined in .env file
+const port = process.env.PORT || 3000;                      // Set port to 3000 if not defined in ..env file
 
-// secret variables located in .env file
+// secret variables located in ..env file
 const mongodb_cluster = process.env.MONGODB_CLUSTER;
 const mongodb_user = process.env.MONGODB_USER;
 const mongodb_password = process.env.MONGODB_PASSWORD;
@@ -46,7 +46,7 @@ database.connect().then(() => {
 
 
 app.get('/', (req, res) => {
-    res.send('Hello World!');
+    res.render("landing");
 });
 
 app.listen(port, () => {
