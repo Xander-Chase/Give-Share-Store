@@ -1,65 +1,100 @@
-<header class="py-3 mb-3 border-bottom">
-    <div class="container-fluid d-grid gap-3 align-items-center" style="grid-template-columns: 1fr 4fr 1fr;">
-        <div>
-            <a href="#" class="w-auto d-flex align-items-center mt-1 link-body-emphasis text-decoration-none">
+<body>
+
+    <header class="py-3 mb-3 border-bottom">
+        <div class="container-fluid d-grid gap-3 align-items-center"
+            style="grid-template-columns: 1fr 4fr 1fr;">
+            <div>
+                <a href="#"
+                    class="w-auto d-flex align-items-center mt-1 link-body-emphasis text-decoration-none">
+                    <div class="col-2">
+                        <svg class="bi me-2" width="40" height="32"><use
+                                xlink:href="#bootstrap"></use></svg>
+                    </div>
+                    <div class="col-8">
+                        <h2>Give and Share</h2>
+                    </div>
+                </a>
+            </div>
+
+            <div class="d-flex align-items-center">
+
+                <form class="w-75 me-3" role="search">
+                    <input type="search" class="form-control"
+                        placeholder="Search..." aria-label="Search">
+                </form>
+            </div>
+
+            <div class="container d-flex">
+                <div class="col-3">
+                    <a href="#"
+                        class="d-block link-body-emphasis text-decoration-none">
+                        <p>About Us</p>
+                    </a>
+                </div>
+
                 <div class="col-2">
-                    <svg class="bi me-2" width="40" height="32"><use xlink:href="#bootstrap"></use></svg>
+                    <a href="#"
+                        class="d-block link-body-emphasis text-decoration-none">
+                        <!-- TODO: Use Shop ICON -->
+                        <!--<img src="#" alt="" width="32" height="32" class="rounded-circle">-->
+                    </a>
                 </div>
-                <div class="col-8">
-                    <h2>Give and Share</h2>
+
+                <!--The next div should only be shown if the user is logged in, if they arent then it should be an admin sign in button-->
+
+                <div class="col-1" id="userProfile">
+
                 </div>
-            </a>
-        </div>
 
-        <div class="d-flex align-items-center">
-
-            <form class="w-75 me-3" role="search">
-                <input type="search" class="form-control" placeholder="Search..." aria-label="Search">
-            </form>
-        </div>
-
-        <div class="container d-flex">
-            <div class="col-3">
-                <a href="#" class="d-block link-body-emphasis text-decoration-none">
-                    <p>About Us</p>
-                </a>
             </div>
+        </div>
+        <div class="container">
+            <header class="d-flex justify-content-center py-3">
+                <ul class="nav nav-pills">
+                    <li class="nav-item"><a href="#" class="nav-link active"
+                            aria-current="page">Home</a></li>
+                    <li class="nav-item"><a href="#"
+                            class="nav-link">Jewelry</a></li>
+                    <li class="nav-item"><a href="#" class="nav-link">Sporting
+                            Goods</a></li>
+                    <li class="nav-item"><a href="#"
+                            class="nav-link">Home</a></li>
+                    <li class="nav-item"><a href="#"
+                            class="nav-link">Women</a></li>
+                    <li class="nav-item"><a href="#"
+                            class="nav-link">Men</a></li>
+                    <li class="nav-item"><a href="#"
+                            class="nav-link">Sales</a></li>
+                </ul>
+            </header>
+        </div>
+    </header>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+        const userProfileDiv = document.getElementById('userProfile');
+        const isLoggedIn = false; // This should be dynamically determined from our back-end
 
-            <div class="col-2">
-                <a href="#" class="d-block link-body-emphasis text-decoration-none">
-                    <!-- TODO: Use Shop ICON -->
-                    <!--<img src="#" alt="" width="32" height="32" class="rounded-circle">-->
-                </a>
-            </div>
-
-            <div class="col-1">
+        if (isLoggedIn) {
+            userProfileDiv.innerHTML = `
                 <div class="flex-shrink-0 dropdown">
                     <a href="#" class="d-block link-body-emphasis text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
                         <img src="https://github.com/mdo.png" alt="mdo" width="32" height="32" class="rounded-circle">
                     </a>
                     <ul class="dropdown-menu text-small shadow">
-                        <li><a class="dropdown-item" href="#">_</a></li>
-                        <li><a class="dropdown-item" href="#">_</a></li>
-                        <li><a class="dropdown-item" href="#">_</a></li>
+                        <li><a class="dropdown-item" href="#">Profile</a></li>
+                        <li><a class="dropdown-item" href="#">Settings</a></li>
+                        <li><a class="dropdown-item" href="#">Help</a></li>
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="#">Sign out</a></li>
                     </ul>
                 </div>
+            `;  
+        } else {
+            userProfileDiv.innerHTML = `
+                <a href="#" class="btn btn-primary">Admin Sign In</a>
+            `;
+            }
+        });
+    </script>
 
-            </div>
-        </div>
-    </div>
-    <div class="container">
-        <header class="d-flex justify-content-center py-3">
-            <ul class="nav nav-pills">
-                <li class="nav-item"><a href="#" class="nav-link active" aria-current="page">Home</a></li>
-                <li class="nav-item"><a href="#" class="nav-link">Jewelry</a></li>
-                <li class="nav-item"><a href="#" class="nav-link">Sporting Goods</a></li>
-                <li class="nav-item"><a href="#" class="nav-link">Home</a></li>
-                <li class="nav-item"><a href="#" class="nav-link">Women</a></li>
-                <li class="nav-item"><a href="#" class="nav-link">Men</a></li>
-                <li class="nav-item"><a href="#" class="nav-link">Sales</a></li>
-            </ul>
-        </header>
-    </div>
-</header>
+</body>

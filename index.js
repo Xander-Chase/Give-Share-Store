@@ -12,7 +12,7 @@ app.use(express.static('public'));                          // serve static imag
 app.use(express.static('css'));                             // serve static css files
 app.use(express.static('js'));                              // serve static js files
 
-const port = process.env.PORT || 3000;                      // Set port to 3000 if not defined in ..env file
+const port = process.env.PORT || 3000;                      // Set port to 8000 if not defined in ..env file
 
 // secret variables located in ..env file
 const mongodb_cluster = process.env.MONGODB_CLUSTER;
