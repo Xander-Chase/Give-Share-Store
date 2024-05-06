@@ -122,6 +122,11 @@ app.post('/adminLogInSubmit', async (req, res) => {
 
 });
 
+app.get('/signout', (req, res) => {
+    req.session.destroy()
+    res.redirect('/');
+});
+
 // connect to the database and hash passwords if necessary, then start the server
 database.connect().then(async () => {
     console.log('MongoDB connected successfully');
