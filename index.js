@@ -75,6 +75,9 @@ async function hashExistingPasswords() {
     }
 }
 
+app.get("/loginPortal", (req, res) => {
+    res.render('loginPortal');
+})
 
 app.get('/adminLogIn', (req, res) => {
     res.render("adminLogIn");
