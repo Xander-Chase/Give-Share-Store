@@ -1,8 +1,7 @@
 <body>
-
     <header class="py-3 mb-3 border-bottom">
         <div class="container-fluid d-grid gap-3 align-items-center"
-            style="grid-template-columns: 1fr 4fr 1fr;">
+            style="grid-template-columns: 1.2fr 5fr 1fr;">
             <div>
                 <a href="#"
                     class="w-auto d-flex align-items-center mt-1 link-body-emphasis text-decoration-none">
@@ -42,7 +41,7 @@
 
                 <!--The next div should only be shown if the user is logged in, if they arent then it should be an admin sign in button-->
 
-                <div class="col-1" id="userProfile">
+                <div class="col-4" id="userProfile">
                     <% if (isLoggedIn) { %>
                         <div class="flex-shrink-0 dropdown">
                             <a href="#" class="d-block link-body-emphasis text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
@@ -57,7 +56,8 @@
                             </ul>
                         </div>
                     <% } else { %>
-                        <a href="/adminLogIn" class="btn btn-primary">Admin Sign In</a>
+                        <!-- FIXME: PLEASE CENTER THIS VERTICALLY-->
+                        <a href="/loginPortal" class="btn btn-primary">Sign In</a>
                     <% } %>
                 </div>
 
