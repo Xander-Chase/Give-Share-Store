@@ -141,3 +141,42 @@ database.connect().then(async () => {
     console.log('Error connecting to MongoDB', err);
 });
 
+// ----------------- Stripe Payment START -----------------
+
+app.get('/StripeCheckout', (req, res) => {
+    res.render('StripeCheckout');
+});
+
+app.get('/StripeSuccess', (req, res) => {
+    res.render('StripeSuccess');
+});
+
+app.get('/StripeCancel', (req, res) => {
+    res.render('StripeCancel');
+});
+
+// Stripe test secret API key.
+const stripe = require('stripe')('sk_test_51OZSVHAcq23T9yD7gpE3kQS73T5AnO6UEaecXMwkzvGc9hVh1QlPNFmM3rzI9cxJ2tU2FtUAPzvcSc1obqPcrUfZ00PojCiOni');
+
+app.use(express.static('public'));
+
+const YOUR_DOMAIN = 'http://localhost:8000';
+
+app.post('/create-checkout-session', async (req, res) => {
+  const session = await stripe.checkout.sessions.create({
+    line_items: [
+        {
+          // Example product to sell
+          price: 'price_1PDwwXAcq23T9yD7s7IK4son',
+          quantity: 1,
+        },
+      ],
+    mode: 'payment',
+    success_url: `${YOUR_DOMAIN}/StripeSuccess`,
+    cancel_url: `${YOUR_DOMAIN}/StripeCancel`,
+  });
+
+  res.redirect(303, session.url);
+});
+
+// ----------------- Stripe Payment END -----------------
