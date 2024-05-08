@@ -125,6 +125,13 @@ app.post('/adminLogInSubmit', async (req, res) => {
 
 });
 
+app.post('/search', (req, res) => {
+    res.render('catalog');
+});
+
+app.get('/cart', (req, res) =>{
+   res.render('cartView');
+});
 app.get('/signout', (req, res) => {
     req.session.destroy()
     res.redirect('/');
