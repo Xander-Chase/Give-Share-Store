@@ -1,0 +1,37 @@
+<%- include("metadata") %>
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <style>
+            .sidebar {
+                background-color: chartreuse;
+            }
+        </style>
+    </head>
+    <body>
+        <%- include("searchNavBar") %>
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-sm-2 sidebar">
+                    This is where a sidebar would go
+                    <br>
+                    I picked a random colour cause the name was funny, we won't actually use this colour in the sidebar
+                </div>
+                <div class="col-md-8">
+                    <h2>Product name</h2>
+                    <h6>$price.99</h6>
+                    <h6>QTY: a number</h6>
+                    <h4>This is a placeholder description for Product name.</h4>
+                    <img src="../public/img/test.png" alt="image of the item" height="50px" width="50px">
+                    <br>
+                    <button type="button" class="btn btn-primary">Add to cart</button>
+                </div>
+                <div class="col-sm-2 sidebar">
+                    This is another sidebar
+                    <br>
+                    It can stretch for a very long time just check out how much text fits on this one sidebar isn't it cool wow it sure is neat how much text you can fit on here man we'll be able to put a lot of cool content here won't we
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

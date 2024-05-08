@@ -130,6 +130,26 @@ app.get('/signout', (req, res) => {
     res.redirect('/');
 });
 
+app.get('/product-info', (req, res) => {
+    const isLoggedIn = req.session.loggedIn;
+    res.render("product_details", {isLoggedIn : isLoggedIn});
+});
+
+app.get('/about-us', (req, res) => {
+    const isLoggedIn = req.session.loggedIn;
+    res.render("about", {isLoggedIn : isLoggedIn});
+});
+
+app.get('/contact-us', (req, res) => {
+    const isLoggedIn = req.loggedIn;
+    res.render("contact", {isLoggedIn : isLoggedIn});
+});
+
+app.get('/manage', (req, res) => {
+    const isLoggedIn = req.loggedIn;
+    res.render("product-management", {isLoggedIn : isLoggedIn});
+});
+
 // connect to the database and hash passwords if necessary, then start the server
 database.connect().then(async () => {
     console.log('MongoDB connected successfully');
