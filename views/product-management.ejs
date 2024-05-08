@@ -1,0 +1,110 @@
+<%- include("metadata") %>
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <style>
+            .right-side {
+                text-align: end;
+            }
+
+            .input {
+                width: 20vw;
+                margin-top: 5px;
+                margin-bottom: 10px;
+            }
+
+            .description {
+                height: 20vh;
+                resize: none;
+            }
+
+            .addButton {
+                width: 20vw;
+                height: 5vh;
+                border-radius: 2.5vh;
+                margin-top: 10px;
+            }
+
+            .listings-topBar {
+                width: 45vw;
+                height: 5vh;
+                background-color: aliceblue;
+            }
+
+            .current-card {
+                width: 45vw;
+                height: 30vh;
+                background-color: aquamarine;
+                margin-top: 5vh;
+            }
+
+            .previous-card {
+                width: 20vw;
+                height: 25vh;
+                background-color: aquamarine;
+                margin-top: 5vh;
+            }
+
+            .mailing-list {
+                height: 40vh;
+                background-color: cornflowerblue;
+                margin-bottom: 5vh;
+            }
+
+            .prev-listings {
+                height: 60vh;
+                background-color: chartreuse;
+            }
+        </style>
+    </head>
+    <body>
+        <%- include("searchNavBar") %>
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-sm-3">
+                    <h3>Add a new listing</h3>
+                    <input type="text" placeholder="Item name" class="input"><br>
+                    <input type="number" placeholder="Price" step="0.01" min="0" class="input">
+                    <textarea name="description" placeholder="Description" wrap="soft" class="input description" ></textarea>
+                    <label for="start">Start date+time (Auction item)</label>
+                    <input type="datetime-local" name="start" class="input">
+                    <label for="end">End date+time (Auction item)</label>
+                    <input type="datetime-local" name="end" class="input"><br>
+                    <div class="input">
+                        <input type="checkbox">Auction item
+                    </div>
+                    <button type="button" class="btn btn-outline-primary addButton">Add</button>
+                </div>
+                <div class="col">
+                    <div class="listings-topBar">
+                        <span style="text-align: start; font-size: 16pt;">Current Listings</span>
+                            <input type="search" placeholder="Search Listings..." aria-label="Search">
+                    </div>
+                    <div class="current-card">
+                        <p>This is a test card</p>
+                        <p>$Price.99</p>
+                        <p>This is where the description and listing status goes</p>
+                        <img src="../public/img/test.png" alt="test image">
+                    </div>
+                </div>
+                <div class="col-sm-3 right-side">
+                    <div class="mailing-list">
+                        Mailing list
+                        <p>person 1: person1@gmail.com</p>
+                        <p>person 2: person2@gmail.com</p>
+                        <p>person 3: person3@hotmail.com</p>
+                    </div>
+                    <div class="prev-listings">
+                        Previous listings
+                        <div class="previous-card" style="text-align: start;">
+                            <p>This is a test card</p>
+                            <p>$Price.99</p>
+                            <p>This is where the description and listing status goes</p>
+                            <img src="../public/img/test.png" alt="test image">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
