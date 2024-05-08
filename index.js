@@ -5,6 +5,8 @@ const session = require('express-session');                 // Import express-se
 const MongoDBStore = require('connect-mongo');              // Import connect-mongo module to store session in MongoDB
 const Joi = require('joi');                                 // include the joi module
 const bcrypt = require('bcrypt');                           // include the bcrypt module
+const { ObjectId } = require('mongodb');                    // include the ObjectId module
+
 
 
 
@@ -129,8 +131,18 @@ app.post('/search', (req, res) => {
     res.render('catalog');
 });
 
-app.get('/cart', (req, res) =>{
-   res.render('cartView');
+// **************************** Requires Further Development ****************************
+// Currently is passed all items in the database to the catalog view as proof of concept
+// Will need to be updated to only pass items that were added to the cart
+app.get('/cart', async (req, res) => {
+    try {
+        const productsCollection = database.db(mongodb_database).collection('listing_items');
+        const productList = await productsCollection.find({}).toArray(); // Fetch all items
+        res.render('cartView', { items: productList }); // Pass items to the EJS template
+    } catch (error) {
+        console.error('Failed to fetch items:', error);
+        res.status(500).send('Error fetching items');
+    }
 });
 app.get('/signout', (req, res) => {
     req.session.destroy()
@@ -150,10 +162,6 @@ database.connect().then(async () => {
 
 // ----------------- Stripe Payment START -----------------
 
-app.get('/StripeCheckout', (req, res) => {
-    res.render('StripeCheckout');
-});
-
 app.get('/StripeSuccess', (req, res) => {
     res.render('StripeSuccess');
 });
@@ -169,22 +177,49 @@ app.use(express.static('public'));
 
 const YOUR_DOMAIN = 'http://localhost:8000';
 
+// Endpoint to create a Stripe checkout session
 app.post('/create-checkout-session', async (req, res) => {
-  const session = await stripe.checkout.sessions.create({
-    line_items: [
-        {
-          // Example product to sell
-          price: 'price_1PDwwXAcq23T9yD7s7IK4son',
-          quantity: 1,
-        },
-      ],
-    automatic_tax: {enabled: true},  
-    mode: 'payment',
-    success_url: `${YOUR_DOMAIN}/StripeSuccess`,
-    cancel_url: `${YOUR_DOMAIN}/StripeCancel`,
-  });
+    try {
+        // Extract product IDs from the POST data
+        const itemIds = req.body.productIds;
+        if (!itemIds || !Array.isArray(itemIds)) {
+            throw new Error('Product IDs not received or not in array format');
+        }
 
-  res.redirect(303, session.url);
+        // Fetch product details from MongoDB
+        const productsCollection = database.db(mongodb_database).collection('listing_items');
+        const items = await productsCollection.find({
+            '_id': { $in: itemIds.map(id => ObjectId.createFromHexString(id)) } // Convert string IDs to ObjectId instances
+        }).toArray();
+
+        // Prepare line items for the Stripe session
+        const line_items = items.map(item => ({
+            price_data: {
+                currency: 'cad',
+                product_data: {
+                    name: item.item_description,
+                    images: [item.product_img_URL[0]]
+                },
+                unit_amount: Math.round(item.item_price * 100), // Convert price to cents
+            },
+            quantity: parseInt(item.item_quantity),
+        }));
+
+        // Create Stripe checkout session
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            line_items,
+            mode: 'payment',
+            success_url: `${YOUR_DOMAIN}/StripeSuccess`,
+            cancel_url: `${YOUR_DOMAIN}/StripeCancel`,
+        });
+
+        // Redirect the client to the Stripe checkout
+        res.redirect(303, session.url);
+    } catch (error) {
+        console.error('Failed to create checkout session:', error);
+        res.status(500).send('Error creating checkout session: ' + error.message);
+    }
 });
 
 // ----------------- Stripe Payment END -----------------
