@@ -221,7 +221,7 @@ app.post('/create-checkout-session', async (req, res) => {
             price_data: {
                 currency: 'cad',
                 product_data: {
-                    name: item.item_description,
+                    name: item.item_title,
                     images: [item.product_img_URL[0]]
                 },
                 unit_amount: Math.round(item.item_price * 100), // Convert price to cents

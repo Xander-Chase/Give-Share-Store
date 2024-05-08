@@ -5,7 +5,6 @@
         <div class="container">
             <div class="row g-5">
                 <div class="col-md-8 border">
-                    // This will display the items in the cart by name and image taken from MongoDB
                     <h1>Products in Your Cart</h1>
                     <% items.forEach(function(item) { %>
                         <div class="g-1 row shadow-sm bg-light text-dark border">
@@ -15,10 +14,10 @@
                                          width="200rem"
                                          height="125rem"
                                          src="<%= item.product_img_URL[0] %>"
-                                         alt="<%= item.item_description %>">
+                                         alt="<%= item.item_title %>">
                                 </div>
                                 <div class="col-sm-5">
-                                    <h2><%= item.item_description %></h2>
+                                    <h2><%= item.item_title %></h2>
                                 </div>
                             </div>
                             <div class="d-flex align-items-center justify-content-end col-md-4">
@@ -33,17 +32,14 @@
                         <span class="text-primary">Your cart</span>
                         <span class="badge bg-primary rounded-pill">3</span>
                     </h4>
-                    // This list will display the items in the cart by name and price taken from MongoDB
-                    // Currently using all items in database, will need to change to only items in cart
                     <ul class="list-group mb-3">
                         <% var total = 0; %>
                         <% items.forEach(function(item) { %>
                             <li class="list-group-item d-flex justify-content-between lh-sm">
                                 <div>
-                                    <h6 class="my-0"><%= item.item_description %></h6>
+                                    <h6 class="my-0"><%= item.item_title %></h6>
                                 </div>
-                                // This totals the price of all items in the cart
-                                <span class="text-muted">$<%= item.item_price.$numberDouble %></span>
+                                <span class="text-muted">$<%= item.item_price %></span>
                                 <% total += parseFloat(item.item_price); %>
                             </li>
                         <% }); %>
@@ -52,8 +48,6 @@
                             <strong>$<%= total.toFixed(2) %></strong>
                         </li>
                     </ul>
-                    // This form will be used to submit the product IDs to the server
-                    // This provides secure payment processing by preventing the client from manipulating the payment amount
                     <form class="card p2" action="/create-checkout-session" method="POST">
                         <% items.forEach(function(item) { %>
                             <input type="hidden" name="productIds" value="<%= item._id.toString() %>">
