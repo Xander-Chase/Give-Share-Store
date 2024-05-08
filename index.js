@@ -18,7 +18,7 @@ app.use(express.static('css'));                             // serve static css 
 app.use(express.static('js'));                              // serve static js files
 app.use(express.json());                                    // parse json request bodies
 
-const port = process.env.PORT || 8000;                      // Set port to 8000 if not defined in ..env file
+const port = process.env.PORT || 5000;                      // Set port to 8000 if not defined in ..env file
 
 // secret variables located in ..env file
 const mongodb_cluster = process.env.MONGODB_CLUSTER;
@@ -139,22 +139,26 @@ app.get('/signout', (req, res) => {
 
 app.get('/product-info', (req, res) => {
     const isLoggedIn = req.session.loggedIn;
-    res.render("product_details", {isLoggedIn : isLoggedIn});
+    res.render("product-info", {isLoggedIn : isLoggedIn});
 });
 
-app.get('/about-us', (req, res) => {
-    const isLoggedIn = req.session.loggedIn;
+app.get('/about', (req, res) => {
+    const isLoggedIn = req.session.loggedIn; 
     res.render("about", {isLoggedIn : isLoggedIn});
 });
 
 app.get('/contact-us', (req, res) => {
-    const isLoggedIn = req.loggedIn;
+    const isLoggedIn = req.session.loggedIn; 
     res.render("contact", {isLoggedIn : isLoggedIn});
 });
 
 app.get('/manage', (req, res) => {
-    const isLoggedIn = req.loggedIn;
-    res.render("product-management", {isLoggedIn : isLoggedIn});
+    if (req.session.loggedIn) {
+        res.render("product-management", {isLoggedIn : isLoggedIn});
+    } 
+    else {
+        res.redirect('/adminLogIn');
+    }
 });
 
 // connect to the database and hash passwords if necessary, then start the server
