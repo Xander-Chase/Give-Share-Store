@@ -171,6 +171,7 @@ app.post('/create-checkout-session', async (req, res) => {
           quantity: 1,
         },
       ],
+    automatic_tax: {enabled: true},  
     mode: 'payment',
     success_url: `${YOUR_DOMAIN}/StripeSuccess`,
     cancel_url: `${YOUR_DOMAIN}/StripeCancel`,
