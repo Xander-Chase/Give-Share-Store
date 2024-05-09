@@ -6,7 +6,7 @@ const MongoDBStore = require('connect-mongo');              // Import connect-mo
 const Joi = require('joi');                                 // include the joi module
 const bcrypt = require('bcrypt');                           // include the bcrypt module
 const { ObjectId } = require('mongodb');                    // include the ObjectId module
-
+const { MongoClient} = require('mongodb');                  // include the MongoClient modules
 
 
 
@@ -14,7 +14,7 @@ const { ObjectId } = require('mongodb');                    // include the Objec
 const app = express();
 app.set('view engine', 'ejs');                              // Set view engine to ejs
 
-app.use(express.urlencoded({ extended: false }));           // parse urlencoded request bodies
+app.use(express.urlencoded({ extended: true }));            // parse urlencoded request bodies
 app.use(express.static('public'));                          // serve static image files
 app.use(express.static('css'));                             // serve static css files
 app.use(express.static('js'));                              // serve static js files
@@ -45,6 +45,7 @@ const mongodb_database = process.env.MONGODB_DATABASE;
 const mongodb_session_secret = process.env.MONGODB_SESSION_SECRET;
 const node_session_secret = process.env.NODE_SESSION_SECRET;
 
+
 // importing the database object from databaseConnection.js file
 var { database } = include('databaseConnection');
 
@@ -59,6 +60,8 @@ var mongoStore = MongoDBStore.create({
     },
     collection: 'sessions'
 });
+
+
 
 // creating a session
 app.use(session({
@@ -188,6 +191,35 @@ app.get('/manage', (req, res) => {
 app.get('/addListing', (req, res) => {
     res.render('addListing');
 });
+
+// Route to handle form submission
+app.post('/submitListing', async (req, res) => {
+    console.log('isFeatureItem:', req.body.isFeatureItem);  
+    const listingItemsCollection = database.db(mongodb_database).collection('listing_items');
+    const isFeatureItem = Array.isArray(req.body.isFeatureItem) ? req.body.isFeatureItem.pop() : req.body.isFeatureItem;
+    const item_category = Array.isArray(req.body.item_category) ? req.body.item_category : [req.body.item_category];
+    const document = {
+        product_img_URL: ["https://unsplash.com/photos/macbook-air-xII7efH1G6o"],
+        product_video_URL: ["https://youtu.be/51QO4pavK3A?si=M_0zCiADmQ9IzZGV"],
+        item_title: req.body.item_title,
+        item_price: parseFloat(req.body.item_price) || 0.00,  
+        item_quantity: parseInt(req.body.item_quantity) || 0,  
+        item_detailed_description: req.body.item_detailed_description || '',
+        item_estimatedShippingCost: parseFloat(req.body.item_estimatedShippingCost) || 0.0,
+        isFeatureItem: isFeatureItem === 'true',
+        item_category: item_category  
+    };
+
+    try {
+        await listingItemsCollection.insertOne(document);
+        res.send('Listing added successfully!');
+    } catch (error) {
+        console.error('Error submitting new listing:', error);
+        res.status(500).send('Failed to add new listing');
+    }
+});
+
+
 
 ////// **************************** Requires Further Development (this is for the "ADD NEW LISTING) MAY BE USEFUL****************************
 
