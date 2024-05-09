@@ -22,6 +22,21 @@ app.use(express.json());                                    // parse json reques
 
 const port = process.env.PORT || 5000;                      // Set port to 8000 if not defined in ..env file
 
+
+////// **************************** Requires Further Development (this is for the "ADD NEW LISTING) MAY BE USEFUL****************************
+
+// const multer = require('multer');
+// const storage = multer.diskStorage({
+//     destination: function (req, file, cb) {
+//         cb(null, 'public/uploads/');
+//     },
+//     filename: function (req, file, cb) {
+//         cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
+//     }
+// });
+// const upload = multer({ storage: storage });
+
+
 // secret variables located in ..env file
 const mongodb_cluster = process.env.MONGODB_CLUSTER;
 const mongodb_user = process.env.MONGODB_USER;
@@ -87,8 +102,6 @@ app.get('/adminLogIn', (req, res) => {
 
 app.post('/adminLogInSubmit', async (req, res) => {
 
-    console.log("Admin Log In Submit")
-
     const email = req.body.email;
     const password = req.body.password;
 
@@ -122,9 +135,7 @@ app.post('/adminLogInSubmit', async (req, res) => {
     req.session.name = user.name;
     req.session.email = user.email;
     req.session.password = user.password;
-    console.log(req.session.password);
     res.redirect("/");
-
 });
 
 app.post('/search', (req, res) => {
@@ -166,12 +177,63 @@ app.get('/contact-us', (req, res) => {
 
 app.get('/manage', (req, res) => {
     if (req.session.loggedIn) {
+        const isLoggedIn = req.session.loggedIn;
         res.render("product-management", {isLoggedIn : isLoggedIn});
     } 
     else {
         res.redirect('/adminLogIn');
     }
 });
+
+app.get('/addListing', (req, res) => {
+    res.render('addListing');
+});
+
+////// **************************** Requires Further Development (this is for the "ADD NEW LISTING) MAY BE USEFUL****************************
+
+// app.post('/submitListing', upload.fields([{name: 'product_img_URL'}, {name: 'product_video_URL'}]), async (req, res) => {
+//     const { item_title, item_price, item_detailed_description, item_estimatedShippingCost, isFeatureItem, isAuctionItem, item_quantity, item_category } = req.body;
+//     const product_img_URL = req.files['product_img_URL']?.map(file => file.path);
+//     const product_video_URL = req.files['product_video_URL']?.map(file => file.path);
+
+//     try {
+//         await productsCollection.insertOne({
+//             product_img_URL,
+//             product_video_URL,
+//             isFeatureItem: isFeatureItem === 'on',
+//             isAuctionItem: isAuctionItem === 'on',
+//             item_quantity: parseInt(item_quantity),
+//             item_title,
+//             item_price: parseFloat(item_price),
+//             item_estimatedShippingCost: parseFloat(item_estimatedShippingCost),
+//             item_detailed_description,
+//             item_category: item_category.split(',').map(item => item.trim())
+//         });
+//         res.redirect('/manage');  // Redirect to manage page or confirmation page
+//     } catch (error) {
+//         console.error('Failed to insert new listing:', error);
+//         res.status(500).send('Error submitting new listing');
+//     }
+// });
+
+
+app.get('/currentListings', (req, res) => {
+    res.render('currentListings');
+});
+
+app.get('/previousListings', (req, res) => {
+    res.render('previousListings');
+});
+
+app.get('/mailingList', (req, res) => {
+    res.render('mailingList');
+});
+
+app.get('/featuredItems', (req, res) => {
+    res.render('featuredItems');
+});
+
+
 
 // connect to the database and hash passwords if necessary, then start the server
 database.connect().then(async () => {
