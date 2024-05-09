@@ -61,8 +61,6 @@ var mongoStore = MongoDBStore.create({
     collection: 'sessions'
 });
 
-
-
 // creating a session
 app.use(session({
     secret: node_session_secret,
@@ -219,36 +217,6 @@ app.post('/submitListing', async (req, res) => {
     }
 });
 
-
-
-////// **************************** Requires Further Development (this is for the "ADD NEW LISTING) MAY BE USEFUL****************************
-
-// app.post('/submitListing', upload.fields([{name: 'product_img_URL'}, {name: 'product_video_URL'}]), async (req, res) => {
-//     const { item_title, item_price, item_detailed_description, item_estimatedShippingCost, isFeatureItem, isAuctionItem, item_quantity, item_category } = req.body;
-//     const product_img_URL = req.files['product_img_URL']?.map(file => file.path);
-//     const product_video_URL = req.files['product_video_URL']?.map(file => file.path);
-
-//     try {
-//         await productsCollection.insertOne({
-//             product_img_URL,
-//             product_video_URL,
-//             isFeatureItem: isFeatureItem === 'on',
-//             isAuctionItem: isAuctionItem === 'on',
-//             item_quantity: parseInt(item_quantity),
-//             item_title,
-//             item_price: parseFloat(item_price),
-//             item_estimatedShippingCost: parseFloat(item_estimatedShippingCost),
-//             item_detailed_description,
-//             item_category: item_category.split(',').map(item => item.trim())
-//         });
-//         res.redirect('/manage');  // Redirect to manage page or confirmation page
-//     } catch (error) {
-//         console.error('Failed to insert new listing:', error);
-//         res.status(500).send('Error submitting new listing');
-//     }
-// });
-
-
 app.get('/currentListings', (req, res) => {
     res.render('currentListings');
 });
@@ -264,8 +232,6 @@ app.get('/mailingList', (req, res) => {
 app.get('/featuredItems', (req, res) => {
     res.render('featuredItems');
 });
-
-
 
 // connect to the database and hash passwords if necessary, then start the server
 database.connect().then(async () => {
