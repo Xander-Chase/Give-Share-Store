@@ -1,4 +1,21 @@
 <body>
+    <style>
+            .list1 {
+                padding: 10px;
+                border-bottom: 1px solid #ccc; 
+            }
+
+            .list1 a {
+                text-decoration: none;
+                color: #333;
+            }
+
+            .list1 :hover {
+                padding: 10px;
+                background-color: #007bff;
+                color: white;
+            }
+    </style>
     <header class="py-3 mb-3 border-bottom">
         <div class="container-fluid d-grid gap-3 align-items-center"
             style="grid-template-columns: 1.2fr 5fr 1fr;">
@@ -17,16 +34,19 @@
 
             <div class="d-flex align-items-center">
 
-                <form method="post" action="/search?=" class="w-75 me-3" role="search">
+                <form method="post" action="/search?=" class="w-75 me-3"
+                    role="search">
                     <input type="search" class="form-control"
-                        placeholder="Search..." aria-label="Search"> <!-- value is the current search prompt-->
+                        placeholder="Search..." aria-label="Search">
+                    <!-- value is the current search prompt-->
                 </form>
             </div>
 
             <div class="container row">
                 <!-- FIXME: CENTER THIS VERTICALLY! -->
                 <div class="col-sm-4">
-                    <a href="/about" class="d-block link-body-emphasis text-decoration-none">
+                    <a href="/about"
+                        class="d-block link-body-emphasis text-decoration-none">
                         About Us
                     </a>
                 </div>
@@ -34,8 +54,11 @@
                 <div class="col-sm-1">
                     <a href="/cart"
                         class="d-block link-body-emphasis text-decoration-none">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-cart" viewBox="0 0 16 16">
-                            <path d="M0 1.5A.5.5 0 0 1 .5 1H2a.5.5 0 0 1 .485.379L2.89 3H14.5a.5.5 0 0 1 .491.592l-1.5 8A.5.5 0 0 1 13 12H4a.5.5 0 0 1-.491-.408L2.01 3.607 1.61 2H.5a.5.5 0 0 1-.5-.5M3.102 4l1.313 7h8.17l1.313-7zM5 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4m7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4m-7 1a1 1 0 1 1 0 2 1 1 0 0 1 0-2m7 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16"
+                            height="16" fill="currentColor" class="bi bi-cart"
+                            viewBox="0 0 16 16">
+                            <path
+                                d="M0 1.5A.5.5 0 0 1 .5 1H2a.5.5 0 0 1 .485.379L2.89 3H14.5a.5.5 0 0 1 .491.592l-1.5 8A.5.5 0 0 1 13 12H4a.5.5 0 0 1-.491-.408L2.01 3.607 1.61 2H.5a.5.5 0 0 1-.5-.5M3.102 4l1.313 7h8.17l1.313-7zM5 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4m7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4m-7 1a1 1 0 1 1 0 2 1 1 0 0 1 0-2m7 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2" />
                         </svg>
                     </a>
                 </div>
@@ -43,25 +66,35 @@
                 <!--The next div should only be shown if the user is logged in, if they arent then it should be an admin sign in button-->
                 <div class="col-sm-1" id="userProfile">
                     <% if (isLoggedIn) { %>
-                        <div class="flex-shrink-0 dropdown">
-                            <a href="#" class="d-block link-body-emphasis text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                                <img src="https://github.com/mdo.png" alt="mdo" width="32" height="32" class="rounded-circle">
-                            </a>
-                            <ul class="dropdown-menu text-small shadow">
-                                <li><a class="dropdown-item" href="#">Profile</a></li>
-                                <li><a class="dropdown-item" href="#">Settings</a></li>
-                                <li><a class="dropdown-item" href="#">Help</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="/signout">Sign out</a></li>
-                            </ul>
-                        </div>
-                    <% } else { %>
-                        <a href="/loginPortal" style="text-decoration: none; color: black">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-circle" viewBox="0 0 16 16">
-                                <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0"/>
-                                <path fill-rule="evenodd" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1"/>
-                            </svg>
+                    <div class="flex-shrink-0 dropdown">
+                        <a href="#"
+                            class="d-block link-body-emphasis text-decoration-none dropdown-toggle"
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                            <img src="https://github.com/mdo.png" alt="mdo"
+                                width="32" height="32" class="rounded-circle">
                         </a>
+                        <ul class="dropdown-menu text-small shadow">
+                            <li><a class="dropdown-item"
+                                    href="/manage">Dashboard</a></li>
+                            <li><a class="dropdown-item"
+                                    href="#">Settings</a></li>
+                            <li><a class="dropdown-item" href="#">Help</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="/signout">Sign
+                                    out</a></li>
+                        </ul>
+                    </div>
+                    <% } else { %>
+                    <a href="/loginPortal"
+                        style="text-decoration: none; color: black">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16"
+                            height="16" fill="currentColor"
+                            class="bi bi-person-circle" viewBox="0 0 16 16">
+                            <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0" />
+                            <path fill-rule="evenodd"
+                                d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1" />
+                        </svg>
+                    </a>
                     <% } %>
                 </div>
 
@@ -70,19 +103,19 @@
         <div class="container">
             <header class="d-flex justify-content-center py-3">
                 <ul class="nav nav-pills">
-                    <li class="nav-item"><a href="#" class="nav-link active"
+                    <li class="list1 nav-item"><a href="/" class="nav-link"
                             aria-current="page">Home</a></li>
-                    <li class="nav-item"><a href="#"
+                    <li class="list1 nav-item"><a href="#"
                             class="nav-link">Jewelry</a></li>
-                    <li class="nav-item"><a href="#" class="nav-link">Sporting
+                    <li class="list1 nav-item"><a href="#" class="nav-link">Sporting
                             Goods</a></li>
-                    <li class="nav-item"><a href="#"
+                    <li class="list1 nav-item"><a href="#"
                             class="nav-link">Home</a></li>
-                    <li class="nav-item"><a href="#"
+                    <li class="list1 nav-item"><a href="#"
                             class="nav-link">Women</a></li>
-                    <li class="nav-item"><a href="#"
+                    <li class="list1 nav-item"><a href="#"
                             class="nav-link">Men</a></li>
-                    <li class="nav-item"><a href="#"
+                    <li class="list1 nav-item"><a href="#"
                             class="nav-link">Sales</a></li>
                 </ul>
             </header>
