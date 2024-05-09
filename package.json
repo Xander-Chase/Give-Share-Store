@@ -16,7 +16,17 @@
     "express": "^4.19.2",
     "express-session": "^1.18.0",
     "joi": "^17.13.1",
-    "nodemon": "^3.1.0",
     "stripe": "^15.5.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yuvraajchouhan/Give-Share-Store.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yuvraajchouhan/Give-Share-Store/issues"
+  },
+  "homepage": "https://github.com/yuvraajchouhan/Give-Share-Store#readme",
+  "devDependencies": {
+    "nodemon": "^3.1.0"
   }
 }

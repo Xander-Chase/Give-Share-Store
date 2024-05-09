@@ -5,6 +5,8 @@ const session = require('express-session');                 // Import express-se
 const MongoDBStore = require('connect-mongo');              // Import connect-mongo module to store session in MongoDB
 const Joi = require('joi');                                 // include the joi module
 const bcrypt = require('bcrypt');                           // include the bcrypt module
+const { ObjectId } = require('mongodb');                    // include the ObjectId module
+const { MongoClient} = require('mongodb');                  // include the MongoClient modules
 
 
 
@@ -12,13 +14,28 @@ const bcrypt = require('bcrypt');                           // include the bcryp
 const app = express();
 app.set('view engine', 'ejs');                              // Set view engine to ejs
 
-app.use(express.urlencoded({ extended: false }));           // parse urlencoded request bodies
+app.use(express.urlencoded({ extended: true }));            // parse urlencoded request bodies
 app.use(express.static('public'));                          // serve static image files
 app.use(express.static('css'));                             // serve static css files
 app.use(express.static('js'));                              // serve static js files
 app.use(express.json());                                    // parse json request bodies
 
-const port = process.env.PORT || 8000;                      // Set port to 8000 if not defined in ..env file
+const port = process.env.PORT || 5000;                      // Set port to 8000 if not defined in ..env file
+
+
+////// **************************** Requires Further Development (this is for the "ADD NEW LISTING) MAY BE USEFUL****************************
+
+// const multer = require('multer');
+// const storage = multer.diskStorage({
+//     destination: function (req, file, cb) {
+//         cb(null, 'public/uploads/');
+//     },
+//     filename: function (req, file, cb) {
+//         cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
+//     }
+// });
+// const upload = multer({ storage: storage });
+
 
 // secret variables located in ..env file
 const mongodb_cluster = process.env.MONGODB_CLUSTER;
@@ -27,6 +44,7 @@ const mongodb_password = process.env.MONGODB_PASSWORD;
 const mongodb_database = process.env.MONGODB_DATABASE;
 const mongodb_session_secret = process.env.MONGODB_SESSION_SECRET;
 const node_session_secret = process.env.NODE_SESSION_SECRET;
+
 
 // importing the database object from databaseConnection.js file
 var { database } = include('databaseConnection');
@@ -42,6 +60,8 @@ var mongoStore = MongoDBStore.create({
     },
     collection: 'sessions'
 });
+
+
 
 // creating a session
 app.use(session({
@@ -85,8 +105,6 @@ app.get('/adminLogIn', (req, res) => {
 
 app.post('/adminLogInSubmit', async (req, res) => {
 
-    console.log("Admin Log In Submit")
-
     const email = req.body.email;
     const password = req.body.password;
 
@@ -120,15 +138,134 @@ app.post('/adminLogInSubmit', async (req, res) => {
     req.session.name = user.name;
     req.session.email = user.email;
     req.session.password = user.password;
-    console.log(req.session.password);
     res.redirect("/");
-
 });
 
+app.post('/search', (req, res) => {
+    res.render('catalog');
+});
+
+// **************************** Requires Further Development ****************************
+// Currently is passed all items in the database to the catalog view as proof of concept
+// Will need to be updated to only pass items that were added to the cart
+app.get('/cart', async (req, res) => {
+    try {
+        const productsCollection = database.db(mongodb_database).collection('listing_items');
+        const productList = await productsCollection.find({}).toArray(); // Fetch all items
+        res.render('cartView', { items: productList }); // Pass items to the EJS template
+    } catch (error) {
+        console.error('Failed to fetch items:', error);
+        res.status(500).send('Error fetching items');
+    }
+});
 app.get('/signout', (req, res) => {
     req.session.destroy()
     res.redirect('/');
 });
+
+app.get('/product-info', (req, res) => {
+    const isLoggedIn = req.session.loggedIn;
+    res.render("product-info", {isLoggedIn : isLoggedIn});
+});
+
+app.get('/about', (req, res) => {
+    const isLoggedIn = req.session.loggedIn; 
+    res.render("about", {isLoggedIn : isLoggedIn});
+});
+
+app.get('/contact-us', (req, res) => {
+    const isLoggedIn = req.session.loggedIn; 
+    res.render("contact", {isLoggedIn : isLoggedIn});
+});
+
+app.get('/manage', (req, res) => {
+    if (req.session.loggedIn) {
+        const isLoggedIn = req.session.loggedIn;
+        res.render("product-management", {isLoggedIn : isLoggedIn});
+    } 
+    else {
+        res.redirect('/adminLogIn');
+    }
+});
+
+app.get('/addListing', (req, res) => {
+    res.render('addListing');
+});
+
+// Route to handle form submission
+app.post('/submitListing', async (req, res) => {
+    console.log('isFeatureItem:', req.body.isFeatureItem);  
+    const listingItemsCollection = database.db(mongodb_database).collection('listing_items');
+    const isFeatureItem = Array.isArray(req.body.isFeatureItem) ? req.body.isFeatureItem.pop() : req.body.isFeatureItem;
+    const item_category = Array.isArray(req.body.item_category) ? req.body.item_category : [req.body.item_category];
+    const document = {
+        product_img_URL: ["https://unsplash.com/photos/macbook-air-xII7efH1G6o"],
+        product_video_URL: ["https://youtu.be/51QO4pavK3A?si=M_0zCiADmQ9IzZGV"],
+        item_title: req.body.item_title,
+        item_price: parseFloat(req.body.item_price) || 0.00,  
+        item_quantity: parseInt(req.body.item_quantity) || 0,  
+        item_detailed_description: req.body.item_detailed_description || '',
+        item_estimatedShippingCost: parseFloat(req.body.item_estimatedShippingCost) || 0.0,
+        isFeatureItem: isFeatureItem === 'true',
+        item_category: item_category  
+    };
+
+    try {
+        await listingItemsCollection.insertOne(document);
+        res.send('Listing added successfully!');
+    } catch (error) {
+        console.error('Error submitting new listing:', error);
+        res.status(500).send('Failed to add new listing');
+    }
+});
+
+
+
+////// **************************** Requires Further Development (this is for the "ADD NEW LISTING) MAY BE USEFUL****************************
+
+// app.post('/submitListing', upload.fields([{name: 'product_img_URL'}, {name: 'product_video_URL'}]), async (req, res) => {
+//     const { item_title, item_price, item_detailed_description, item_estimatedShippingCost, isFeatureItem, isAuctionItem, item_quantity, item_category } = req.body;
+//     const product_img_URL = req.files['product_img_URL']?.map(file => file.path);
+//     const product_video_URL = req.files['product_video_URL']?.map(file => file.path);
+
+//     try {
+//         await productsCollection.insertOne({
+//             product_img_URL,
+//             product_video_URL,
+//             isFeatureItem: isFeatureItem === 'on',
+//             isAuctionItem: isAuctionItem === 'on',
+//             item_quantity: parseInt(item_quantity),
+//             item_title,
+//             item_price: parseFloat(item_price),
+//             item_estimatedShippingCost: parseFloat(item_estimatedShippingCost),
+//             item_detailed_description,
+//             item_category: item_category.split(',').map(item => item.trim())
+//         });
+//         res.redirect('/manage');  // Redirect to manage page or confirmation page
+//     } catch (error) {
+//         console.error('Failed to insert new listing:', error);
+//         res.status(500).send('Error submitting new listing');
+//     }
+// });
+
+
+app.get('/currentListings', (req, res) => {
+    res.render('currentListings');
+});
+
+app.get('/previousListings', (req, res) => {
+    res.render('previousListings');
+});
+
+app.get('/mailingList', (req, res) => {
+    res.render('mailingList');
+});
+
+app.get('/featuredItems', (req, res) => {
+    res.render('featuredItems');
+});
+
+
 
 // connect to the database and hash passwords if necessary, then start the server
 database.connect().then(async () => {
@@ -141,3 +278,66 @@ database.connect().then(async () => {
     console.log('Error connecting to MongoDB', err);
 });
 
+// ----------------- Stripe Payment START -----------------
+
+app.get('/StripeSuccess', (req, res) => {
+    res.render('StripeSuccess');
+});
+
+app.get('/StripeCancel', (req, res) => {
+    res.render('StripeCancel');
+});
+
+// Stripe test secret API key.
+const stripe = require('stripe')('sk_test_51OZSVHAcq23T9yD7gpE3kQS73T5AnO6UEaecXMwkzvGc9hVh1QlPNFmM3rzI9cxJ2tU2FtUAPzvcSc1obqPcrUfZ00PojCiOni');
+
+app.use(express.static('public'));
+
+const YOUR_DOMAIN = 'http://localhost:8000';
+
+// Endpoint to create a Stripe checkout session
+app.post('/create-checkout-session', async (req, res) => {
+    try {
+        // Extract product IDs from the POST data
+        const itemIds = req.body.productIds;
+        if (!itemIds || !Array.isArray(itemIds)) {
+            throw new Error('Product IDs not received or not in array format');
+        }
+
+        // Fetch product details from MongoDB
+        const productsCollection = database.db(mongodb_database).collection('listing_items');
+        const items = await productsCollection.find({
+            '_id': { $in: itemIds.map(id => ObjectId.createFromHexString(id)) } // Convert string IDs to ObjectId instances
+        }).toArray();
+
+        // Prepare line items for the Stripe session
+        const line_items = items.map(item => ({
+            price_data: {
+                currency: 'cad',
+                product_data: {
+                    name: item.item_title,
+                    images: [item.product_img_URL[0]]
+                },
+                unit_amount: Math.round(item.item_price * 100), // Convert price to cents
+            },
+            quantity: parseInt(item.item_quantity),
+        }));
+
+        // Create Stripe checkout session
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            line_items,
+            mode: 'payment',
+            success_url: `${YOUR_DOMAIN}/StripeSuccess`,
+            cancel_url: `${YOUR_DOMAIN}/StripeCancel`,
+        });
+
+        // Redirect the client to the Stripe checkout
+        res.redirect(303, session.url);
+    } catch (error) {
+        console.error('Failed to create checkout session:', error);
+        res.status(500).send('Error creating checkout session: ' + error.message);
+    }
+});
+
+// ----------------- Stripe Payment END -----------------

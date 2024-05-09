@@ -1,0 +1,61 @@
+<%- include("metadata") %>
+<html lang="en">
+    <%- include("searchNavBar", {isLoggedIn: false}) %>
+    <body>
+        <div class="container">
+            <div class="row g-5">
+                <div class="col-md-8 border">
+                    <h1>Products in Your Cart</h1>
+                    <% items.forEach(function(item) { %>
+                        <div class="g-1 row shadow-sm bg-light text-dark border">
+                            <div class="row d-flex align-items-center col-md-8">
+                                <div class="card shadow-sm col-sm-5 border">
+                                    <img class="card-img-med"
+                                         width="200rem"
+                                         height="125rem"
+                                         src="<%= item.product_img_URL[0] %>"
+                                         alt="<%= item.item_title %>">
+                                </div>
+                                <div class="col-sm-5">
+                                    <h2><%= item.item_title %></h2>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-end col-md-4">
+                                <h3>$<%= item.item_price %> <small class="text-secondary">CAN</small></h3>
+                            </div>
+                        </div>
+                        <br>
+                    <% }); %>
+                </div>
+                <div id="your-cart" class="col-md-4 border">
+                    <h4 class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="text-primary">Your cart</span>
+                        <span class="badge bg-primary rounded-pill">3</span>
+                    </h4>
+                    <ul class="list-group mb-3">
+                        <% var total = 0; %>
+                        <% items.forEach(function(item) { %>
+                            <li class="list-group-item d-flex justify-content-between lh-sm">
+                                <div>
+                                    <h6 class="my-0"><%= item.item_title %></h6>
+                                </div>
+                                <span class="text-muted">$<%= item.item_price %></span>
+                                <% total += parseFloat(item.item_price); %>
+                            </li>
+                        <% }); %>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Subtotal (CAN)</span>
+                            <strong>$<%= total.toFixed(2) %></strong>
+                        </li>
+                    </ul>
+                    <form class="card p2" action="/create-checkout-session" method="POST">
+                        <% items.forEach(function(item) { %>
+                            <input type="hidden" name="productIds" value="<%= item._id.toString() %>">
+                        <% }); %>
+                        <button type="submit" id="checkout-button" class="btn btn-primary">Proceed to Checkout</button>
+                    </form>                                        
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
