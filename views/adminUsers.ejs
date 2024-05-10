@@ -1,0 +1,52 @@
+<div class="container mt-5">
+    <h2>Admin Users</h2>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% users.forEach(function(user) { %>
+                <tr>
+                    <td><%= user.name %></td>
+                    <td><%= user.email %></td>
+                    <td>
+                        <a href="/editUser/<%= user._id %>" class="btn btn-sm btn-primary">Edit</a>
+                    </td>
+                </tr>
+            <% }); %>
+        </tbody>
+    </table>
+    <h3>Add New Admin</h3>
+    <form action="/addUser" method="post">
+        <div class="mb-3">
+            <label for="name" class="form-label">Name</label>
+            <input type="text" class="form-control" id="name" name="name" required>
+        </div>
+        <div class="mb-3">
+            <label for="email" class="form-label">Email</label>
+            <input type="email" class="form-control" id="email" name="email" required>
+        </div>
+        <div class="mb-3">
+            <label for="password" class="form-label">Password</label>
+            <input type="password" class="form-control" id="password" name="password" required>
+        </div>
+        <button type="submit" class="btn btn-success">Add Admin</button>
+    </form>
+</div>
+
+<script>
+    function loadContent(contentType) {
+        const contentUrl = `/${contentType}`; // this will be the URL of the content to load
+        fetch(contentUrl)
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('contentArea').innerHTML = html;
+            })
+            .catch(error => console.error('Failed to load the content:', error));
+    }
+
+</script>
