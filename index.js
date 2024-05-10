@@ -60,6 +60,15 @@ var mongoStore = MongoDBStore.create({
     collection: 'sessions'
 });
 
+// **************************** Functions ****************************
+// Necessary functions to ensure non-repeating code.
+// Fetches all the items from the product list
+async function fetchAllItems()
+{
+    const productsColl = database.db(mongodb_database).collection('listing_items');
+    return await productsColl.find().toArray(); // Fetch all items;
+}
+
 // creating a session
 app.use(session({
     secret: node_session_secret,
@@ -138,8 +147,88 @@ app.post('/adminLogInSubmit', async (req, res) => {
     res.redirect("/");
 });
 
-app.post('/search', (req, res) => {
-    res.render('catalog');
+function getBodyFilters()
+{
+    // TODO / INFO: ******************************** This is the Sub-Category template ********************************
+    /*<div className="col accordion">
+        <h2 className="accordion-header" id="heading<%= header %>">
+            <button className="accordion-button bg-white" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#<%= header %>" aria-expanded="true" aria-controls="<%= header %>">
+                <strong>WA</strong> <!-- TODO: Variable -->
+            </button>
+        </h2>
+        <div id="<%= header %>" className="accordion-collapse collapse show" aria-labelledby="heading<%= header %>"
+             data-bs-parent="#accordionExample">
+            <div className="accordion-body">
+                <
+                %- choice %>
+            </div>
+        </div>
+    </div>*/
+
+    return [
+
+        "<ul class=\"list-group list-group-flush\">\n" +
+        " <li class=\"list-group-item\">Home</li>" +
+        " <li class=\"list-group-item\">Garden</li>\n" +
+        " <li class=\"list-group-item\">Jewelry</li>\n" +
+        " <li class=\"list-group-item\">Sports</li>\n" +
+        " <li class=\"list-group-item\">Entertainment</li>\n" +
+        " <li class=\"list-group-item\">Clothing</li>\n" +
+        " <li class=\"list-group-item\">Accessories</li>\n" +
+        " <li class=\"list-group-item\">Family</li>\n" +
+        " <li class=\"list-group-item\">Electronics</li>\n" +
+        " <li class=\"list-group-item\">Collectables</li>\n" +
+        "</ul>",
+        "<div class=\"row col-sm\">\n" +
+        "        <div class=\"col text-start\">\n" +
+        "            <label for=\"priceRange\" class=\"form-label\">$0</label>\n" +
+        "        </div>\n" +
+        "        <div class=\"col text-middle\">\n" +
+        "            <label id=\"userRange\" for=\"priceRange\" class=\"form-label\">$199.99</label>\n" +
+        "        </div>\n" +
+        "        <div class=\"col text-end\">\n" +
+        "            <label for=\"priceRange\" class=\"form-label\">$199.99</label>\n" +
+        "        </div>\n" +
+        "        <input type=\"range\" class=\"form-range\" min=\"0\" max=\"199.99\" step=\"5\" id=\"priceRange\" oninput=\"document.getElementById('userRange').innerHTML = `$${this.value}`\">\n" +
+        "    </div>"
+    ];
+}
+app.get('/search/', async (req, res) => {
+    try
+    {
+        // Place this as a public or constant variable.
+        let filtersHeader = ["Categories", "Price"];
+        let bodyFilters = getBodyFilters();
+
+        res.render('catalog', {items: await fetchAllItems(),
+            filterHeaders: filtersHeader,
+            filterStuff: bodyFilters
+        });
+    }
+    catch (error)
+    {
+        console.error("Failed to fetch items:", error);
+        res.status(500).send('Error fetching items');
+    }
+})
+app.get('/search/:key', async (req, res) => {
+    try
+    {
+        let filtersHeader = ["Categories", "Price"];
+        let bodyFilters = getBodyFilters();
+        const searchKey = req.params.key;
+        const productsColl = database.db(mongodb_database).collection('listing_items');
+        const productList = await productsColl.find({item_title: {$regex: searchKey, $options: 'i'}}).toArray();
+        res.render('catalog', {items: productList, keyword: req.params.key,
+            filterHeaders: filtersHeader,
+            filterStuff: bodyFilters});
+    }
+    catch (error)
+    {
+        console.error("Failed to fetch items:", error);
+        res.status(500).send('Error fetching items');
+    }
 });
 
 // **************************** Requires Further Development ****************************
@@ -147,9 +236,7 @@ app.post('/search', (req, res) => {
 // Will need to be updated to only pass items that were added to the cart
 app.get('/cart', async (req, res) => {
     try {
-        const productsCollection = database.db(mongodb_database).collection('listing_items');
-        const productList = await productsCollection.find({}).toArray(); // Fetch all items
-        res.render('cartView', { items: productList }); // Pass items to the EJS template
+        res.render('cartView', { items: await fetchAllItems() }); // Pass items to the EJS template
     } catch (error) {
         console.error('Failed to fetch items:', error);
         res.status(500).send('Error fetching items');
