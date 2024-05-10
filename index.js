@@ -246,7 +246,6 @@ app.get('/currentListings', async (req, res) => {
         // handling error case - passing empty array
         res.render('currentListings', { listings: [] }); // rendering the page even in case of error with an empty array
     }
-=======
 });
 
 
