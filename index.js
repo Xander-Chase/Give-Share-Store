@@ -61,8 +61,6 @@ var mongoStore = MongoDBStore.create({
     collection: 'sessions'
 });
 
-
-
 // creating a session
 app.use(session({
     secret: node_session_secret,
@@ -168,7 +166,7 @@ app.get('/product-info/:id', async (req, res) => {
     try {
         const itemId = req.params.id;
         const productsCollection = database.db(mongodb_database).collection('listing_items');
-        // Use 'new' to create a new ObjectId instance
+        
         const item = await productsCollection.findOne({ _id: new ObjectId(itemId) });
 
         if (!item) {
@@ -248,6 +246,7 @@ app.get('/currentListings', async (req, res) => {
         // handling error case - passing empty array
         res.render('currentListings', { listings: [] }); // rendering the page even in case of error with an empty array
     }
+=======
 });
 
 
@@ -270,9 +269,6 @@ app.get('/featuredItems', async (req, res) => {
         res.render('featuredItems', { listings: [] });
     }
 });
-
-
-
 
 // connect to the database and hash passwords if necessary, then start the server
 database.connect().then(async () => {
