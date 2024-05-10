@@ -8,19 +8,20 @@
     <div class="container mt-5">
         <h2>Add New Listing</h2>
         <p> Fields marked with <span class="mandatory">*</span> are mandatory.</p>
-        <form action="/submitListing" method="post" enctype="application/x-www-form-urlencoded" class="mt-4">
+        <form action="/submitListing" method="post" enctype="multipart/form-data" class="mt-4">
 
             <!-- Product Images Input -->
-            <!-- <div class="mb-3">
-                <label for="productImg" class="form-label">Product Images <span class="mandatory">*</span> </label>
-                <input type="file" class="form-control" id="productImg" name="product_img_URL" required multiple>
-            </div> -->
+            <div class="mb-3">
+                <label for="photo" class="form-label">Product Images <span class="mandatory">*</span> </label>
+                <input type="file" class="form-control" id="photo" name="photo" required multiple>
+            </div>
 
             <!-- Product Videos Input -->
-            <!-- <div class="mb-3">
-                <label for="productVideo" class="form-label">Product Videos</label>
-                <input type="file" class="form-control" id="productVideo" name="product_video_URL" multiple>
-            </div> -->
+            <div class="mb-3">
+                <label for="video" class="form-label">Product Videos</label>
+                <input type="file" class="form-control" id="video" name="video" multiple>
+            </div>
+
 
             <!-- Item Title Input -->
             <div class="mb-3">

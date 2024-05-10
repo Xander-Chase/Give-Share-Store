@@ -7,6 +7,11 @@ const Joi = require('joi');                                 // include the joi m
 const bcrypt = require('bcrypt');                           // include the bcrypt module
 const { ObjectId } = require('mongodb');                    // include the ObjectId module
 const { MongoClient} = require('mongodb');                  // include the MongoClient modules
+const AWS = require('aws-sdk');                             // include the AWS module
+const multer = require('multer');                           // include the multer module
+const multerS3 = require('multer-s3');                      // include the multer-s3 module
+const { S3Client } = require("@aws-sdk/client-s3");         // include the S3Client module
+const { Upload } = require("@aws-sdk/lib-storage");         // include the Upload module
 
 
 
@@ -21,20 +26,6 @@ app.use(express.static('js'));                              // serve static js f
 app.use(express.json());                                    // parse json request bodies
 
 const port = process.env.PORT || 5000;                      // Set port to 8000 if not defined in ..env file
-
-
-////// **************************** Requires Further Development (this is for the "ADD NEW LISTING) MAY BE USEFUL****************************
-
-// const multer = require('multer');
-// const storage = multer.diskStorage({
-//     destination: function (req, file, cb) {
-//         cb(null, 'public/uploads/');
-//     },
-//     filename: function (req, file, cb) {
-//         cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
-//     }
-// });
-// const upload = multer({ storage: storage });
 
 
 // secret variables located in ..env file
@@ -186,26 +177,78 @@ app.get('/manage', (req, res) => {
     }
 });
 
+
+// ------------------ AWS S3 START ------------------
+
+// Configures AWS to use .env credentials and region
+const s3 = new S3Client({
+    region: process.env.AWS_REGION,
+    credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+    }
+});
+
+// ------------------ AWS S3 END ------------------
+
+// ------------------ multer START ------------------
+
+const upload = multer({
+    storage: multerS3({
+        s3: s3,
+        bucket: 'the-vintage-garage-test',
+        metadata: function (req, file, cb) {
+            cb(null, {fieldName: file.fieldname});
+        },
+        key: function (req, file, cb) {
+            const folder = file.mimetype.startsWith('image/') ? 'images/' : 'videos/';
+            cb(null, folder + Date.now().toString() + '-' + file.originalname);
+        }
+    })
+});
+
+
+// ------------------ multer END ------------------
+
+// // ------------------ AWS Test Start ------------------
+// const { PutObjectCommand } = require("@aws-sdk/client-s3");
+
+// async function testUpload() {
+//     try {
+//         const data = await s3.send(new PutObjectCommand({
+//             Bucket: "the-vintage-garage-test",
+//             Key: "test-upload.txt",
+//             Body: "Hello World!"
+//         }));
+//         console.log("Success", data);
+//     } catch (err) {
+//         console.error("Error", err);
+//     }
+// }
+// testUpload();
+
+// // ------------------ AWS Test End ------------------
+
 app.get('/addListing', (req, res) => {
     res.render('addListing');
 });
 
 // Route to handle form submission
-app.post('/submitListing', async (req, res) => {
-    console.log('isFeatureItem:', req.body.isFeatureItem);  
+app.post('/submitListing', upload.fields([{ name: 'photo', maxCount: 10 }, { name: 'video', maxCount: 1 }]), async (req, res) => {
+    const photos = req.files['photo'] ? req.files['photo'].map(file => file.location) : [];
+    const videos = req.files['video'] ? req.files['video'].map(file => file.location) : [];
+
     const listingItemsCollection = database.db(mongodb_database).collection('listing_items');
-    const isFeatureItem = Array.isArray(req.body.isFeatureItem) ? req.body.isFeatureItem.pop() : req.body.isFeatureItem;
-    const item_category = Array.isArray(req.body.item_category) ? req.body.item_category : [req.body.item_category];
     const document = {
-        product_img_URL: ["https://unsplash.com/photos/macbook-air-xII7efH1G6o"],
-        product_video_URL: ["https://youtu.be/51QO4pavK3A?si=M_0zCiADmQ9IzZGV"],
+        product_img_URL: photos,
+        product_video_URL: videos,
         item_title: req.body.item_title,
-        item_price: parseFloat(req.body.item_price) || 0.00,  
-        item_quantity: parseInt(req.body.item_quantity) || 0,  
+        item_price: parseFloat(req.body.item_price) || 0.00,
+        item_quantity: parseInt(req.body.item_quantity) || 0,
         item_detailed_description: req.body.item_detailed_description || '',
         item_estimatedShippingCost: parseFloat(req.body.item_estimatedShippingCost) || 0.0,
-        isFeatureItem: isFeatureItem === 'true',
-        item_category: item_category  
+        isFeatureItem: req.body.isFeatureItem === 'true',
+        item_category: Array.isArray(req.body.item_category) ? req.body.item_category : [req.body.item_category]
     };
 
     try {
