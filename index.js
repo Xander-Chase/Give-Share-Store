@@ -373,7 +373,18 @@ app.get('/previousListings', (req, res) => {
 });
 
 app.get('/mailingList', (req, res) => {
-    res.render('mailingList');
+    // Example data representing people on the mailing list
+    const mailingList = [
+        { name: "Alice Johnson", email: "alice.johnson@example.com" },
+        { name: "Bob Smith", email: "bob.smith@example.com" },
+        { name: "Carolyn B. Yates", email: "carolyn.yates@example.com" },
+        { name: "David Gilmore", email: "david.gilmore@example.com" }
+    ];
+
+    res.render('mailingList', {
+        people: mailingList,
+        isLoggedIn: req.session.loggedIn
+    });
 });
 
 app.get('/adminUsers', async (req, res) => {
