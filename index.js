@@ -70,10 +70,18 @@ app.use(session({
     cookie: { maxAge: 60 * 60 * 1000 }
 }));
 
-app.get('/', (req, res) => {
-    const isLoggedIn = req.session.loggedIn; 
-    res.render("landing" , {isLoggedIn : isLoggedIn});
+app.get('/', async (req, res) => {
+    const isLoggedIn = req.session.loggedIn;
+    try {
+        const productsCollection = database.db(mongodb_database).collection('listing_items');
+        const currentListings = await productsCollection.find({ isFeatureItem: false }).toArray();
+        res.render("landing", {isLoggedIn, currentListings});
+    } catch (error) {
+        console.error('Failed to fetch current listings:', error);
+        res.render("landing", {isLoggedIn, currentListings: []});
+    }
 });
+
 
 async function hashExistingPasswords() {
     try {
