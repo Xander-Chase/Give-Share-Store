@@ -1,43 +1,46 @@
+<style>
+    .list1 {
+        padding: 10px;
+        border-bottom: 1px solid #ccc;
+    }
+
+    .list1 a {
+        text-decoration: none;
+        color: #333;
+    }
+
+    .list1 :hover {
+        padding: 10px;
+        background-color: #007bff;
+        color: white;
+    }
+</style>
+
 <body>
-    <style>
-            .list1 {
-                padding: 10px;
-                border-bottom: 1px solid #ccc; 
-            }
-
-            .list1 a {
-                text-decoration: none;
-                color: #333;
-            }
-
-            .list1 :hover {
-                padding: 10px;
-                background-color: #007bff;
-                color: white;
-            }
-    </style>
     <header class="py-3 mb-3 border-bottom">
         <div class="container-fluid d-grid gap-3 align-items-center"
             style="grid-template-columns: 1.2fr 5fr 1fr;">
             <div>
-                <a href="#"
+                <a href="/"
                     class="w-auto d-flex align-items-center mt-1 link-body-emphasis text-decoration-none">
                     <div class="col-2">
                         <svg class="bi me-2" width="40" height="32"><use
                                 xlink:href="#bootstrap"></use></svg>
                     </div>
                     <div class="col-8">
-                        <h2>Give and Share</h2>
+                        <!-- Place an icon -->
+                        <h2>The Vintage Garage</h2>
+                        <small class="text-secondary">by The Give and Share Society</small>
                     </div>
                 </a>
             </div>
 
             <div class="d-flex align-items-center">
 
-                <form method="post" action="/search?=" class="w-75 me-3"
-                    role="search">
-                    <input type="search" class="form-control"
-                        placeholder="Search..." aria-label="Search">
+                <form id="searchBar" method="get" class="w-75 me-3"
+                    role="search" onsubmit="this.action = `/search/${document.getElementById('searchInput').value}`;">
+                    <input id="searchInput" type="search" class="form-control"
+                        placeholder="Search..." aria-label="Search" value="<% if (locals.keyword) {%><%= locals.keyword %><% }%>">
                     <!-- value is the current search prompt-->
                 </form>
             </div>
@@ -120,6 +123,7 @@
                 </ul>
             </header>
         </div>
-    </header>
 
+    </header>
 </body>
+

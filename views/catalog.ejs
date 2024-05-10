@@ -4,19 +4,30 @@
     <body>
 
 
-    <div class="col-md-7" style="position: fixed">
+
+
+
+    <div class="col-md-7" style="position: absolute">
         <div class="container">
-            <div class="row"> <!-- TODO: Use EJS Template -->
-                <div class="dropdown show">
-                    <a class="dropdown-toggle text-decoration-none text-dark" href="#" role="button" id="dropDown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        Type
-                    </a>
-                    <div class="dropdown-menu" aria-labelledby="dropDown">
-                        <a class="dropdown-item" href="#">Action</a>
-                        <a class="dropdown-item" href="#">Another action</a>
-                        <a class="dropdown-item" href="#">Something else here</a>
+            <div class="col"> <!-- TODO: Use EJS Template -->
+                <% for (i = 0; i < filterHeaders.length; i++) {%>
+                    <div class="col accordion w-25">
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="heading<%= filterHeaders[i] %>">
+                                <button class="accordion-button bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#<%= filterHeaders[i] %>" aria-expanded="true" aria-controls="<%= filterHeaders[i] %>">
+                                    <strong><%= filterHeaders[i] %></strong> <!-- TODO: Variable -->
+                                </button>
+                            </h2>
+                            <div id="<%= filterHeaders[i] %>" class="accordion-collapse collapse show" aria-labelledby="heading<%= filterHeaders[i] %>" data-bs-parent="#accordionExample">
+                                <div class="accordion-body">
+                                    <!-- TODO: Session Cookies because based on the collection search, only show the existing categories or just use node again --> <!-- TODO: Variable-->
+                                    <%- filterStuff[i] %>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
+                <% }%>
+
             </div>
         </div>
     </div>
@@ -28,57 +39,32 @@
 
         <!-- FIXME: Add Space for the right side of the page -->
         <div class="row row-cols-1">
-            <div class="col-3 row-3">
-                <div class="card shadow-sm">
-                    <img class="bd-placeholder-img card-img-top" width="286rem" height="286rem" src="https://www.azierestaurant.ca/wp-content/uploads/2024/01/jordan-sneakers-794oni-1.jpg" alt=""/>
-                    <div class="card-body">
-                        <h3 class="">Jordan Sneakers</h3>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div class="btn-group">
-                                <!-- TODO: For EJS template, data passing, put ejs % syntax in action-->
-                                <form method="POST" action="/addCart?= "><button type="submit" class="btn btn-sm">Add to Cart</button></form>
-                                <form method="GET" action="/view/item?="><button type="submit" class="btn btn-sm">View Item</button></form>
-                            </div>
-                            <strong class="text-body-primary">CAN $199.99</strong>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <% items.forEach(function(item) { %>
             <div class="col-3 row-3">
                 <div class="card shadow-sm">
                     <img class="bd-placeholder-img card-img-top" width="286rem" height="286rem"
-                         src="https://i5.walmartimages.com/asr/c91a5074-b6c7-4c0d-b617-c36df0fd589f.dafa0c800e0980f0a53eb3e1e117b6dd.jpeg?odnHeight=450&odnWidth=450&odnBg=ffffff" alt=""/>
+                         src="<%= item.product_img_URL[0] %>"
+                         alt="<%= item.item_title %>"
+                    />
                     <div class="card-body">
-                        <h3 class="">MrBeast Hat</h3>
+                        <h3 class="">
+                            <%= item.item_title %>
+                        </h3>
                         <div class="d-flex justify-content-between align-items-center">
                             <div class="btn-group">
                                 <!-- TODO: For EJS template, data passing, put ejs % syntax in action-->
                                 <form method="POST" action="/addCart?= "><button type="submit" class="btn btn-sm">Add to Cart</button></form>
                                 <form method="GET" action="/view/item?="><button type="submit" class="btn btn-sm">View Item</button></form>
                             </div>
-                            <strong class="text-body-primary">CAN $59.57</strong>
+                            <strong class="text-body-primary">
+                                CAN <%= item.item_price %>
+                            </strong>
                         </div>
                     </div>
                 </div>
+
             </div>
-            <div class="col-3 row-3">
-                <div class="card shadow-sm">
-                    <img class="bd-placeholder-img card-img-top" width="286rem" height="286rem"
-                         src="https://assets.nintendo.com/image/upload/c_fill,w_1200/q_auto:best/f_auto/dpr_2.0/ncom/My%20Nintendo%20Store/EN-US/Collections/Mario%20Kart%202023/mario-kart-keychain-120433/120432-halo-mario-kart-keychain-front-1200x675"
-                         alt=""/>
-                    <div class="card-body">
-                        <h3 class="">Mario Kart Keychain</h3>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div class="btn-group">
-                                <!-- TODO: For EJS template, data passing, put ejs % syntax in action-->
-                                <form method="POST" action="/addCart?= "><button type="submit" class="btn btn-sm">Add to Cart</button></form>
-                                <form method="GET" action="/view/item?="><button type="submit" class="btn btn-sm">View Item</button></form>
-                            </div>
-                            <strong class="text-body-primary">CAN $4.03</strong>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <% }); %>
         </div>
     </div>
     </body>
