@@ -1,3 +1,33 @@
-<h1>
-    this is where featured items will be displayed
-</h1>
+<div class="container mt-5">
+    <h2>Featured Listings</h2>
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
+        <% if(listings && listings.length > 0) { %>
+            <% listings.forEach(function(listing) { %>
+                <div class="col">
+                    <div class="card shadow-sm">
+                        <% if(listing.product_img_URL && listing.product_img_URL.length > 0) { %>
+                            <img src="<%= listing.product_img_URL[0] %>" class="bd-placeholder-img card-img-top" alt="...">
+                        <% } else { %>
+                            <svg class="bd-placeholder-img card-img-top" width="100%" height="225" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Placeholder: Thumbnail" preserveAspectRatio="xMidYMid slice" focusable="false">
+                                <title>Placeholder</title>
+                                <rect width="100%" height="100%" fill="#f77f00"/><text x="50%" y="50%" fill="#ffffff" dy=".3em">Thumbnail</text>
+                            </svg>
+                        <% } %>
+                        <div class="card-body">
+                            <p class="card-text"><%= listing.item_detailed_description %></p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="btn-group">
+                                    <a href="/product-info/<%= listing._id %>" class="btn btn-sm btn-outline-secondary">View</a>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary">Edit</button>
+                                </div>
+                                <small class="text-muted"><%= listing.item_price %> USD</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            <% }); %>
+        <% } else { %>
+            <p>No featured listings available.</p>
+        <% } %>
+    </div>
+</div>

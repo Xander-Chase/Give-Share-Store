@@ -161,10 +161,27 @@ app.get('/signout', (req, res) => {
     res.redirect('/');
 });
 
-app.get('/product-info', (req, res) => {
-    const isLoggedIn = req.session.loggedIn;
-    res.render("product-info", {isLoggedIn : isLoggedIn});
+
+app.get('/product-info/:id', async (req, res) => {
+    try {
+        const itemId = req.params.id;
+        const productsCollection = database.db(mongodb_database).collection('listing_items');
+        
+        const item = await productsCollection.findOne({ _id: new ObjectId(itemId) });
+
+        if (!item) {
+            res.status(404).send('Item not found');
+            return;
+        }
+
+        const isLoggedIn = req.session.loggedIn;
+        res.render('product-info', { item: item, isLoggedIn : isLoggedIn});
+    } catch (error) {
+        console.error('Failed to fetch item:', error);
+        res.status(500).send('Error fetching item details');
+    }
 });
+
 
 app.get('/about', (req, res) => {
     const isLoggedIn = req.session.loggedIn; 
@@ -217,9 +234,21 @@ app.post('/submitListing', async (req, res) => {
     }
 });
 
-app.get('/currentListings', (req, res) => {
-    res.render('currentListings');
+
+app.get('/currentListings', async (req, res) => {
+    try {
+        const productsCollection = database.db(mongodb_database).collection('listing_items');
+        const currentListings = await productsCollection.find({ isFeatureItem: false }).toArray();
+        res.render('currentListings', { listings: currentListings });
+    } catch (error) {
+        console.error('Failed to fetch current listings:', error);
+        res.status(500).send('Error fetching current listings');
+        // handling error case - passing empty array
+        res.render('currentListings', { listings: [] }); // rendering the page even in case of error with an empty array
+    }
+=======
 });
+
 
 app.get('/previousListings', (req, res) => {
     res.render('previousListings');
@@ -229,8 +258,16 @@ app.get('/mailingList', (req, res) => {
     res.render('mailingList');
 });
 
-app.get('/featuredItems', (req, res) => {
-    res.render('featuredItems');
+app.get('/featuredItems', async (req, res) => {
+    try {
+        const productsCollection = database.db(mongodb_database).collection('listing_items');
+        const featuredItems = await productsCollection.find({ isFeatureItem: true }).toArray();
+        res.render('featuredItems', { listings: featuredItems });
+    } catch (error) {
+        console.error('Failed to fetch featured items:', error);
+        res.status(500).send('Error fetching featured items');
+        res.render('featuredItems', { listings: [] });
+    }
 });
 
 // connect to the database and hash passwords if necessary, then start the server
