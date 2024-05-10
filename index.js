@@ -210,25 +210,6 @@ const upload = multer({
 
 // ------------------ multer END ------------------
 
-// // ------------------ AWS Test Start ------------------
-// const { PutObjectCommand } = require("@aws-sdk/client-s3");
-
-// async function testUpload() {
-//     try {
-//         const data = await s3.send(new PutObjectCommand({
-//             Bucket: "the-vintage-garage-test",
-//             Key: "test-upload.txt",
-//             Body: "Hello World!"
-//         }));
-//         console.log("Success", data);
-//     } catch (err) {
-//         console.error("Error", err);
-//     }
-// }
-// testUpload();
-
-// // ------------------ AWS Test End ------------------
-
 app.get('/addListing', (req, res) => {
     res.render('addListing');
 });
