@@ -1,37 +1,21 @@
 <%- include("metadata") %>
-<!DOCTYPE html>
-<html lang="en">
-    <head>
-        <style>
-            .sidebar {
-                background-color: chartreuse;
-            }
-        </style>
-    </head>
-    <body>
-        <%- include("searchNavBar") %>
-        <div class="container-fluid">
-            <div class="row">
-                <div class="col-sm-2 sidebar">
-                    This is where a sidebar would go
-                    <br>
-                    I picked a random colour cause the name was funny, we won't actually use this colour in the sidebar
-                </div>
-                <div class="col-md-8">
-                    <h2>Product name</h2>
-                    <h6>$price.99</h6>
-                    <h6>QTY: a number</h6>
-                    <h4>This is a placeholder description for Product name.</h4>
-                    <img src="../public/img/test.png" alt="image of the item" height="50px" width="50px">
-                    <br>
-                    <button type="button" class="btn btn-primary">Add to cart</button>
-                </div>
-                <div class="col-sm-2 sidebar">
-                    This is another sidebar
-                    <br>
-                    It can stretch for a very long time just check out how much text fits on this one sidebar isn't it cool wow it sure is neat how much text you can fit on here man we'll be able to put a lot of cool content here won't we
-                </div>
-            </div>
-        </div>
-    </body>
-</html>
+
+<%- include("searchNavBar") %>
+<div class="container mt-5">
+    <% if(item.product_img_URL && item.product_img_URL.length > 0) { %>
+        <img src="<%= item.product_img_URL[0] %>" alt="Product Image" height="200px" width="200px">
+    <% } %>
+    <% if(item.product_video_URL && item.product_video_URL.length > 0) { %>
+        <video width="320" height="240" controls>
+            <source src="<%= item.product_video_URL[0] %>" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+    <% } %>
+    <h2><%= item.item_title %></h2>
+    <h6>Price: $<%= item.item_price.toFixed(2) %></h6>
+    <h6>QTY: <%= item.item_quantity %></h6>
+    <h4>Description: <%= item.item_detailed_description %></h4>
+
+    <br>
+    <button type="button" class="btn btn-primary">Add to cart</button>
+</div>
