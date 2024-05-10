@@ -344,6 +344,75 @@ app.get('/mailingList', (req, res) => {
     res.render('mailingList');
 });
 
+app.get('/adminUsers', async (req, res) => {
+    try {
+        const admins = await adminCollection.find().toArray();
+        res.render('adminUsers', { users: admins });
+    } catch (error) {
+        console.error('Error fetching admin users:', error);
+        res.status(500).send('Error fetching admin users');
+    }
+});
+
+app.post('/addUser', async (req, res) => {
+    try {
+        const { name, email, password } = req.body;
+        const hashedPassword = await bcrypt.hash(password, 10);
+        await adminCollection.insertOne({ name, email, password: hashedPassword });
+        //send a response to the client
+        res.send('Admin added successfully!');
+        res.redirect('/manage');
+    } catch (error) {
+        console.error('Error adding new admin:', error);
+        res.status(500).send('Failed to add new admin');
+    }
+});
+
+app.get('/editUser/:id', async (req, res) => {
+    try {
+        const user = await adminCollection.findOne({ _id: new ObjectId(req.params.id) });
+        if (!user) {
+            res.status(404).send('User not found');
+            return;
+        }
+        const isLoggedIn = req.session.loggedIn;
+        res.render('editUser', { user, isLoggedIn : isLoggedIn});
+    } catch (error) {
+        console.error('Error retrieving user for editing:', error);
+        res.status(500).send('Error retrieving user');
+    }
+});
+
+app.post('/updateUser/:id', async (req, res) => {
+    try {
+        const { name, email } = req.body;
+        await adminCollection.updateOne(
+            { _id: new ObjectId(req.params.id) },
+            { $set: { name, email }}
+        );
+        res.redirect('/adminUsers');
+    } catch (error) {
+        console.error('Error updating user:', error);
+        res.status(500).send('Failed to update user');
+    }
+});
+
+app.post('/deleteUser/:id', async (req, res) => {
+    try {
+        const result = await adminCollection.deleteOne({ _id: new ObjectId(req.params.id) });
+        if(result.deletedCount === 1) {
+            res.status(200).send('User deleted successfully');
+        } else {
+            res.status(404).send('User not found');
+        }
+    } catch (error) {
+        console.error('Failed to delete user:', error);
+        res.status(500).send('Failed to delete user');
+    }
+});
+
+
+
 app.get('/featuredItems', async (req, res) => {
     try {
         const productsCollection = database.db(mongodb_database).collection('listing_items');
