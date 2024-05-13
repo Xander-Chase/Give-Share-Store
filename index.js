@@ -7,6 +7,11 @@ const Joi = require('joi');                                 // include the joi m
 const bcrypt = require('bcrypt');                           // include the bcrypt module
 const { ObjectId } = require('mongodb');                    // include the ObjectId module
 const { MongoClient} = require('mongodb');                  // include the MongoClient modules
+const AWS = require('aws-sdk');                             // include the AWS module
+const multer = require('multer');                           // include the multer module
+const multerS3 = require('multer-s3');                      // include the multer-s3 module
+const { S3Client } = require("@aws-sdk/client-s3");         // include the S3Client module
+const { Upload } = require("@aws-sdk/lib-storage");         // include the Upload module
 
 
 
@@ -21,20 +26,6 @@ app.use(express.static('js'));                              // serve static js f
 app.use(express.json());                                    // parse json request bodies
 
 const port = process.env.PORT || 5000;                      // Set port to 8000 if not defined in ..env file
-
-
-////// **************************** Requires Further Development (this is for the "ADD NEW LISTING) MAY BE USEFUL****************************
-
-// const multer = require('multer');
-// const storage = multer.diskStorage({
-//     destination: function (req, file, cb) {
-//         cb(null, 'public/uploads/');
-//     },
-//     filename: function (req, file, cb) {
-//         cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
-//     }
-// });
-// const upload = multer({ storage: storage });
 
 
 // secret variables located in ..env file
@@ -61,6 +52,15 @@ var mongoStore = MongoDBStore.create({
     collection: 'sessions'
 });
 
+// **************************** Functions ****************************
+// Necessary functions to ensure non-repeating code.
+// Fetches all the items from the product list
+async function fetchAllItems()
+{
+    const productsColl = database.db(mongodb_database).collection('listing_items');
+    return await productsColl.find().toArray(); // Fetch all items;
+}
+
 // creating a session
 app.use(session({
     secret: node_session_secret,
@@ -70,10 +70,18 @@ app.use(session({
     cookie: { maxAge: 60 * 60 * 1000 }
 }));
 
-app.get('/', (req, res) => {
-    const isLoggedIn = req.session.loggedIn; 
-    res.render("landing" , {isLoggedIn : isLoggedIn});
+app.get('/', async (req, res) => {
+    const isLoggedIn = req.session.loggedIn;
+    try {
+        const productsCollection = database.db(mongodb_database).collection('listing_items');
+        const currentListings = await productsCollection.find({ isFeatureItem: false }).toArray();
+        res.render("landing", {isLoggedIn, currentListings});
+    } catch (error) {
+        console.error('Failed to fetch current listings:', error);
+        res.render("landing", {isLoggedIn, currentListings: []});
+    }
 });
+
 
 async function hashExistingPasswords() {
     try {
@@ -139,8 +147,88 @@ app.post('/adminLogInSubmit', async (req, res) => {
     res.redirect("/");
 });
 
-app.post('/search', (req, res) => {
-    res.render('catalog');
+function getBodyFilters()
+{
+    // TODO / INFO: ******************************** This is the Sub-Category template ********************************
+    /*<div className="col accordion">
+        <h2 className="accordion-header" id="heading<%= header %>">
+            <button className="accordion-button bg-white" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#<%= header %>" aria-expanded="true" aria-controls="<%= header %>">
+                <strong>WA</strong> <!-- TODO: Variable -->
+            </button>
+        </h2>
+        <div id="<%= header %>" className="accordion-collapse collapse show" aria-labelledby="heading<%= header %>"
+             data-bs-parent="#accordionExample">
+            <div className="accordion-body">
+                <
+                %- choice %>
+            </div>
+        </div>
+    </div>*/
+
+    return [
+
+        "<ul class=\"list-group list-group-flush\">\n" +
+        " <li class=\"list-group-item\">Home</li>" +
+        " <li class=\"list-group-item\">Garden</li>\n" +
+        " <li class=\"list-group-item\">Jewelry</li>\n" +
+        " <li class=\"list-group-item\">Sports</li>\n" +
+        " <li class=\"list-group-item\">Entertainment</li>\n" +
+        " <li class=\"list-group-item\">Clothing</li>\n" +
+        " <li class=\"list-group-item\">Accessories</li>\n" +
+        " <li class=\"list-group-item\">Family</li>\n" +
+        " <li class=\"list-group-item\">Electronics</li>\n" +
+        " <li class=\"list-group-item\">Collectables</li>\n" +
+        "</ul>",
+        "<div class=\"row col-sm\">\n" +
+        "        <div class=\"col text-start\">\n" +
+        "            <label for=\"priceRange\" class=\"form-label\">$0</label>\n" +
+        "        </div>\n" +
+        "        <div class=\"col text-middle\">\n" +
+        "            <label id=\"userRange\" for=\"priceRange\" class=\"form-label\">$199.99</label>\n" +
+        "        </div>\n" +
+        "        <div class=\"col text-end\">\n" +
+        "            <label for=\"priceRange\" class=\"form-label\">$199.99</label>\n" +
+        "        </div>\n" +
+        "        <input type=\"range\" class=\"form-range\" min=\"0\" max=\"199.99\" step=\"5\" id=\"priceRange\" oninput=\"document.getElementById('userRange').innerHTML = `$${this.value}`\">\n" +
+        "    </div>"
+    ];
+}
+app.get('/search/', async (req, res) => {
+    try
+    {
+        // Place this as a public or constant variable.
+        let filtersHeader = ["Categories", "Price"];
+        let bodyFilters = getBodyFilters();
+
+        res.render('catalog', {items: await fetchAllItems(),
+            filterHeaders: filtersHeader,
+            filterStuff: bodyFilters
+        });
+    }
+    catch (error)
+    {
+        console.error("Failed to fetch items:", error);
+        res.status(500).send('Error fetching items');
+    }
+})
+app.get('/search/:key', async (req, res) => {
+    try
+    {
+        let filtersHeader = ["Categories", "Price"];
+        let bodyFilters = getBodyFilters();
+        const searchKey = req.params.key;
+        const productsColl = database.db(mongodb_database).collection('listing_items');
+        const productList = await productsColl.find({item_title: {$regex: searchKey, $options: 'i'}}).toArray();
+        res.render('catalog', {items: productList, keyword: req.params.key,
+            filterHeaders: filtersHeader,
+            filterStuff: bodyFilters});
+    }
+    catch (error)
+    {
+        console.error("Failed to fetch items:", error);
+        res.status(500).send('Error fetching items');
+    }
 });
 
 // **************************** Requires Further Development ****************************
@@ -148,9 +236,7 @@ app.post('/search', (req, res) => {
 // Will need to be updated to only pass items that were added to the cart
 app.get('/cart', async (req, res) => {
     try {
-        const productsCollection = database.db(mongodb_database).collection('listing_items');
-        const productList = await productsCollection.find({}).toArray(); // Fetch all items
-        res.render('cartView', { items: productList }); // Pass items to the EJS template
+        res.render('cartView', { items: await fetchAllItems() }); // Pass items to the EJS template
     } catch (error) {
         console.error('Failed to fetch items:', error);
         res.status(500).send('Error fetching items');
@@ -203,26 +289,59 @@ app.get('/manage', (req, res) => {
     }
 });
 
+
+// ------------------ AWS S3 START ------------------
+
+// Configures AWS to use .env credentials and region
+const s3 = new S3Client({
+    region: process.env.AWS_REGION,
+    credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+    }
+});
+
+// ------------------ AWS S3 END ------------------
+
+// ------------------ multer START ------------------
+
+const upload = multer({
+    storage: multerS3({
+        s3: s3,
+        bucket: 'the-vintage-garage-test',
+        metadata: function (req, file, cb) {
+            cb(null, {fieldName: file.fieldname});
+        },
+        key: function (req, file, cb) {
+            const folder = file.mimetype.startsWith('image/') ? 'images/' : 'videos/';
+            cb(null, folder + Date.now().toString() + '-' + file.originalname);
+        }
+    })
+});
+
+
+// ------------------ multer END ------------------
+
 app.get('/addListing', (req, res) => {
     res.render('addListing');
 });
 
 // Route to handle form submission
-app.post('/submitListing', async (req, res) => {
-    console.log('isFeatureItem:', req.body.isFeatureItem);  
+app.post('/submitListing', upload.fields([{ name: 'photo', maxCount: 10 }, { name: 'video', maxCount: 1 }]), async (req, res) => {
+    const photos = req.files['photo'] ? req.files['photo'].map(file => file.location) : [];
+    const videos = req.files['video'] ? req.files['video'].map(file => file.location) : [];
+
     const listingItemsCollection = database.db(mongodb_database).collection('listing_items');
-    const isFeatureItem = Array.isArray(req.body.isFeatureItem) ? req.body.isFeatureItem.pop() : req.body.isFeatureItem;
-    const item_category = Array.isArray(req.body.item_category) ? req.body.item_category : [req.body.item_category];
     const document = {
-        product_img_URL: ["https://unsplash.com/photos/macbook-air-xII7efH1G6o"],
-        product_video_URL: ["https://youtu.be/51QO4pavK3A?si=M_0zCiADmQ9IzZGV"],
+        product_img_URL: photos,
+        product_video_URL: videos,
         item_title: req.body.item_title,
-        item_price: parseFloat(req.body.item_price) || 0.00,  
-        item_quantity: parseInt(req.body.item_quantity) || 0,  
+        item_price: parseFloat(req.body.item_price) || 0.00,
+        item_quantity: parseInt(req.body.item_quantity) || 0,
         item_detailed_description: req.body.item_detailed_description || '',
         item_estimatedShippingCost: parseFloat(req.body.item_estimatedShippingCost) || 0.0,
-        isFeatureItem: isFeatureItem === 'true',
-        item_category: item_category  
+        isFeatureItem: req.body.isFeatureItem === 'true',
+        item_category: Array.isArray(req.body.item_category) ? req.body.item_category : [req.body.item_category]
     };
 
     try {
@@ -254,8 +373,88 @@ app.get('/previousListings', (req, res) => {
 });
 
 app.get('/mailingList', (req, res) => {
-    res.render('mailingList');
+    // Example data representing people on the mailing list
+    const mailingList = [
+        { name: "Alice Johnson", email: "alice.johnson@example.com" },
+        { name: "Bob Smith", email: "bob.smith@example.com" },
+        { name: "Carolyn B. Yates", email: "carolyn.yates@example.com" },
+        { name: "David Gilmore", email: "david.gilmore@example.com" }
+    ];
+
+    res.render('mailingList', {
+        people: mailingList,
+        isLoggedIn: req.session.loggedIn
+    });
 });
+
+app.get('/adminUsers', async (req, res) => {
+    try {
+        const admins = await adminCollection.find().toArray();
+        res.render('adminUsers', { users: admins });
+    } catch (error) {
+        console.error('Error fetching admin users:', error);
+        res.status(500).send('Error fetching admin users');
+    }
+});
+
+app.post('/addUser', async (req, res) => {
+    try {
+        const { name, email, password } = req.body;
+        const hashedPassword = await bcrypt.hash(password, 10);
+        await adminCollection.insertOne({ name, email, password: hashedPassword });
+        //send a response to the client
+        res.send('Admin added successfully!');
+        res.redirect('/manage');
+    } catch (error) {
+        console.error('Error adding new admin:', error);
+        res.status(500).send('Failed to add new admin');
+    }
+});
+
+app.get('/editUser/:id', async (req, res) => {
+    try {
+        const user = await adminCollection.findOne({ _id: new ObjectId(req.params.id) });
+        if (!user) {
+            res.status(404).send('User not found');
+            return;
+        }
+        const isLoggedIn = req.session.loggedIn;
+        res.render('editUser', { user, isLoggedIn : isLoggedIn});
+    } catch (error) {
+        console.error('Error retrieving user for editing:', error);
+        res.status(500).send('Error retrieving user');
+    }
+});
+
+app.post('/updateUser/:id', async (req, res) => {
+    try {
+        const { name, email } = req.body;
+        await adminCollection.updateOne(
+            { _id: new ObjectId(req.params.id) },
+            { $set: { name, email }}
+        );
+        res.redirect('/adminUsers');
+    } catch (error) {
+        console.error('Error updating user:', error);
+        res.status(500).send('Failed to update user');
+    }
+});
+
+app.post('/deleteUser/:id', async (req, res) => {
+    try {
+        const result = await adminCollection.deleteOne({ _id: new ObjectId(req.params.id) });
+        if(result.deletedCount === 1) {
+            res.status(200).send('User deleted successfully');
+        } else {
+            res.status(404).send('User not found');
+        }
+    } catch (error) {
+        console.error('Failed to delete user:', error);
+        res.status(500).send('Failed to delete user');
+    }
+});
+
+
 
 app.get('/featuredItems', async (req, res) => {
     try {
