@@ -67,7 +67,7 @@ app.use(session({
     saveUninitialized: false,
     resave: true,
     store: mongoStore,
-    cookie: { maxAge: 60 * 60 * 1000 }
+    cookie: { maxAge: 60 * 60 * 1000 * 10 }
 }));
 
 app.get('/', async (req, res) => {
@@ -403,7 +403,6 @@ app.post('/addUser', async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
         await adminCollection.insertOne({ name, email, password: hashedPassword });
         //send a response to the client
-        res.send('Admin added successfully!');
         res.redirect('/manage');
     } catch (error) {
         console.error('Error adding new admin:', error);
