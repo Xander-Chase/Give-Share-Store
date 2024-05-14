@@ -64,11 +64,16 @@ async function fetchAllItems()
 // creating a session
 app.use(session({
     secret: node_session_secret,
-    saveUninitialized: false,
+    saveUninitialized: true,
     resave: true,
     store: mongoStore,
     cookie: { maxAge: 60 * 60 * 1000 * 10 }
 }));
+
+app.use((req, res, next) => {
+    res.locals.cartItemCount = req.session.cart ? req.session.cart.length : 0;
+    next();
+});
 
 app.get('/', async (req, res) => {
     const isLoggedIn = req.session.loggedIn;
@@ -231,17 +236,36 @@ app.get('/search/:key', async (req, res) => {
     }
 });
 
-// **************************** Requires Further Development ****************************
-// Currently is passed all items in the database to the catalog view as proof of concept
-// Will need to be updated to only pass items that were added to the cart
 app.get('/cart', async (req, res) => {
+    const cartItems = req.session.cart || [];
+    res.render('cartView', { items: cartItems });
+});
+
+app.post('/add-to-cart', async (req, res) => {
+    const itemId = req.body.itemId;
+
     try {
-        res.render('cartView', { items: await fetchAllItems() }); // Pass items to the EJS template
+        const productsCollection = database.db(mongodb_database).collection('listing_items');
+        const item = await productsCollection.findOne({ _id: ObjectId.createFromHexString(itemId) });
+
+        if (item) {
+            req.session.cart.push(item);
+            req.session.save(err => {
+                if (err) {
+                    console.error('Error saving session:', err);
+                }
+                res.json({ success: true, cartItemCount: req.session.cart.length });
+            });
+        } else {
+            res.json({ success: false, message: 'Item not found' });
+        }
     } catch (error) {
-        console.error('Failed to fetch items:', error);
-        res.status(500).send('Error fetching items');
+        console.error('Failed to add item to cart:', error);
+        res.json({ success: false, message: 'Error adding item to cart' });
     }
 });
+
+
 app.get('/signout', (req, res) => {
     req.session.destroy()
     res.redirect('/');
