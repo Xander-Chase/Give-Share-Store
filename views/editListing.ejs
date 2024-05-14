@@ -1,0 +1,74 @@
+<%- include("metadata") %>
+<%- include("searchNavBar") %>
+
+<style>
+    .mandatory {
+        color: red;
+    }
+
+    .pic {
+        width: 150px;
+        height: 100px;
+    }
+</style>
+
+<body>
+    <div class="container mt-5">
+        <h2>Edit: </h2>
+        <p> Fields marked with <span class="mandatory">*</span> are mandatory.</p>
+        <form action="/updateListing/<%= listing._id %>" method="post" enctype="multipart/form-data" class="mt-4">
+
+            <div class="pic">
+                <% if(listing.product_img_URL && listing.product_img_URL.length > 0) { %>
+                    <img src="<%= listing.product_img_URL[0] %>" class="bd-placeholder-img card-img-top" alt="..." height="100px" width="150px">
+                <% } else { %>
+                    <svg class="bd-placeholder-img card-img-top" width="100%" height="225" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Placeholder: Thumbnail" preserveAspectRatio="xMidYMid slice" focusable="false">
+                        <title>Placeholder</title>
+                        <rect width="100%" height="100%" fill="#55595c" />
+                        <text x="50%" y="50%" fill="#eceeef" dy=".3em">Thumbnail</text>
+                    </svg>
+                <% } %>
+            </div>
+
+            <!-- Item Title Input -->
+            <div class="mb-3">
+                <label for="itemTitle" class="form-label">Item Title <span class="mandatory">*</span></label>
+                <input type="text" class="form-control" id="itemTitle" name="item_title" value="<%= listing.item_title %>" required>
+            </div>
+
+            <!-- Item Price Input -->
+            <div class="mb-3">
+                <label for="itemPrice" class="form-label">Item Price <span class="mandatory">*</span></label>
+                <input type="number" class="form-control" id="itemPrice" name="item_price" value="<%= listing.item_price %>" step="0.01" required>
+            </div>
+
+            <!-- Detailed Description Input -->
+            <div class="mb-3">
+                <label for="itemDescription" class="form-label">Detailed Description</label>
+                <textarea class="form-control" id="itemDescription" name="item_detailed_description" rows="3"><%= listing.item_detailed_description %></textarea>
+            </div>
+
+            <!-- Estimated Shipping Cost Input -->
+            <div class="mb-3">
+                <label for="shippingCost" class="form-label">Estimated Shipping Cost</label>
+                <input type="number" class="form-control" id="shippingCost" name="item_estimatedShippingCost" value="<%= listing.item_estimatedShippingCost %>" step="0.01">
+            </div>
+
+            <!-- Featured Item Checkbox -->
+            <div class="mb-3 form-check">
+                <input type="hidden" name="isFeatureItem" value="false">
+                <input type="checkbox" class="form-check-input" id="featureItem" name="isFeatureItem" value="true" <% if(listing.isFeatureItem) { %>checked<% } %>>
+                <label class="form-check-label" for="featureItem">Featured Item?</label>
+            </div>
+
+            <!-- Quantity Input -->
+            <div class="mb-3">
+                <label for="itemQuantity" class="form-label">Quantity <span class="mandatory">*</span></label>
+                <input type="number" class="form-control" id="itemQuantity" name="item_quantity" value="<%= listing.item_quantity %>" required>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+        </form>
+    </div>
+</body>
