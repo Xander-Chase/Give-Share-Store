@@ -4,12 +4,12 @@
     <body>
 
     <!-- Filters -->
-    <div class="col " style="width: 15%; position: fixed;">
+    <div class="col" style="width: 15%; position: fixed;">
         <div class="container">
             <div class="col"> <!-- TODO: Use EJS Template -->
-                <% for (i = 0; i < filterHeaders.length; i++) {%>
-                    <div class="col accordion w-100 " >
-                        <div class="accordion-item" >
+                <% for (i = 0; i < filterHeaders.length; i++) { %>
+                    <div class="col accordion w-100">
+                        <div class="accordion-item">
                             <h2 class="accordion-header" id="heading<%= filterHeaders[i] %>">
                                 <button class="accordion-button bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#<%= filterHeaders[i] %>" aria-expanded="true" aria-controls="<%= filterHeaders[i] %>">
                                     <strong><%= filterHeaders[i] %></strong> <!-- TODO: Variable -->
@@ -17,23 +17,29 @@
                             </h2>
                             <div id="<%= filterHeaders[i] %>" class="accordion-collapse collapse show" aria-labelledby="heading<%= filterHeaders[i] %>" data-bs-parent="#accordionExample">
                                 <div class="accordion-body">
-                                    <!-- TODO: Session Cookies because based on the collection search, only show the existing categories or just use node again --> <!-- TODO: Variable-->
-                                    <%- filterStuff[i] %> </div>
+                                    <!-- TODO: Session Cookies because based on the collection search, only show the existing categories or just use node again -->
+                                    <!-- TODO: Variable-->
+                                    <%- filterStuff[i] %>
+                                </div>
                             </div>
                         </div>
                     </div>
-                <% }%>
+                <% } %>
                 <br>
                 <div class="d-flex justify-content-center gap-3">
-                    <form method="post" onsubmit="this.action = `/price=${document.getElementById('selectedPrice').value}`;"><button type="submit" class="btn btn-primary">Confirm</button></form>
-                    <form method="post" onsubmit="this.action = '/clearFilter';"><button type="submit" class="btn btn-danger">Clear</button></form>
+                    <form method="post" onsubmit="this.action = `/price=${document.getElementById('selectedPrice').value}`;">
+                        <button type="submit" class="btn btn-primary">Confirm</button>
+                    </form>
+                    <form method="post" onsubmit="this.action = '/clearFilter';">
+                        <button type="submit" class="btn btn-danger">Clear</button>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
+
     <div class="container-fluid d-grid gap-1 align-items-center"
          style="grid-template-rows: 1fr 0.4fr 0.3fr 1fr; grid-template-columns: 18% 70%;">
-
 
         <!-- Slide Banner -->
         <div class="col" style="grid-column-start: 2">
@@ -50,19 +56,19 @@
                         "/img/landingPage/banner/giveandshareBanner.png",
                         "https://media.istockphoto.com/id/1227531351/photo/summer-banner-sunny-sand-with-palm-leaves-in-tropical-beach.jpg?s=612x612&w=0&k=20&c=PM5uFqeefOvstaSrFUGPOArZR9QfMTCHlAMr4yRoFDk=",
                         "https://jdmyblog.s3.amazonaws.com/wp-content/uploads/2022/06/TOP-BANNER-5.jpg"
-                    ];%>
+                    ]; %>
                     <% let sampleDescriptions = [
                         "The Vintage Garage!",
                         "It's that time of the Month, we have our freshly and chilly Summer collection! Great for your picnic and travels!",
                         "Check out the new jordan collection in The Vintage Garage!"
-                        ];%>
-                    <% for (let i = 0; i < 3; i++) {%>
+                    ]; %>
+                    <% for (let i = 0; i < 3; i++) { %>
                         <% let status = ""; %>
-                        <% if (i < 1) {%>
+                        <% if (i < 1) { %>
                             <% status = "active" %>
-                        <% }%>
-                        <%- include("templates/carouselBanner", {activeStatus: status, description: sampleDescriptions[i], slogan: sampleSlogan[i], source: sampleBanners[i]})%>
-                    <% }%>
+                        <% } %>
+                        <%- include("templates/carouselBanner", {activeStatus: status, description: sampleDescriptions[i], slogan: sampleSlogan[i], source: sampleBanners[i]}) %>
+                    <% } %>
                 </div>
 
                 <button class="carousel-control-prev" type="button" data-bs-target="#myCarousel" data-bs-slide="prev">
@@ -81,11 +87,6 @@
             <h2>Current Listings</h2>
         </div>
 
-
-
-
-
-
         <div class="container-fluid d-grid align-items-center text-center"
              style="grid-template-columns: 25% 75%; grid-column-end: 3; grid-column-start: 1;">
 
@@ -103,14 +104,12 @@
                                     <%= item.item_title %>
                                 </h3>
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <div class="btn-group" style="padding: 1%">
-                                        <!-- TODO: For EJS template, data passing, put ejs % syntax in action-->
-                                        <a href="/product-info/<%= item._id %>"  class="btn btn-sm btn-outline-secondary">View</a>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addToCart('<%= listing._id %>')">Add to Cart</button>
+                                    <div class="btn-group">
+                                        <a href="/product-info/<%= item._id %>" class="btn btn-sm btn-outline-secondary">View</a>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addToCart('<%= item._id %>')">Add to Cart</button>
                                     </div>
                                     <strong class="text-body-primary">
                                         CAN <%= item.item_price %>
-<!--                                        .toFixed(2)-->
                                     </strong>
                                 </div>
                             </div>
@@ -119,7 +118,6 @@
                 <% }); %>
             </div>
         </div>
-
 
         <div class="col text-center">
         </div>
