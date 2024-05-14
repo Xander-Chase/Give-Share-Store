@@ -37,8 +37,8 @@
 
             <div class="d-flex align-items-center">
 
-                <form id="searchBar" method="get" class="w-75 me-3"
-                    role="search" onsubmit="this.action = `/search/${document.getElementById('searchInput').value}`;">
+                <form id="searchBar" method="post" class="w-75 me-3"
+                    role="search" onsubmit="this.action = `/keyword=${document.getElementById('searchInput').value}`;">
                     <input id="searchInput" type="search" class="form-control"
                         placeholder="Search..." aria-label="Search" value="<% if (locals.keyword) {%><%= locals.keyword %><% }%>">
                     <!-- value is the current search prompt-->
