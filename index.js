@@ -72,10 +72,43 @@ app.use(session({
 
 app.get('/', async (req, res) => {
     const isLoggedIn = req.session.loggedIn;
+    let searchKey = "";
+    let maximumPrice = 100000000;
+    if (req.session.keyword != null)
+        searchKey = req.session.keyword;
+
+    if (req.session.maxPrice > 0)
+        maximumPrice = req.session.maxPrice;
+
     try {
+
+        let filtersHeader = ["Categories", "Price", "Sorting"];
         const productsCollection = database.db(mongodb_database).collection('listing_items');
-        const currentListings = await productsCollection.find({ isFeatureItem: false }).toArray();
-        res.render("landing", {isLoggedIn, currentListings});
+
+        let prices = [];
+        let currentListings = await productsCollection.find({ isFeatureItem: false,
+            item_title: {$regex: searchKey, $options: 'i'}}).toArray();
+        currentListings.forEach(function(item)
+        {
+            prices.push(item.item_price)
+        });
+
+        const sortedPrices = prices.sort(function(a, b) {
+            if (a < b)
+                return 1;
+            else if (a > b)
+                return -1;
+            else
+                return 0;
+        });
+
+        currentListings = await productsCollection.find({ isFeatureItem: false,
+            item_title: {$regex: searchKey, $options: 'i'},
+            item_price: {$lt: Math.round(maximumPrice)}}).toArray();
+
+        let bodyFilters = getBodyFilters(sortedPrices[0], sortedPrices[prices.length-1], maximumPrice);
+
+        res.render("landing", {isLoggedIn, currentListings, filterHeaders: filtersHeader, filterStuff: bodyFilters});
     } catch (error) {
         console.error('Failed to fetch current listings:', error);
         res.render("landing", {isLoggedIn, currentListings: []});
@@ -147,25 +180,8 @@ app.post('/adminLogInSubmit', async (req, res) => {
     res.redirect("/");
 });
 
-function getBodyFilters()
+function getBodyFilters(maxVal, minVal, currentPrice)
 {
-    // TODO / INFO: ******************************** This is the Sub-Category template ********************************
-    /*<div className="col accordion">
-        <h2 className="accordion-header" id="heading<%= header %>">
-            <button className="accordion-button bg-white" type="button" data-bs-toggle="collapse"
-                    data-bs-target="#<%= header %>" aria-expanded="true" aria-controls="<%= header %>">
-                <strong>WA</strong> <!-- TODO: Variable -->
-            </button>
-        </h2>
-        <div id="<%= header %>" className="accordion-collapse collapse show" aria-labelledby="heading<%= header %>"
-             data-bs-parent="#accordionExample">
-            <div className="accordion-body">
-                <
-                %- choice %>
-            </div>
-        </div>
-    </div>*/
-
     return [
 
         "<ul class=\"list-group list-group-flush\">\n" +
@@ -180,57 +196,56 @@ function getBodyFilters()
         " <li class=\"list-group-item\">Electronics</li>\n" +
         " <li class=\"list-group-item\">Collectables</li>\n" +
         "</ul>",
+
         "<div class=\"row col-sm\">\n" +
         "        <div class=\"col text-start\">\n" +
-        "            <label for=\"priceRange\" class=\"form-label\">$0</label>\n" +
+        "            <label for=\"priceRange\" class=\"form-label\">" +
+        "               <strong>$"+ (Math.floor(minVal / 5) * 5) + "</strong>" +
+        "           </label>\n" +
         "        </div>\n" +
         "        <div class=\"col text-middle\">\n" +
-        "            <label id=\"userRange\" for=\"priceRange\" class=\"form-label\">$199.99</label>\n" +
+        "            <label id=\"userRange\" for=\"priceRange\" class=\"form-label\">$" + currentPrice + "</label>\n" +
         "        </div>\n" +
         "        <div class=\"col text-end\">\n" +
-        "            <label for=\"priceRange\" class=\"form-label\">$199.99</label>\n" +
+        "            <label for=\"priceRange\" class=\"form-label\">" +
+        "               <strong>$" + (Math.ceil(maxVal / 5) * 5) + "</strong>" +
+        "           </label>\n" +
         "        </div>\n" +
-        "        <input type=\"range\" class=\"form-range\" min=\"0\" max=\"199.99\" step=\"5\" id=\"priceRange\" oninput=\"document.getElementById('userRange').innerHTML = `$${this.value}`\">\n" +
-        "    </div>"
+        "        <input id=\"selectedPrice\" type=\"range\" class=\"form-range\" min="+ (Math.floor(minVal / 5) * 5) +" max="+ (Math.ceil(maxVal / 5) * 5) +" step=" +
+        (Math.ceil(maxVal / 5) - (maxVal / 5)) + " id=\"priceRange\" oninput=\"" +
+        "{document.getElementById('userRange').innerHTML = `$${this.value}`;}\">\n" +
+        "</div>",
+
+        "<ul class='list-group list-group-flush'>" +
+        " <li class='list-group-item'>Sort by Highest Price</li>" +
+        " <li class='list-group-item'>Sort by Lowest Price</li></ul>"
     ];
 }
-app.get('/search/', async (req, res) => {
-    try
-    {
-        // Place this as a public or constant variable.
-        let filtersHeader = ["Categories", "Price"];
-        let bodyFilters = getBodyFilters();
+function sup()
+{
+    console.log("Wassup");
 
-        res.render('catalog', {items: await fetchAllItems(),
-            filterHeaders: filtersHeader,
-            filterStuff: bodyFilters
-        });
-    }
-    catch (error)
-    {
-        console.error("Failed to fetch items:", error);
-        res.status(500).send('Error fetching items');
-    }
+}
+app.post('/keyword=', (req, res) => {
+    req.session.keyword = null;
+    res.redirect('/');
 })
-app.get('/search/:key', async (req, res) => {
-    try
-    {
-        let filtersHeader = ["Categories", "Price"];
-        let bodyFilters = getBodyFilters();
-        const searchKey = req.params.key;
-        const productsColl = database.db(mongodb_database).collection('listing_items');
-        const productList = await productsColl.find({item_title: {$regex: searchKey, $options: 'i'}}).toArray();
-        res.render('catalog', {items: productList, keyword: req.params.key,
-            filterHeaders: filtersHeader,
-            filterStuff: bodyFilters});
-    }
-    catch (error)
-    {
-        console.error("Failed to fetch items:", error);
-        res.status(500).send('Error fetching items');
-    }
+app.post('/keyword=:key', async (req, res) => {
+    req.session.keyword = req.params.key;
+    res.redirect('/');
 });
 
+app.post('/price=:newMax', (req, res) => {
+    req.session.maxPrice = req.params.newMax;
+    res.redirect('/');
+})
+
+app.post('/clearFilter', (req, res) =>
+{
+    req.session.maxPrice = 0;
+    req.session.keyword = null;
+    res.redirect('/');
+})
 // **************************** Requires Further Development ****************************
 // Currently is passed all items in the database to the catalog view as proof of concept
 // Will need to be updated to only pass items that were added to the cart
