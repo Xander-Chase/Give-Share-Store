@@ -100,11 +100,19 @@ async function fetchAllItems()
 // creating a session
 app.use(session({
     secret: node_session_secret,
-    saveUninitialized: false,
+    saveUninitialized: true,
     resave: true,
     store: mongoStore,
-    cookie: { maxAge: 60 * 60 * 1000 }
+    cookie: { maxAge: 60 * 60 * 1000 * 10 }
 }));
+
+app.use((req, res, next) => {
+    if (!req.session.cart) {
+        req.session.cart = [];
+    }
+    res.locals.cartItemCount = req.session.cart ? req.session.cart.length : 0;
+    next();
+});
 
 app.get('/', async (req, res) => {
     const isLoggedIn = req.session.loggedIn;
@@ -285,13 +293,56 @@ app.post('/clearFilter', (req, res) =>
 // Currently is passed all items in the database to the catalog view as proof of concept
 // Will need to be updated to only pass items that were added to the cart
 app.get('/cart', async (req, res) => {
+    const cartItems = req.session.cart || [];
+    res.render('cartView', { items: cartItems });
+});
+
+app.post('/add-to-cart', async (req, res) => {
+    const itemId = req.body.itemId;
+
     try {
-        res.render('cartView', { items: await fetchAllItems() }); // Pass items to the EJS template
+        const productsCollection = database.db(mongodb_database).collection('listing_items');
+        const item = await productsCollection.findOne({ _id: ObjectId.createFromHexString(itemId) });
+
+        if (item) {
+            req.session.cart.push(item);
+            req.session.save(err => {
+                if (err) {
+                    console.error('Error saving session:', err);
+                }
+                res.json({ success: true, cartItemCount: req.session.cart.length });
+            });
+        } else {
+            res.json({ success: false, message: 'Item not found' });
+        }
     } catch (error) {
-        console.error('Failed to fetch items:', error);
-        res.status(500).send('Error fetching items');
+        console.error('Failed to add item to cart:', error);
+        res.json({ success: false, message: 'Error adding item to cart' });
     }
 });
+
+app.post('/remove-from-cart', async (req, res) => {
+    const itemId = req.body.itemId;
+
+    try {
+        if (!req.session.cart) {
+            return res.json({ success: false, message: 'Cart is empty' });
+        }
+
+        req.session.cart = req.session.cart.filter(item => item._id.toString() !== itemId);
+        req.session.save(err => {
+            if (err) {
+                console.error('Error saving session:', err);
+                return res.json({ success: false, message: 'Error saving session' });
+            }
+            res.json({ success: true, cartItemCount: req.session.cart.length });
+        });
+    } catch (error) {
+        console.error('Failed to remove item from cart:', error);
+        res.json({ success: false, message: 'Error removing item from cart' });
+    }
+});
+
 app.get('/signout', (req, res) => {
     req.session.destroy()
     res.redirect('/');
@@ -396,12 +447,67 @@ app.post('/submitListing', upload.fields([{ name: 'photo', maxCount: 10 }, { nam
 
     try {
         await listingItemsCollection.insertOne(document);
-        res.send('Listing added successfully!');
+        res.redirect('/manage');
     } catch (error) {
         console.error('Error submitting new listing:', error);
         res.status(500).send('Failed to add new listing');
     }
 });
+
+app.get('/editListing/:id', async (req, res) => {
+    const itemId = req.params.id;
+    isLoggedIn = req.session.loggedIn;
+    console.log("Received ID for editing:", itemId);
+
+    if (!ObjectId.isValid(itemId)) {
+        return res.status(400).send('Invalid ID format');
+    }
+
+    try {
+        const listing = await database.db(mongodb_database).collection('listing_items').findOne({_id: new ObjectId(itemId)});
+        if (!listing) {
+            return res.status(404).send('Listing not found');
+        }
+        res.render('editListing', { listing, isLoggedIn});
+    } catch (error) {
+        console.error('Failed to fetch listing:', error);
+        res.status(500).send('Error fetching listing details');
+    }
+});
+
+
+app.post('/updateListing/:id', upload.none(), async (req, res) => {
+    const itemId = new ObjectId(req.params.id);
+    console.log("Form submission data:", req.body);
+
+    const updateData = {
+        item_title: req.body.item_title,
+        item_price: parseFloat(req.body.item_price) || 0.00,
+        item_quantity: parseInt(req.body.item_quantity) || 0,
+        item_detailed_description: req.body.item_detailed_description || '',
+        item_estimatedShippingCost: parseFloat(req.body.item_estimatedShippingCost) || 0.0,
+        isFeatureItem: req.body.isFeatureItem ? req.body.isFeatureItem === 'true' : false,
+    };
+
+
+    try {
+        const result = await database.db(mongodb_database).collection('listing_items').updateOne(
+            { _id: itemId },
+            { $set: updateData }
+        );
+        if (result.modifiedCount === 0) {
+            console.log("No changes were made.");
+            res.send("No changes were made.");
+        } else {
+            console.log("Updated listing successfully");
+            res.redirect('/manage');
+        }
+    } catch (error) {
+        console.error('Failed to update listing:', error);
+        res.status(500).send('Error updating listing');
+    }
+});
+
 
 
 app.get('/currentListings', async (req, res) => {
@@ -423,7 +529,18 @@ app.get('/previousListings', (req, res) => {
 });
 
 app.get('/mailingList', (req, res) => {
-    res.render('mailingList');
+    // Example data representing people on the mailing list
+    const mailingList = [
+        { name: "Alice Johnson", email: "alice.johnson@example.com" },
+        { name: "Bob Smith", email: "bob.smith@example.com" },
+        { name: "Carolyn B. Yates", email: "carolyn.yates@example.com" },
+        { name: "David Gilmore", email: "david.gilmore@example.com" }
+    ];
+
+    res.render('mailingList', {
+        people: mailingList,
+        isLoggedIn: req.session.loggedIn
+    });
 });
 
 app.get('/adminUsers', async (req, res) => {
@@ -442,7 +559,6 @@ app.post('/addUser', async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
         await adminCollection.insertOne({ name, email, password: hashedPassword });
         //send a response to the client
-        res.send('Admin added successfully!');
         res.redirect('/manage');
     } catch (error) {
         console.error('Error adding new admin:', error);
