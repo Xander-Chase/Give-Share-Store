@@ -12,6 +12,8 @@ const multer = require('multer');                           // include the multe
 const multerS3 = require('multer-s3');                      // include the multer-s3 module
 const { S3Client } = require("@aws-sdk/client-s3");         // include the S3Client module
 const { Upload } = require("@aws-sdk/lib-storage");         // include the Upload module
+const Realm = require("realm");
+const { google } = require("googleapis");
 
 
 
@@ -35,6 +37,40 @@ const mongodb_password = process.env.MONGODB_PASSWORD;
 const mongodb_database = process.env.MONGODB_DATABASE;
 const mongodb_session_secret = process.env.MONGODB_SESSION_SECRET;
 const node_session_secret = process.env.NODE_SESSION_SECRET;
+const google_client_id = process.env.GOOGLE_CLIENT_ID;
+const google_project_id = process.env.GOOGLE_PROJECT_ID;
+const google_client_secret = process.env.GOOGLE_CLIENT_SECRET;
+
+// Configure and instantiate Google OAuth2.0 client
+/*const oauthConfig = {
+    client_id: google_client_id,
+    project_id: google_project_id,
+    auth_uri: "https://accounts.google.com/o/oauth2/auth",
+    token_uri: "https://oauth2.googleapis.com/token",
+    auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
+    client_secret: google_client_secret,
+    redirect_uris: [`${BASE_URL}/auth/google/callback`],
+    JWTsecret: "secret",
+    scopes: [
+        "https://www.googleapis.com/auth/userinfo.email",
+        "https://www.googleapis.com/auth/userinfo.profile",
+        "openid",
+        // any other scopes you might require. View all here - https://developers.google.com/identity/protocols/oauth2/scopes
+    ],
+};
+
+const OAuth2 = google.auth.OAuth2;
+const oauth2Client = new OAuth2(
+    oauthConfig.client_id,
+    oauthConfig.client_secret,
+    oauthConfig.redirect_uris[0]
+);
+
+// Instantiate Realm app
+const realmApp = new Realm.App({
+    id: REALM_APP_ID,
+});*/
+
 
 
 // importing the database object from databaseConnection.js file
@@ -219,8 +255,7 @@ function getBodyFilters(maxVal, minVal, currentPrice)
         "               <strong>$" + (Math.ceil(maxVal / 5) * 5) + "</strong>" +
         "           </label>\n" +
         "        </div>\n" +
-        "        <input id=\"selectedPrice\" type=\"range\" class=\"form-range\" min="+ (Math.floor(minVal / 5) * 5) +" max="+ (Math.ceil(maxVal / 5) * 5) +" step=" +
-        (Math.ceil(maxVal / 5) - (maxVal / 5)) + " id=\"priceRange\" oninput=\"" +
+        "        <input id=\"selectedPrice\" type=\"range\" class=\"form-range\" min="+ (Math.floor(minVal / 5) * 5) +" max="+ (Math.ceil(maxVal / 5) * 5) +" step=5 id=\"priceRange\" oninput=\"" +
         "{document.getElementById('userRange').innerHTML = `$${this.value}`;}\">\n" +
         "</div>",
 
