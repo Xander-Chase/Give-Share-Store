@@ -71,6 +71,9 @@ app.use(session({
 }));
 
 app.use((req, res, next) => {
+    if (!req.session.cart) {
+        req.session.cart = [];
+    }
     res.locals.cartItemCount = req.session.cart ? req.session.cart.length : 0;
     next();
 });
@@ -265,6 +268,27 @@ app.post('/add-to-cart', async (req, res) => {
     }
 });
 
+app.post('/remove-from-cart', async (req, res) => {
+    const itemId = req.body.itemId;
+
+    try {
+        if (!req.session.cart) {
+            return res.json({ success: false, message: 'Cart is empty' });
+        }
+
+        req.session.cart = req.session.cart.filter(item => item._id.toString() !== itemId);
+        req.session.save(err => {
+            if (err) {
+                console.error('Error saving session:', err);
+                return res.json({ success: false, message: 'Error saving session' });
+            }
+            res.json({ success: true, cartItemCount: req.session.cart.length });
+        });
+    } catch (error) {
+        console.error('Failed to remove item from cart:', error);
+        res.json({ success: false, message: 'Error removing item from cart' });
+    }
+});
 
 app.get('/signout', (req, res) => {
     req.session.destroy()
