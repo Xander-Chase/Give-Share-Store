@@ -346,12 +346,67 @@ app.post('/submitListing', upload.fields([{ name: 'photo', maxCount: 10 }, { nam
 
     try {
         await listingItemsCollection.insertOne(document);
-        res.send('Listing added successfully!');
+        res.redirect('/manage');
     } catch (error) {
         console.error('Error submitting new listing:', error);
         res.status(500).send('Failed to add new listing');
     }
 });
+
+app.get('/editListing/:id', async (req, res) => {
+    const itemId = req.params.id;
+    isLoggedIn = req.session.loggedIn;
+    console.log("Received ID for editing:", itemId);
+
+    if (!ObjectId.isValid(itemId)) {
+        return res.status(400).send('Invalid ID format');
+    }
+
+    try {
+        const listing = await database.db(mongodb_database).collection('listing_items').findOne({_id: new ObjectId(itemId)});
+        if (!listing) {
+            return res.status(404).send('Listing not found');
+        }
+        res.render('editListing', { listing, isLoggedIn});
+    } catch (error) {
+        console.error('Failed to fetch listing:', error);
+        res.status(500).send('Error fetching listing details');
+    }
+});
+
+
+app.post('/updateListing/:id', upload.none(), async (req, res) => {
+    const itemId = new ObjectId(req.params.id);
+    console.log("Form submission data:", req.body);
+
+    const updateData = {
+        item_title: req.body.item_title,
+        item_price: parseFloat(req.body.item_price) || 0.00,
+        item_quantity: parseInt(req.body.item_quantity) || 0,
+        item_detailed_description: req.body.item_detailed_description || '',
+        item_estimatedShippingCost: parseFloat(req.body.item_estimatedShippingCost) || 0.0,
+        isFeatureItem: req.body.isFeatureItem ? req.body.isFeatureItem === 'true' : false,
+    };
+
+
+    try {
+        const result = await database.db(mongodb_database).collection('listing_items').updateOne(
+            { _id: itemId },
+            { $set: updateData }
+        );
+        if (result.modifiedCount === 0) {
+            console.log("No changes were made.");
+            res.send("No changes were made.");
+        } else {
+            console.log("Updated listing successfully");
+            res.redirect('/manage');
+        }
+    } catch (error) {
+        console.error('Failed to update listing:', error);
+        res.status(500).send('Error updating listing');
+    }
+});
+
 
 
 app.get('/currentListings', async (req, res) => {
