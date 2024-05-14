@@ -126,4 +126,24 @@
 
     </div>
     </body>
+    <script>
+        function addToCart(itemId) {
+            fetch('/add-to-cart', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ itemId: itemId })
+            }).then(response => response.json())
+              .then(data => {
+                  if (data.success) {
+                      document.getElementById('cart-item-count').innerText = data.cartItemCount;
+                  } else {
+                      alert(data.message);
+                  }
+              }).catch(error => {
+                  console.error('Error adding item to cart:', error);
+              });
+        }
+    </script>
 </html>
