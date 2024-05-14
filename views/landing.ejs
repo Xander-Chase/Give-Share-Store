@@ -1,13 +1,42 @@
 <%- include("metadata") %>
 <html lang="en" >
-    <%- include("searchNavBar") %>
+    <%- include("searchNavBar", {isLoggedIn: false}) %>
     <body>
 
-    <div class="container-fluid d-grid gap-3 align-items-center"
-         style="grid-template-rows: 0fr 1fr 3fr ;">
+    <!-- Filters -->
+    <div class="col " style="width: 15%; position: fixed;">
+        <div class="container">
+            <div class="col"> <!-- TODO: Use EJS Template -->
+                <% for (i = 0; i < filterHeaders.length; i++) {%>
+                    <div class="col accordion w-100 " >
+                        <div class="accordion-item" >
+                            <h2 class="accordion-header" id="heading<%= filterHeaders[i] %>">
+                                <button class="accordion-button bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#<%= filterHeaders[i] %>" aria-expanded="true" aria-controls="<%= filterHeaders[i] %>">
+                                    <strong><%= filterHeaders[i] %></strong> <!-- TODO: Variable -->
+                                </button>
+                            </h2>
+                            <div id="<%= filterHeaders[i] %>" class="accordion-collapse collapse show" aria-labelledby="heading<%= filterHeaders[i] %>" data-bs-parent="#accordionExample">
+                                <div class="accordion-body">
+                                    <!-- TODO: Session Cookies because based on the collection search, only show the existing categories or just use node again --> <!-- TODO: Variable-->
+                                    <%- filterStuff[i] %> </div>
+                            </div>
+                        </div>
+                    </div>
+                <% }%>
+                <br>
+                <div class="d-flex justify-content-center gap-3">
+                    <form method="post" onsubmit="this.action = `/price=${document.getElementById('selectedPrice').value}`;"><button type="submit" class="btn btn-primary">Confirm</button></form>
+                    <form method="post" onsubmit="this.action = '/clearFilter';"><button type="submit" class="btn btn-danger">Clear</button></form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container-fluid d-grid gap-1 align-items-center"
+         style="grid-template-rows: 1fr 0.4fr 0.3fr 1fr; grid-template-columns: 18% 70%;">
+
 
         <!-- Slide Banner -->
-        <div class="col">
+        <div class="col" style="grid-column-start: 2">
             <div id="myCarousel" class="carousel slide mb-6 pointer-event" data-bs-ride="carousel">
                 <div class="carousel-indicators">
                     <button type="button" data-bs-target="#myCarousel" data-bs-slide-to="0" class="" aria-label="Slide 1"></button>
@@ -47,62 +76,54 @@
             </div>
         </div>
 
-        <div class="container mt-4">
+        <div class="container mt-1" style="grid-column-start: 2; grid-column-end: 3">
             <h1>Welcome to The Vintage Garage!</h1>
             <h2>Current Listings</h2>
-            <div class="row">
-                <% currentListings.forEach(function(listing) { %>
-                    <div class="col-md-4">
-                        <div class="card mb-4 shadow-sm">
-                            <img src="<%= listing.product_img_URL[0] %>" class="card-img-top" alt="<%= listing.item_title %>">
+        </div>
+
+
+
+
+
+
+        <div class="container-fluid d-grid align-items-center text-center"
+             style="grid-template-columns: 25% 75%; grid-column-end: 3; grid-column-start: 1;">
+
+            <div class="col-md-7"></div>
+            <!-- FIXME: Add Space for the right side of the page -->
+            <div class="row row-cols-1">
+                <% currentListings.forEach(function(item) { %>
+                    <div class="col-3 row-3">
+                        <div class="card shadow-sm" style="height: 100%">
+                            <img class="bd-placeholder-img card-img-top" width="286rem" height="286rem"
+                                 src="<%= item.product_img_URL[0] %>"
+                                 alt="<%= item.item_title %>" />
                             <div class="card-body">
-                                <h5 class="card-title"><%= listing.item_title %></h5>
-                                <p class="card-text">$<%= listing.item_price.toFixed(2) %></p>
+                                <h3 class="">
+                                    <%= item.item_title %>
+                                </h3>
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <div class="btn-group">
-                                      <!-- TODO: For EJS template, data passing, put ejs % syntax in action-->
-                                      <a href="/product-info/<%= item._id %>"  class="btn btn-sm btn-outline-secondary">View</a>
-                                      <button type="button" class="btn btn-sm btn-outline-secondary">Add to Cart</button>
+                                    <div class="btn-group" style="padding: 1%">
+                                        <!-- TODO: For EJS template, data passing, put ejs % syntax in action-->
+                                        <a href="/product-info/<%= item._id %>"  class="btn btn-sm btn-outline-secondary">View</a>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary">Add to Cart</button>
                                     </div>
+                                    <strong class="text-body-primary">
+                                        CAN <%= item.item_price %>
+<!--                                        .toFixed(2)-->
+                                    </strong>
                                 </div>
                             </div>
                         </div>
                     </div>
                 <% }); %>
             </div>
+        </div>
 
 
         <div class="col text-center">
         </div>
 
     </div>
-
-
-
-
-
-
-
     </body>
-<script>
-    function addToCart(itemId) {
-        fetch('/add-to-cart', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ itemId: itemId })
-        }).then(response => response.json())
-          .then(data => {
-              if (data.success) {
-                  document.getElementById('cart-item-count').innerText = data.cartItemCount;
-              } else {
-                  alert(data.message);
-              }
-          }).catch(error => {
-              console.error('Error adding item to cart:', error);
-          });
-    }
-</script>
-
 </html>
