@@ -106,7 +106,7 @@
                                     <div class="btn-group" style="padding: 1%">
                                         <!-- TODO: For EJS template, data passing, put ejs % syntax in action-->
                                         <a href="/product-info/<%= item._id %>"  class="btn btn-sm btn-outline-secondary">View</a>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary">Add to Cart</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addToCart('<%= listing._id %>')">Add to Cart</button>
                                     </div>
                                     <strong class="text-body-primary">
                                         CAN <%= item.item_price %>
