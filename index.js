@@ -79,8 +79,9 @@ const realmApp = new Realm.App({
 // importing the database object from databaseConnection.js file
 var { database } = include('databaseConnection');
 
-// referencing to users collection in database
+// referencing to admins and users collection in database
 const adminCollection = database.db(mongodb_database).collection('admins');
+const userCollection = database.db(mongodb_database).collection('users');
 
 // linking to mongoDb database
 var mongoStore = MongoDBStore.create({
@@ -189,6 +190,14 @@ app.get('/adminLogIn', (req, res) => {
     res.render("adminLogIn");
 });
 
+app.get('/userLogIn', (req, res) => {
+    res.render("userLogIn");
+});
+
+app.get('/userNewLogIn', (req, res) => {
+    res.render("userNewLogIn");
+});
+
 app.post('/adminLogInSubmit', async (req, res) => {
 
     const email = req.body.email;
@@ -217,6 +226,44 @@ app.post('/adminLogInSubmit', async (req, res) => {
     if (!passwordMatch) {
         console.log("Invalid password");
         res.render("adminLogIn", {error: "Error: Invalid password"});
+        return;
+    }
+
+    req.session.loggedIn = true;
+    req.session.name = user.name;
+    req.session.email = user.email;
+    req.session.password = user.password;
+    res.redirect("/");
+});
+
+app.post('/userLogInSubmit', async (req, res) => {
+
+    const email = req.body.email;
+    const password = req.body.password;
+
+    const schema = Joi.object({
+        email: Joi.string().required(),
+        password: Joi.string().max(20).required()
+    });
+
+    const validationResult = schema.validate({ email, password });
+    if (validationResult.error != null) {
+        console.log(validationResult.error);
+        res.render("userLogIn", {error: "Error: "+validationResult.error.message});
+        return;
+    }
+
+    const user = await userCollection.findOne({ email: email });
+    if (user === null) {
+        console.log("User not found");
+        res.render("userLogIn", {error: "Error: User not found"});
+        return;
+    }
+
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) {
+        console.log("Invalid password");
+        res.render("userLogIn", {error: "Error: Invalid password"});
         return;
     }
 

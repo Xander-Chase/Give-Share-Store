@@ -1,0 +1,33 @@
+<%- include("metadata") %>
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <style>
+            .mandatory {
+                color: red;
+            }
+        </style>
+    </head>
+<body class="p-3 m-0 border-0 bd-example m-0 border-0">
+    <form method="POST" action="/userLogInSubmit">
+
+        <h1 class="h3 mb-3 fw-normal">User sign in</h1>
+
+        <div class="mb-3">
+            <label for="floatingInput">Email address <span
+                    class="mandatory">*</span></label>
+
+            <input name='email' type="email" class="form-control"
+                id="floatingInput">
+            <div id="emailHelp" class="form-text"></div>
+        </div>
+        <div class="mb-3">
+            <label for="floatingPassword">Password <span
+                    class="mandatory">*</span></label>
+            <input name='password' type="password" class="form-control"
+                id="floatingPassword">
+        </div>
+
+        <button type="submit" class="btn btn-primary">Submit</button>
+    </form>
+</body>
