@@ -104,20 +104,17 @@
         <div class="container">
             <header class="d-flex justify-content-center py-3">
                 <ul class="nav nav-pills">
-                    <li class="list1 nav-item"><a href="/" class="nav-link"
-                            aria-current="page">Home</a></li>
-                    <li class="list1 nav-item"><a href="#"
-                            class="nav-link">Jewelry</a></li>
-                    <li class="list1 nav-item"><a href="#" class="nav-link">Sporting
-                            Goods</a></li>
-                    <li class="list1 nav-item"><a href="#"
-                            class="nav-link">Home</a></li>
-                    <li class="list1 nav-item"><a href="#"
-                            class="nav-link">Women</a></li>
-                    <li class="list1 nav-item"><a href="#"
-                            class="nav-link">Men</a></li>
-                    <li class="list1 nav-item"><a href="#"
-                            class="nav-link">Sales</a></li>
+                    <% categories.forEach(function(category) { %>
+                    <li class="list1 nav-item" id="<%= category.category_type %>">
+                        <form method="POST" class="nav-link"
+                              action="/category=<%= category.category_type%>">
+                            <button type="submit" style="border: none; background: none"
+                            aria-current="page">
+                                <%= category.category_type%>
+                            </button>
+                        </form>
+                    </li>
+                    <% }) %>
                 </ul>
             </header>
         </div>
