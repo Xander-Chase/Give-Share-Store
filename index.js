@@ -408,7 +408,7 @@ app.post('/changePassword', async (req, res) => {
     const isLoggedIn = req.session.loggedIn;
     const schema = Joi.object({
         currentPassword: Joi.string().required(),
-        newPassword: Joi.string().min(8).required(),
+        newPassword: Joi.string().min(3).required(),
         confirmPassword: Joi.any().valid(Joi.ref('newPassword')).required()
     });
 
