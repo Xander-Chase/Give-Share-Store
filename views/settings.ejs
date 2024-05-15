@@ -16,8 +16,8 @@
                 <h2>User Information</h2>
             </div>
             <div class="card-body">
-                <p>Name: <%= user %></p>
-                <p>Email: <%= email %></p>
+                <p>Name: <b><%= user %></b></p>
+                <p>Email: <b><%= email %></b></p>
             </div>
         </div>
         
@@ -26,7 +26,7 @@
                 <h2>Change Password</h2>
             </div>
             <div class="card-body">
-                <form action="/change-password" method="POST">
+                <form action="/changePassword" method="POST">
                     <div class="form-group">
                         <label for="current-password">Current Password:</label>
                         <input type="password" id="current-password" name="currentPassword" class="form-control" required>
@@ -45,6 +45,10 @@
                     <button type="submit" class="btn btn-primary">Change Password</button>
                 </form>
             </div>
+        </div>
+
+        <div>
+            <a href="/signout" class="btn btn-primary mt-4">Signout</a>
         </div>
     </div>
 </body>
