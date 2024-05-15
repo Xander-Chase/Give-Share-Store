@@ -11,7 +11,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.574.0",
     "@aws-sdk/lib-storage": "^3.574.0",
-    "aws-sdk": "^2.1618.0",
+    "aws-sdk": "^2.1619.0",
     "bcrypt": "^5.1.1",
     "connect-mongo": "^5.1.0",
     "dotenv": "^16.4.5",
