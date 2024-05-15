@@ -1,6 +1,21 @@
 <%- include("metadata") %>
 <html lang="en">
     <%- include("searchNavBar", {isLoggedIn: false}) %>
+    <head>
+        <style>
+            @media (min-width: 300px) {
+                .col-md-8 {
+                    width: 100%;
+                }
+            }
+
+            @media (min-width: 800px) {
+                .col-md-8 {
+                 width: 50%;
+                }
+            }
+        </style>
+    </head>
     <body>
         <div class="container">
             <div class="row g-5">
