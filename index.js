@@ -390,6 +390,17 @@ app.get('/manage', (req, res) => {
     }
 });
 
+app.get('/settings', (req, res) => {
+    if (req.session.loggedIn) {
+        const isLoggedIn = req.session.loggedIn;
+        user = req.session.name;
+        email = req.session.email;
+        res.render("settings", {isLoggedIn : isLoggedIn, user : user, email : email});
+    } 
+    else {
+        res.redirect('/adminLogIn');
+    }
+});
 
 // ------------------ AWS S3 START ------------------
 
