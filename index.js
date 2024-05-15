@@ -488,6 +488,7 @@ app.post('/submitListing', upload.fields([{ name: 'photo', maxCount: 10 }, { nam
         item_quantity: parseInt(req.body.item_quantity) || 0,
         item_detailed_description: req.body.item_detailed_description || '',
         item_estimatedShippingCost: parseFloat(req.body.item_estimatedShippingCost) || 0.0,
+        item_estimatedInsuranceCost: parseFloat(req.body.item_estimatedInsuranceCost) || 0.0,
         isFeatureItem: req.body.isFeatureItem === 'true',
         item_category: Array.isArray(req.body.item_category) ? req.body.item_category : [req.body.item_category]
     };
@@ -533,6 +534,7 @@ app.post('/updateListing/:id', upload.none(), async (req, res) => {
         item_quantity: parseInt(req.body.item_quantity) || 0,
         item_detailed_description: req.body.item_detailed_description || '',
         item_estimatedShippingCost: parseFloat(req.body.item_estimatedShippingCost) || 0.0,
+        item_estimatedInsuranceCost: parseFloat(req.body.item_estimatedInsuranceCost) || 0.0,
         isFeatureItem: req.body.isFeatureItem ? req.body.isFeatureItem === 'true' : false,
     };
 
