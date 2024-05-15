@@ -438,6 +438,53 @@ app.get('/manage', (req, res) => {
     }
 });
 
+app.get('/settings', (req, res) => {
+    if (req.session.loggedIn) {
+        const isLoggedIn = req.session.loggedIn;
+        const user = req.session.name;
+        const email = req.session.email;
+        res.render("settings", {isLoggedIn : isLoggedIn, user : user, email : email});
+    } 
+    else {
+        res.redirect('/adminLogIn');
+    }
+});
+
+app.post('/changePassword', async (req, res) => {
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+    const email = req.session.email;
+    const isLoggedIn = req.session.loggedIn;
+    const schema = Joi.object({
+        currentPassword: Joi.string().required(),
+        newPassword: Joi.string().min(3).required(),
+        confirmPassword: Joi.any().valid(Joi.ref('newPassword')).required()
+    });
+
+    const validationResult = schema.validate({ currentPassword, newPassword, confirmPassword });
+    if (validationResult.error) {
+        console.log(validationResult.error);
+        return res.render('settings', { isLoggedIn, user: req.session.name, email, error: validationResult.error.message });
+    }
+
+    const user = await adminCollection.findOne({ email });
+    if (!user) {
+        console.log('User not found');
+        return res.render('settings', { isLoggedIn, user: req.session.name, email, error: 'User not found' });
+    }
+
+    const passwordMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!passwordMatch) {
+        console.log('Wrong current password');
+        return res.render('settings', { isLoggedIn, user: req.session.name, email, error: 'Incorrect current password' });
+    }
+
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    await adminCollection.updateOne({ email }, { $set: { password: hashedNewPassword } });
+    req.session.password = hashedNewPassword;
+
+    res.render('passwordUpdated', { isLoggedIn });
+});
+
 
 // ------------------ AWS S3 START ------------------
 
@@ -489,6 +536,7 @@ app.post('/submitListing', upload.fields([{ name: 'photo', maxCount: 10 }, { nam
         item_quantity: parseInt(req.body.item_quantity) || 0,
         item_detailed_description: req.body.item_detailed_description || '',
         item_estimatedShippingCost: parseFloat(req.body.item_estimatedShippingCost) || 0.0,
+        item_estimatedInsuranceCost: parseFloat(req.body.item_estimatedInsuranceCost) || 0.0,
         isFeatureItem: req.body.isFeatureItem === 'true',
         item_category: Array.isArray(req.body.item_category) ? req.body.item_category : [req.body.item_category]
     };
@@ -534,6 +582,7 @@ app.post('/updateListing/:id', upload.none(), async (req, res) => {
         item_quantity: parseInt(req.body.item_quantity) || 0,
         item_detailed_description: req.body.item_detailed_description || '',
         item_estimatedShippingCost: parseFloat(req.body.item_estimatedShippingCost) || 0.0,
+        item_estimatedInsuranceCost: parseFloat(req.body.item_estimatedInsuranceCost) || 0.0,
         isFeatureItem: req.body.isFeatureItem ? req.body.isFeatureItem === 'true' : false,
     };
 
