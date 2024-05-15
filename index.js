@@ -271,6 +271,7 @@ app.post('/userLogInSubmit', async (req, res) => {
     req.session.name = user.name;
     req.session.email = user.email;
     req.session.password = user.password;
+    console.log(req.session)
     res.redirect("/");
 });
 
@@ -435,6 +436,16 @@ app.get('/manage', (req, res) => {
     } 
     else {
         res.redirect('/adminLogIn');
+    }
+});
+
+app.get('/manageUser', (req, res) => {
+    if (req.session.loggedIn) {
+        const isLoggedIn = req.session.loggedIn;
+        res.render("user-management", {isLoggedIn : isLoggedIn});
+    } 
+    else {
+        res.redirect('/userLogIn');
     }
 });
 
@@ -651,17 +662,26 @@ app.get('/adminUsers', async (req, res) => {
 });
 
 app.post('/addUser', async (req, res) => {
+    const { name, email, password, userType } = req.body;
     try {
-        const { name, email, password } = req.body;
         const hashedPassword = await bcrypt.hash(password, 10);
-        await adminCollection.insertOne({ name, email, password: hashedPassword });
-        //send a response to the client
-        res.redirect('/manage');
+        if (userType === 'admin') {
+            await adminCollection.insertOne({ name, email, password: hashedPassword });
+            req.session.loggedIn = true;
+            res.redirect('/manage');
+        } else if (userType === 'user') {
+            await userCollection.insertOne({ name, email, password: hashedPassword });
+            req.session.loggedIn = true;
+            res.redirect('/manageUser');
+        } else {
+            res.status(400).send('Invalid user type');
+        }
     } catch (error) {
-        console.error('Error adding new admin:', error);
-        res.status(500).send('Failed to add new admin');
+        console.error('Error adding new user:', error);
+        res.status(500).send('Failed to add new user');
     }
 });
+
 
 app.get('/editUser/:id', async (req, res) => {
     try {
