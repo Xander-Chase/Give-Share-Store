@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Past Orders</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <h2>Past Orders</h2>
+        <div class="order-list">
+            <% if (orders.length === 0) { %>
+                <p>No past orders found.</p>
+            <% } else { %>
+                <% orders.forEach(order => { %>
+                    <div class="order-item">
+                        <h3>Order ID: <%= order._id %></h3>
+                        <p>Date: <%= order.date %></p>
+                        <p>Total Amount: $<%= order.totalAmount %></p>
+                        <h4>Items:</h4>
+                        <ul>
+                            <% order.items.forEach(item => { %>
+                                <li><%= item.item_title %> - $<%= item.item_price %> x <%= item.item_quantity %></li>
+                            <% }) %>
+                        </ul>
+                    </div>
+                <% }) %>
+            <% } %>
+        </div>
+    </div>
+</body>
+</html>

@@ -271,6 +271,7 @@ app.post('/adminLogInSubmit', async (req, res) => {
     req.session.name = user.name;
     req.session.email = user.email;
     req.session.password = user.password;
+    req.session.userId = user._id;
     res.redirect("/");
 });
 
@@ -311,6 +312,7 @@ app.post('/userLogInSubmit', async (req, res) => {
     req.session.email = user.email;
     req.session.password = user.password;
     console.log("user isLoggedIn:" + req.session.loggedIn);
+    req.session.userId = user._id;
     res.redirect("/");
 });
 
@@ -517,6 +519,55 @@ app.get('/manageUser', async (req, res) => {
         res.redirect('/userLogIn');
     }
 });
+
+app.get('/pastOrders', async (req, res) => {
+    try {
+        const ordersCollection = database.db(mongodb_database).collection('orders');
+        const userOrders = await ordersCollection.find({ userId: req.session.userId }).toArray();
+        const isLoggedIn = req.session.loggedIn;
+        const isAdmin = req.session.isAdmin || false;
+
+        res.render('pastOrders', {
+            orders: userOrders,
+            isLoggedIn,
+            isAdmin,
+            categories: await getCategoriesNav()
+        });
+    } catch (error) {
+        console.error('Error fetching past orders:', error);
+        res.status(500).send('Error fetching past orders');
+    }
+});
+
+async function addTestOrder() {
+    try {
+        const ordersCollection = database.db(mongodb_database).collection('orders');
+        const testOrder = {
+            userId: 'testUserId',
+            date: new Date(),
+            totalAmount: 100.00,
+            items: [
+                {
+                    item_title: 'Test Item 1',
+                    item_price: 50.00,
+                    item_quantity: 1
+                },
+                {
+                    item_title: 'Test Item 2',
+                    item_price: 25.00,
+                    item_quantity: 2
+                }
+            ]
+        };
+        await ordersCollection.insertOne(testOrder);
+        console.log('Test order added successfully');
+    } catch (error) {
+        console.error('Error adding test order:', error);
+    }
+}
+
+addTestOrder();
+
 
 app.get('/settings', async (req, res) => {
     if (req.session.loggedIn) {
