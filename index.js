@@ -14,8 +14,7 @@ const { S3Client } = require("@aws-sdk/client-s3");         // include the S3Cli
 const { Upload } = require("@aws-sdk/lib-storage");         // include the Upload module
 const Realm = require("realm");
 const { google } = require("googleapis");
-
-
+const fetch = require('node-fetch');                             // Import node-fetch module to fetch data from API
 
 
 const app = express();
@@ -40,6 +39,10 @@ const node_session_secret = process.env.NODE_SESSION_SECRET;
 const google_client_id = process.env.GOOGLE_CLIENT_ID;
 const google_project_id = process.env.GOOGLE_PROJECT_ID;
 const google_client_secret = process.env.GOOGLE_CLIENT_SECRET;
+const PayPalEnvironment = process.env.PAYPAL_ENVIRONMENT;   // Import PayPal Environment from ..env file
+const PayPalClientID = process.env.PAYPAL_CLIENT_ID;        // Import PayPal Client ID from ..env file
+const PayPalSecret = process.env.PAYPAL_CLIENT_SECRET;      // Import PayPal Secret from ..env file
+const PayPal_endpoint_url = PayPalEnvironment === 'sandbox' ? 'https://api-m.sandbox.paypal.com' : 'https://api-m.paypal.com'; // Import PayPal endpoint URL from ..env file
 
 // Configure and instantiate Google OAuth2.0 client
 /*const oauthConfig = {
@@ -76,8 +79,9 @@ const realmApp = new Realm.App({
 // importing the database object from databaseConnection.js file
 var { database } = include('databaseConnection');
 
-// referencing to users collection in database
+// referencing to admins and users collection in database
 const adminCollection = database.db(mongodb_database).collection('admins');
+const userCollection = database.db(mongodb_database).collection('users');
 
 // linking to mongoDb database
 var mongoStore = MongoDBStore.create({
@@ -116,6 +120,8 @@ app.use((req, res, next) => {
 
 app.get('/', async (req, res) => {
     const isLoggedIn = req.session.loggedIn;
+    const isAdmin = req.session.isAdmin || false;
+
     let searchKey = "";
     let maximumPrice = 100000000;
     if (req.session.keyword != null)
@@ -152,10 +158,10 @@ app.get('/', async (req, res) => {
 
         let bodyFilters = getBodyFilters(sortedPrices[0], sortedPrices[prices.length-1], maximumPrice);
 
-        res.render("landing", {isLoggedIn, currentListings, filterHeaders: filtersHeader, filterStuff: bodyFilters});
+        res.render("landing", {isLoggedIn, isAdmin, currentListings, filterHeaders: filtersHeader, filterStuff: bodyFilters});
     } catch (error) {
         console.error('Failed to fetch current listings:', error);
-        res.render("landing", {isLoggedIn, currentListings: []});
+        res.render("landing", {isLoggedIn, isAdmin, currentListings: []});
     }
 });
 
@@ -184,6 +190,14 @@ app.get("/loginPortal", (req, res) => {
 
 app.get('/adminLogIn', (req, res) => {
     res.render("adminLogIn");
+});
+
+app.get('/userLogIn', (req, res) => {
+    res.render("userLogIn");
+});
+
+app.get('/userNewLogIn', (req, res) => {
+    res.render("userNewLogIn");
 });
 
 app.post('/adminLogInSubmit', async (req, res) => {
@@ -218,9 +232,50 @@ app.post('/adminLogInSubmit', async (req, res) => {
     }
 
     req.session.loggedIn = true;
+    req.session.isAdmin = true;
     req.session.name = user.name;
     req.session.email = user.email;
     req.session.password = user.password;
+    res.redirect("/");
+});
+
+app.post('/userLogInSubmit', async (req, res) => {
+
+    const email = req.body.email;
+    const password = req.body.password;
+
+    const schema = Joi.object({
+        email: Joi.string().required(),
+        password: Joi.string().max(20).required()
+    });
+
+    const validationResult = schema.validate({ email, password });
+    if (validationResult.error != null) {
+        console.log(validationResult.error);
+        res.render("userLogIn", {error: "Error: "+validationResult.error.message});
+        return;
+    }
+
+    const user = await userCollection.findOne({ email: email });
+    if (user === null) {
+        console.log("User not found");
+        res.render("userLogIn", {error: "Error: User not found"});
+        return;
+    }
+
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) {
+        console.log("Invalid password");
+        res.render("userLogIn", {error: "Error: Invalid password"});
+        return;
+    }
+
+    req.session.loggedIn = true;
+    req.session.isAdmin = false;
+    req.session.name = user.name;
+    req.session.email = user.email;
+    req.session.password = user.password;
+    console.log("user isLoggedIn:" + req.session.loggedIn);
     res.redirect("/");
 });
 
@@ -289,12 +344,10 @@ app.post('/clearFilter', (req, res) =>
     req.session.keyword = null;
     res.redirect('/');
 })
-// **************************** Requires Further Development ****************************
-// Currently is passed all items in the database to the catalog view as proof of concept
-// Will need to be updated to only pass items that were added to the cart
+
 app.get('/cart', async (req, res) => {
     const cartItems = req.session.cart || [];
-    res.render('cartView', { items: cartItems });
+    res.render('cartView', { items: cartItems, paypalClientId: process.env.PAYPAL_CLIENT_ID });
 });
 
 app.post('/add-to-cart', async (req, res) => {
@@ -383,10 +436,22 @@ app.get('/contact-us', (req, res) => {
 app.get('/manage', (req, res) => {
     if (req.session.loggedIn) {
         const isLoggedIn = req.session.loggedIn;
-        res.render("product-management", {isLoggedIn : isLoggedIn});
+        const isAdmin = req.session.isAdmin;
+        res.render("product-management", {isLoggedIn, isAdmin});
     } 
     else {
         res.redirect('/adminLogIn');
+    }
+});
+
+app.get('/manageUser', (req, res) => {
+    if (req.session.loggedIn) {
+        const isLoggedIn = req.session.loggedIn;
+        const isAdmin = req.session.isAdmin;
+        res.render("user-management", {isLoggedIn, isAdmin});
+    } 
+    else {
+        res.redirect('/userLogIn');
     }
 });
 
@@ -603,17 +668,26 @@ app.get('/adminUsers', async (req, res) => {
 });
 
 app.post('/addUser', async (req, res) => {
+    const { name, email, password, userType } = req.body;
     try {
-        const { name, email, password } = req.body;
         const hashedPassword = await bcrypt.hash(password, 10);
-        await adminCollection.insertOne({ name, email, password: hashedPassword });
-        //send a response to the client
-        res.redirect('/manage');
+        if (userType === 'admin') {
+            await adminCollection.insertOne({ name, email, password: hashedPassword });
+            req.session.loggedIn = true;
+            res.redirect('/manage');
+        } else if (userType === 'user') {
+            await userCollection.insertOne({ name, email, password: hashedPassword });
+            req.session.loggedIn = true;
+            res.redirect('/manageUser');
+        } else {
+            res.status(400).send('Invalid user type');
+        }
     } catch (error) {
-        console.error('Error adding new admin:', error);
-        res.status(500).send('Failed to add new admin');
+        console.error('Error adding new user:', error);
+        res.status(500).send('Failed to add new user');
     }
 });
+
 
 app.get('/editUser/:id', async (req, res) => {
     try {
@@ -682,6 +756,51 @@ database.connect().then(async () => {
 }).catch((err) => {
     console.log('Error connecting to MongoDB', err);
 });
+
+// ----------------- PayPal Payment START -----------------
+
+async function getAccessToken() {
+    const auth = `${PayPalClientID}:${PayPalSecret}`;
+    const data = 'grant_type=client_credentials';
+
+    const response = await fetch(`${PayPal_endpoint_url}/v1/oauth2/token`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': 'Basic ' + Buffer.from(auth).toString('base64')
+        },
+        body: data
+    });
+    const json = await response.json();
+    return json.access_token;
+}
+
+app.post('/create-paypal-order', async (req, res) => {
+    try {
+        const accessToken = await getAccessToken();
+        const orderData = {
+            intent: req.body.intent.toUpperCase(),
+            purchase_units: req.body.purchase_units
+        };
+
+        const response = await fetch(`${PayPal_endpoint_url}/v2/checkout/orders`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`
+            },
+            body: JSON.stringify(orderData)
+        });
+
+        const json = await response.json();
+        res.send(json);
+    } catch (err) {
+        console.error('Error creating PayPal order:', err);
+        res.status(500).send(err);
+    }
+});
+
+// ----------------- PayPal Payment END -----------------
 
 // ----------------- Stripe Payment START -----------------
 
