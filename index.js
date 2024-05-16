@@ -120,6 +120,8 @@ app.use((req, res, next) => {
 
 app.get('/', async (req, res) => {
     const isLoggedIn = req.session.loggedIn;
+    const isAdmin = req.session.isAdmin || false;
+
     let searchKey = "";
     let maximumPrice = 100000000;
     if (req.session.keyword != null)
@@ -156,10 +158,10 @@ app.get('/', async (req, res) => {
 
         let bodyFilters = getBodyFilters(sortedPrices[0], sortedPrices[prices.length-1], maximumPrice);
 
-        res.render("landing", {isLoggedIn, currentListings, filterHeaders: filtersHeader, filterStuff: bodyFilters});
+        res.render("landing", {isLoggedIn, isAdmin, currentListings, filterHeaders: filtersHeader, filterStuff: bodyFilters});
     } catch (error) {
         console.error('Failed to fetch current listings:', error);
-        res.render("landing", {isLoggedIn, currentListings: []});
+        res.render("landing", {isLoggedIn, isAdmin, currentListings: []});
     }
 });
 
@@ -230,6 +232,7 @@ app.post('/adminLogInSubmit', async (req, res) => {
     }
 
     req.session.loggedIn = true;
+    req.session.isAdmin = true;
     req.session.name = user.name;
     req.session.email = user.email;
     req.session.password = user.password;
@@ -268,10 +271,11 @@ app.post('/userLogInSubmit', async (req, res) => {
     }
 
     req.session.loggedIn = true;
+    req.session.isAdmin = false;
     req.session.name = user.name;
     req.session.email = user.email;
     req.session.password = user.password;
-    console.log(req.session)
+    console.log("user isLoggedIn:" + req.session.loggedIn);
     res.redirect("/");
 });
 
@@ -432,7 +436,8 @@ app.get('/contact-us', (req, res) => {
 app.get('/manage', (req, res) => {
     if (req.session.loggedIn) {
         const isLoggedIn = req.session.loggedIn;
-        res.render("product-management", {isLoggedIn : isLoggedIn});
+        const isAdmin = req.session.isAdmin;
+        res.render("product-management", {isLoggedIn, isAdmin});
     } 
     else {
         res.redirect('/adminLogIn');
@@ -442,7 +447,8 @@ app.get('/manage', (req, res) => {
 app.get('/manageUser', (req, res) => {
     if (req.session.loggedIn) {
         const isLoggedIn = req.session.loggedIn;
-        res.render("user-management", {isLoggedIn : isLoggedIn});
+        const isAdmin = req.session.isAdmin;
+        res.render("user-management", {isLoggedIn, isAdmin});
     } 
     else {
         res.redirect('/userLogIn');
