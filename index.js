@@ -14,7 +14,7 @@ const { S3Client } = require("@aws-sdk/client-s3");         // include the S3Cli
 const { Upload } = require("@aws-sdk/lib-storage");         // include the Upload module
 const Realm = require("realm");
 const { google } = require("googleapis");
-const fetch = require('node-fetch');                             // Import node-fetch module to fetch data from API
+const fetch = import('node-fetch');                             // Import node-fetch module to fetch data from API
 
 
 const app = express();
@@ -170,7 +170,8 @@ app.get('/', async (req, res) => {
             filterHeaders: filtersHeader,
             filtersAnchor: filterAnchors,
             filterStuff: bodyFilters,
-            categories: await getCategoriesNav()
+            categories: await getCategoriesNav(),
+            isAdmin: isAdmin
         });
     } catch (error) {
         console.error('Failed to fetch current listings:', error);
@@ -598,7 +599,7 @@ app.post('/submitListing', upload.fields([{ name: 'photo', maxCount: 10 }, { nam
 
 app.get('/editListing/:id', async (req, res) => {
     const itemId = req.params.id;
-    isLoggedIn = req.session.loggedIn;
+    const isLoggedIn = req.session.loggedIn;
     console.log("Received ID for editing:", itemId);
 
     if (!ObjectId.isValid(itemId)) {
@@ -725,7 +726,7 @@ app.get('/editUser/:id', async (req, res) => {
             return;
         }
         const isLoggedIn = req.session.loggedIn;
-        res.render('editUser', { user, isLoggedIn : isLoggedIn, categories: await getCategoriesNav()});
+        res.render('editUser', { user, isAdmin: req.session.isAdmin, isLoggedIn : isLoggedIn, categories: await getCategoriesNav()});
     } catch (error) {
         console.error('Error retrieving user for editing:', error);
         res.status(500).send('Error retrieving user');
@@ -775,7 +776,11 @@ app.get('/featuredItems', async (req, res) => {
 });
 
 app.get('/categoryManagement', async (req, res) => {
-    res.render('categoryManagement');
+    const categoriesCollection = database.db(mongodb_database).collection('categories');
+    const categoriesArray = await categoriesCollection.find().toArray();
+    res.render('categoryManagement', {
+        categories: categoriesArray
+    });
 })
 // connect to the database and hash passwords if necessary, then start the server
 database.connect().then(async () => {
