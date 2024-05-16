@@ -14,7 +14,7 @@ const { S3Client } = require("@aws-sdk/client-s3");         // include the S3Cli
 const { Upload } = require("@aws-sdk/lib-storage");         // include the Upload module
 const Realm = require("realm");
 const { google } = require("googleapis");
-const fetch = require('node-fetch');                             // Import node-fetch module to fetch data from API
+const fetch = import('node-fetch');                             // Import node-fetch module to fetch data from API
 
 
 const app = express();
@@ -36,9 +36,6 @@ const mongodb_password = process.env.MONGODB_PASSWORD;
 const mongodb_database = process.env.MONGODB_DATABASE;
 const mongodb_session_secret = process.env.MONGODB_SESSION_SECRET;
 const node_session_secret = process.env.NODE_SESSION_SECRET;
-const google_client_id = process.env.GOOGLE_CLIENT_ID;
-const google_project_id = process.env.GOOGLE_PROJECT_ID;
-const google_client_secret = process.env.GOOGLE_CLIENT_SECRET;
 const PayPalEnvironment = process.env.PAYPAL_ENVIRONMENT;   // Import PayPal Environment from ..env file
 const PayPalClientID = process.env.PAYPAL_CLIENT_ID;        // Import PayPal Client ID from ..env file
 const PayPalSecret = process.env.PAYPAL_CLIENT_SECRET;      // Import PayPal Secret from ..env file
@@ -130,9 +127,18 @@ app.get('/', async (req, res) => {
     if (req.session.maxPrice > 0)
         maximumPrice = req.session.maxPrice;
 
+    let categoryTab = "";
+    let subCategoryTab = "";
+    if (req.session.category != null ){
+        categoryTab = `> ${req.session.category}`;
+    }
+    if (req.session.subcategory != null)
+    {
+        subCategoryTab = `> ${req.session.subcategory}`;
+    }
     try {
 
-        let filtersHeader = [`Category > ${req.session.category} > ${req.session.subcategory}`, "Price", "Sorting"];
+        let filtersHeader = [`Category ${categoryTab} ${subCategoryTab}`, "Price", "Sorting"];
         let filterAnchors = ["Category", "Price", "Sorting"];
         const productsCollection = database.db(mongodb_database).collection('listing_items');
         let prices = [];
@@ -170,11 +176,12 @@ app.get('/', async (req, res) => {
             filterHeaders: filtersHeader,
             filtersAnchor: filterAnchors,
             filterStuff: bodyFilters,
-            categories: await getCategoriesNav()
+            categories: await getCategoriesNav(),
+            isAdmin: isAdmin
         });
     } catch (error) {
         console.error('Failed to fetch current listings:', error);
-        res.render("landing", {isLoggedIn, isAdmin, currentListings: []});
+        res.render("landing", {isLoggedIn: isLoggedIn, isAdmin: isAdmin, currentListings: []});
     }
 });
 
@@ -353,7 +360,7 @@ app.post('/price=:newMax', (req, res) => {
 
 app.post('/category=:type', async (req, res) => {
     req.session.category = req.params.type;
-    req.session.subcategory = "";
+    req.session.subcategory = null;
     res.redirect('/');
 })
 
@@ -598,7 +605,7 @@ app.post('/submitListing', upload.fields([{ name: 'photo', maxCount: 10 }, { nam
 
 app.get('/editListing/:id', async (req, res) => {
     const itemId = req.params.id;
-    isLoggedIn = req.session.loggedIn;
+    const isLoggedIn = req.session.loggedIn;
     console.log("Received ID for editing:", itemId);
 
     if (!ObjectId.isValid(itemId)) {
