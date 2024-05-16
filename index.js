@@ -131,13 +131,12 @@ app.get('/', async (req, res) => {
 
     let categoryTab = "";
     let subCategoryTab = "";
-    if (req.session.category != null ){
+    if (req.session.category != null )
         categoryTab = `> ${req.session.category}`;
-    }
+
     if (req.session.subcategory != null)
-    {
         subCategoryTab = `> ${req.session.subcategory}`;
-    }
+
     try {
 
         let filtersHeader = [`Category ${categoryTab} ${subCategoryTab}`, "Price", "Sorting"];
@@ -160,11 +159,25 @@ app.get('/', async (req, res) => {
                 return 0;
         });
 
-        currentListings = await productsCollection.find({ isFeatureItem: false,
-            item_title: {$regex: searchKey, $options: 'i'},
-            item_price: {$lt: Math.round(maximumPrice)}, item_category: req.session.subcategory || req.session.category }).toArray();
+        // TODO: please make one of them into a variable.
+        if (req.session.category == null)
+            currentListings = await productsCollection.find({ isFeatureItem: false,
+                item_title: {$regex: searchKey, $options: 'i'},
+                item_price: {$lt: Math.round(maximumPrice)} }).toArray();
+        else
+            if (req.session.subcategory == null)
+                currentListings = await productsCollection.find({ isFeatureItem: false,
+                    item_title: {$regex: searchKey, $options: 'i'},
+                    item_price: {$lt: Math.round(maximumPrice)}, item_category: req.session.category }).toArray();
+            else
+                currentListings = await productsCollection.find({ isFeatureItem: false,
+                    item_title: {$regex: searchKey, $options: 'i'},
+                    item_price: {$lt: Math.round(maximumPrice)}, item_category: req.session.subcategory || req.session.category }).toArray();
 
         const categoriesCollection = database.db(mongodb_database).collection('categories');
+
+        // Find the category with the type based on the req.session.category keyword
+        // then project meaning to only get the sub_categories field excluding the ID field
         const subCategories = await categoriesCollection.find({category_type: req.session.category}).project({_id: 0, sub_categories: 1}).toArray();
         let bodyFilters;
         if (subCategories.length < 1 || subCategories[0].sub_categories.length < 1)
@@ -306,6 +319,8 @@ function getBodyFilters(maxVal, minVal, currentPrice, subCategories)
     let categoriesBody =
         "<ul class=\"list-group list-group-flush\">";
 
+    // for each subCategories on that array, assign it as a list element on the sub-category filter on the left
+    // since some of them are spaces, we split the spaces and join them with '_'
     subCategories.forEach(function(subC) {
         categoriesBody+="<li class=\"list-group-item\"><form method='post' action='/subcategory=" + subC.split(" ").join("_") + "'><button " +
             "style='background: none; border: none'" +
@@ -366,6 +381,12 @@ app.post('/category=:type', async (req, res) => {
     res.redirect('/');
 })
 
+app.post('/category=', async (req, res) => {
+    req.session.category = null;
+    req.session.subcategory = null;
+    res.redirect('/');
+})
+
 app.post('/subcategory=:type', async (req, res) => {
     req.session.subcategory = req.params.type.split("_").join(" ");
 
@@ -373,8 +394,11 @@ app.post('/subcategory=:type', async (req, res) => {
 })
 app.post('/clearFilter', (req, res) =>
 {
+
     req.session.maxPrice = 0;
     req.session.keyword = null;
+    req.session.category = null;
+    req.session.subcategory = null;
     res.redirect('/');
 })
 
