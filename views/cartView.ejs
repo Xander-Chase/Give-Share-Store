@@ -4,8 +4,8 @@
     <head>
         <style>
             .product-img {
-                max-width: 12.5vw;
-                max-height: 15vh;
+                max-width: 15vw;
+                max-height: 20vh;
                 overflow: hidden;
             }
 
@@ -34,6 +34,11 @@
             }
 
             @media (max-width: 576px) {
+                .product-img {
+                    max-width: 16vw;
+                    max-height: 10vh;
+                }
+
                 .product-card {
                     width: 75vw;
                 }
@@ -115,6 +120,6 @@
                 </div>
             </div>
         </div>
-        <%- include("footer") %>
     </body>
+    <%- include("footer") %>
 </html>

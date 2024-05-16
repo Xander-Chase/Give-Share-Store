@@ -1,13 +1,28 @@
 <%- include("metadata") %>
 <html lang="en">
     <%- include("searchNavBar", {isLoggedIn : false}) %>
+    <head>
+        <style>
+            .card {
+                max-width: 20vw;
+                max-height: 40vh;
+            }
+
+            .col-3 {
+                padding-bottom: 20vw;
+            }
+
+            .product-img {
+                padding: 5px;
+                max-width: 19vw;
+                max-height: 25vh;
+                overflow: hidden;
+                align-self: center;
+            }
+        </style>
+    </head>
     <body>
-
-
-
-
-
-    <div class="col-md-7" style="position: absolute">
+    <div class="col-md-5" style="position: absolute">
         <div class="container">
             <div class="col"> <!-- TODO: Use EJS Template -->
                 <% for (i = 0; i < filterHeaders.length; i++) {%>
@@ -27,25 +42,23 @@
                         </div>
                     </div>
                 <% }%>
-
             </div>
         </div>
     </div>
 
     <div class="container-fluid d-grid align-items-center text-center"
-         style="grid-template-columns: 25% 75%;">
-
+         style="grid-template-columns: 15% 85%;">
         <div class="col-md-7"></div>
-
-        <!-- FIXME: Add Space for the right side of the page -->
-        <div class="row row-cols-1">
+        <div class="row row-cols-4">
             <% items.forEach(function(item) { %>
-            <div class="col-3 row-3">
-                <div class="card shadow-sm">
-                    <img class="bd-placeholder-img card-img-top" width="286rem" height="286rem"
+            <div class="col-3">
+                <div class="card shadow-sms">
+                    <div class="product-img">
+                        <img class="bd-placeholder-img card-img-top"
                          src="<%= item.product_img_URL[0] %>"
                          alt="<%= item.item_title %>"
                     />
+                    </div>
                     <div class="card-body">
                         <h3 class="">
                             <%= item.item_title %>
