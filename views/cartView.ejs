@@ -2,16 +2,61 @@
 <html lang="en">
     <%- include("searchNavBar", {isLoggedIn: false}) %>
     <head>
+        <script src="https://kit.fontawesome.com/ab5a40e500.js" crossorigin="anonymous"></script>
         <style>
-            @media (min-width: 300px) {
-                .col-md-8 {
-                    width: 100%;
-                }
+            .product-img {
+                max-width: 12.5vw;
+                max-height: 15vh;
+                overflow: hidden;
             }
 
-            @media (min-width: 800px) {
-                .col-md-8 {
-                 width: 50%;
+            .item-title {
+                font-size: 24pt;
+                font-weight: 500;
+            }
+
+            .text-primary {
+                font-size: 18pt;
+            }
+
+            .my-0 {
+                font-size: 10pt;
+                font-weight: 600;
+            }
+
+            .price-text {
+                font-size: 22pt;
+                font-weight: 600;
+            }
+
+            #title {
+                font-size: 28pt;
+                font-weight: 500;
+            }
+
+            @media (max-width: 576px) {
+                .product-card {
+                    width: 75vw;
+                }
+
+                .item-title {
+                    font-size: 18pt;
+                }
+
+                .my-0 {
+                    font-size: 12pt;
+                }
+
+                .price-text {
+                    font-size: 16pt;
+                }
+
+                #your-cart {
+                    width: 75vw;
+                }
+
+                #title {
+                    font-size: 22pt;
                 }
             }
         </style>
@@ -19,29 +64,28 @@
     <body>
         <div class="container">
             <div class="row g-5">
-                <div class="col-md-8 border">
-                    <h1>Products in Your Cart</h1>
+                <div class="col-md-8 border product-card">
+                    <span id="title">Products in Your Cart</span>
                     <% items.forEach(function(item) { %>
                         <div class="g-1 row shadow-sm bg-light text-dark border">
                             <div class="row d-flex align-items-center col-md-8">
-                                <div class="card shadow-sm col-sm-5 border">
+                                <div class="card product-img shadow-sm col-sm-5 border justify-content-center">
                                     <img class="card-img-med"
-                                         width="200rem"
-                                         height="125rem"
                                          src="<%= item.product_img_URL[0] %>"
                                          alt="<%= item.item_title %>">
                                 </div>
-                                <div class="col-sm-5">
-                                    <h2><%= item.item_title %></h2>
+                                <div class="col-sm-7">
+                                    <span class="item-title"><%= item.item_title %></span>
                                 </div>
                             </div>
                             <div class="d-flex align-items-center justify-content-end col-md-4">
-                                <h3>$<%= item.item_price %> <small class="text-secondary">CAN</small></h3>
+                                <span class="price-text">$<%= item.item_price %> <small class="text-secondary">CAN</small></span>
                             </div>
                         </div>
                         <br>
                     <% }); %>
                 </div>
+                <div class="w-100 d-block d-md-none"></div>
                 <div id="your-cart" class="col-md-4 border">
                     <h4 class="d-flex justify-content-between align-items-center mb-3">
                         <span class="text-primary">Your cart</span>
@@ -52,7 +96,7 @@
                         <% items.forEach(function(item) { %>
                             <li class="list-group-item d-flex justify-content-between lh-sm">
                                 <div>
-                                    <h6 class="my-0"><%= item.item_title %></h6>
+                                    <span class="my-0"><%= item.item_title %></span>
                                 </div>
                                 <span class="text-muted">$<%= item.item_price %></span>
                                 <% total += parseFloat(item.item_price); %>
@@ -72,5 +116,6 @@
                 </div>
             </div>
         </div>
+        <%- include("footer") %>
     </body>
 </html>
