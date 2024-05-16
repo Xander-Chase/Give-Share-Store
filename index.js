@@ -83,6 +83,7 @@ var { database } = include('databaseConnection');
 const adminCollection = database.db(mongodb_database).collection('admins');
 const userCollection = database.db(mongodb_database).collection('users');
 
+const categoryCollection = database.db(mongodb_database).collection('categories');
 // linking to mongoDb database
 var mongoStore = MongoDBStore.create({
     mongoUrl: `mongodb+srv://${mongodb_user}:${mongodb_password}@${mongodb_cluster}/${mongodb_database}`,
@@ -156,8 +157,8 @@ app.get('/', async (req, res) => {
             item_title: {$regex: searchKey, $options: 'i'},
             item_price: {$lt: Math.round(maximumPrice)}, item_category: req.session.subcategory || req.session.category }).toArray();
 
-        const categoriesCollection = database.db(mongodb_database).collection('categories');
-        const subCategories = await categoriesCollection.find({category_type: req.session.category}).project({_id: 0, sub_categories: 1}).toArray();
+
+        const subCategories = await categoryCollection.find({category_type: req.session.category}).project({_id: 0, sub_categories: 1}).toArray();
         let bodyFilters;
         if (subCategories.length < 1 || subCategories[0].sub_categories.length < 1)
             bodyFilters = getBodyFilters(sortedPrices[0], sortedPrices[prices.length-1], maximumPrice, []);
@@ -566,6 +567,7 @@ const upload = multer({
 // ------------------ multer END ------------------
 
 app.get('/addListing', (req, res) => {
+
     res.render('addListing');
 });
 
@@ -776,12 +778,71 @@ app.get('/featuredItems', async (req, res) => {
 });
 
 app.get('/categoryManagement', async (req, res) => {
-    const categoriesCollection = database.db(mongodb_database).collection('categories');
-    const categoriesArray = await categoriesCollection.find().toArray();
+    const categoriesArray = await categoryCollection.find().toArray();
     res.render('categoryManagement', {
         categories: categoriesArray
     });
 })
+
+app.get('/editCategory/:id', async (req, res) =>
+{
+    try
+    {
+        const category = await categoryCollection.findOne({ _id: new ObjectId(req.params.id) });
+        res.render('editCategory', { category, isAdmin: req.session.isAdmin, isLoggedIn : req.session.loggedIn, categories: await getCategoriesNav()});
+    }
+    catch (error)
+    {
+        console.error('Error retrieving category for editing:', error);
+        res.status(500).send('Error retrieving category');
+    }
+})
+
+app.post('/updateCategory/:id', async (req, res) => {
+    try {
+        const { name, sub_categories } = req.body;
+        console.log(`${name} and ${sub_categories}`)
+        await categoryCollection.updateOne(
+            { _id: new ObjectId(req.params.id) },
+            { $set: {
+                category_type: name,
+                sub_categories: sub_categories.split(", ")
+            }}
+        );
+        res.redirect('/manage');
+    } catch (error) {
+        console.error('Error updating category:', error);
+        res.status(500).send('Failed to update category');
+    }
+})
+
+app.post('/deleteCategory/:id', async (req, res) => {
+    try {
+        const result = await categoryCollection.deleteOne({ _id: new ObjectId(req.params.id) });
+        if(result.deletedCount === 1) {
+            res.status(200).send('Category deleted successfully');
+        } else {
+            res.status(404).send('Category not found');
+        }
+    } catch (error) {
+        console.error('Failed to delete user:', error);
+        res.status(500).send('Failed to delete user');
+    }
+})
+
+app.post('/addCategory', async (req, res) => {
+    const { category_name, sub_categories} = req.body;
+    try {
+        await categoryCollection.insertOne({ category_type: category_name, sub_categories: sub_categories.split(", ")});
+        res.redirect('/manage');
+
+    } catch (error) {
+        console.error('Error adding new category:', error);
+        res.status(500).send('Failed to add new user');
+    }
+});
+
+
 // connect to the database and hash passwords if necessary, then start the server
 database.connect().then(async () => {
     console.log('MongoDB connected successfully');
