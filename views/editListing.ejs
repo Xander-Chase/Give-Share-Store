@@ -54,6 +54,12 @@
                 <input type="number" class="form-control" id="shippingCost" name="item_estimatedShippingCost" value="<%= listing.item_estimatedShippingCost %>" step="0.01">
             </div>
 
+            <!-- Estimated Insurance Cost Input-->
+            <div class="mb-3">
+                <label for="insuranceCost" class="form-label">Estimated Insurance Cost</label>
+                <input type="number" class="form-control" id="insuranceCost" name="item_estimatedInsuranceCost" value="<%= listing.item_estimatedInsuranceCost %>" step="0.01">
+            </div>
+
             <!-- Featured Item Checkbox -->
             <div class="mb-3 form-check">
                 <input type="checkbox" class="form-check-input" id="featureItem" name="isFeatureItem" value="true" <% if(listing.isFeatureItem) { %>checked<% } %>>

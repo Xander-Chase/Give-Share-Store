@@ -56,29 +56,63 @@
                             <input type="hidden" name="productIds" value="<%= item._id.toString() %>">
                         <% }); %>
                         <button type="submit" id="checkout-button" class="btn btn-primary">Proceed to Checkout</button>
-                    </form>                                        
-                </div>
+                    </form>   
+                    <div id="paypal-button-container"></div>
+                    <script src="https://www.paypal.com/sdk/js?client-id=<%= paypalClientId %>&currency=CAD"></script>
+                    <script>
+                        paypal.Buttons({
+                            fundingSource: paypal.FUNDING.PAYPAL, 
+                            createOrder: async function() {
+                                const response = await fetch("/create-paypal-order", {
+                                    method: "POST",
+                                    headers: {
+                                        "Content-Type": "application/json",
+                                    },
+                                    body: JSON.stringify({
+                                        intent: "CAPTURE",
+                                        purchase_units: [{
+                                            amount: {
+                                                currency_code: "CAD",
+                                                value: "<%= total.toFixed(2) %>"
+                                            }
+                                        }]
+                                    })
+                                });
+                                const order = await response.json();
+                                return order.id;
+                            },
+                            onApprove: function(data, actions) {
+                                return actions.order.capture().then(function(details) {
+                                    alert('Transaction completed by ' + details.payer.name.given_name);
+
+                                    <!-- TODO Redirect and perform other actions after successful payment -->
+
+                                });
+                            }
+                        }).render('#paypal-button-container');
+                    </script>                    
             </div>
         </div>
-    </body>
-    <script>
-        function removeFromCart(itemId) {
-            fetch('/remove-from-cart', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ itemId: itemId })
-            }).then(response => response.json())
-              .then(data => {
-                  if (data.success) {
-                      location.reload(); 
-                  } else {
-                      alert(data.message);
-                  }
-              }).catch(error => {
-                  console.error('Error removing item from cart:', error);
-              });
-        }
-    </script>
+    </div>
+</body>
+<script>
+    function removeFromCart(itemId) {
+        fetch('/remove-from-cart', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ itemId: itemId })
+        }).then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload(); 
+                } else {
+                    alert(data.message);
+                }
+            }).catch(error => {
+                console.error('Error removing item from cart:', error);
+            });
+    }
+</script>
 </html>

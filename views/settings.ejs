@@ -1,0 +1,55 @@
+<%- include("metadata") %>
+<%- include("searchNavBar") %>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Settings</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container">
+        <h1 class="mt-4 mb-4">Settings</h1>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h2>User Information</h2>
+            </div>
+            <div class="card-body">
+                <p>Name: <b><%= user %></b></p>
+                <p>Email: <b><%= email %></b></p>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h2>Change Password</h2>
+            </div>
+            <div class="card-body">
+                <form action="/changePassword" method="POST">
+                    <div class="form-group">
+                        <label for="current-password">Current Password:</label>
+                        <input type="password" id="current-password" name="currentPassword" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="new-password">New Password:</label>
+                        <input type="password" id="new-password" name="newPassword" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="confirm-password">Confirm New Password:</label>
+                        <input type="password" id="confirm-password" name="confirmPassword" class="form-control" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Change Password</button>
+                </form>
+            </div>
+        </div>
+
+        <div>
+            <a href="/signout" class="btn btn-primary mt-4">Signout</a>
+        </div>
+    </div>
+</body>
+</html>
