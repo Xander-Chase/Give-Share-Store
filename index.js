@@ -1,20 +1,21 @@
-require ('dotenv').config();                                // Import dotenv module to read ..env file
-require ('./utils');                                        // Import utils.js file to define include function
-const express = require('express');                         // Import express module to create server
-const session = require('express-session');                 // Import express-session module to manage session
-const MongoDBStore = require('connect-mongo');              // Import connect-mongo module to store session in MongoDB
-const Joi = require('joi');                                 // include the joi module
-const bcrypt = require('bcrypt');                           // include the bcrypt module
-const { ObjectId } = require('mongodb');                    // include the ObjectId module
-const { MongoClient} = require('mongodb');                  // include the MongoClient modules
-const AWS = require('aws-sdk');                             // include the AWS module
-const multer = require('multer');                           // include the multer module
-const multerS3 = require('multer-s3');                      // include the multer-s3 module
-const { S3Client } = require("@aws-sdk/client-s3");         // include the S3Client module
-const { Upload } = require("@aws-sdk/lib-storage");         // include the Upload module
-const Realm = require("realm");
-const { google } = require("googleapis");
+require ('dotenv').config();                                    // Import dotenv module to read ..env file
+require ('./utils');                                            // Import utils.js file to define include function
+const express = require('express');                             // Import express module to create server
+const session = require('express-session');                     // Import express-session module to manage session
+const MongoDBStore = require('connect-mongo');                  // Import connect-mongo module to store session in MongoDB
+const Joi = require('joi');                                     // include the joi module
+const bcrypt = require('bcrypt');                               // include the bcrypt module
+const { ObjectId } = require('mongodb');                        // include the ObjectId module
+const { MongoClient} = require('mongodb');                      // include the MongoClient modules
+const AWS = require('aws-sdk');                                 // include the AWS module
+const multer = require('multer');                               // include the multer module
+const multerS3 = require('multer-s3');                          // include the multer-s3 module
+const { S3Client } = require("@aws-sdk/client-s3");             // include the S3Client module
+const { Upload } = require("@aws-sdk/lib-storage");             // include the Upload module
+const Realm = require("realm");                                 // Import Realm module to interact with MongoDB Realm
+const { google } = require("googleapis");                       // Import googleapis module to interact with Google APIs
 const fetch = import('node-fetch');                             // Import node-fetch module to fetch data from API
+const mailchimp = require('@mailchimp/mailchimp_marketing');    // Import mailchimp_marketing module to interact with Mailchimp API
 
 
 const app = express();
@@ -40,6 +41,7 @@ const PayPalEnvironment = process.env.PAYPAL_ENVIRONMENT;   // Import PayPal Env
 const PayPalClientID = process.env.PAYPAL_CLIENT_ID;        // Import PayPal Client ID from ..env file
 const PayPalSecret = process.env.PAYPAL_CLIENT_SECRET;      // Import PayPal Secret from ..env file
 const PayPal_endpoint_url = PayPalEnvironment === 'sandbox' ? 'https://api-m.sandbox.paypal.com' : 'https://api-m.paypal.com'; // Import PayPal endpoint URL from ..env file
+
 
 // Configure and instantiate Google OAuth2.0 client
 /*const oauthConfig = {
@@ -678,19 +680,32 @@ app.get('/previousListings', (req, res) => {
     res.render('previousListings');
 });
 
-app.get('/mailingList', async (req, res) => {
-    // Example data representing people on the mailing list
-    const mailingList = [
-        { name: "Alice Johnson", email: "alice.johnson@example.com" },
-        { name: "Bob Smith", email: "bob.smith@example.com" },
-        { name: "Carolyn B. Yates", email: "carolyn.yates@example.com" },
-        { name: "David Gilmore", email: "david.gilmore@example.com" }
-    ];
 
-    res.render('mailingList', {
-        people: mailingList
-    });
+app.get('/mailingList', async (req, res) => {
+    try {
+        mailchimp.setConfig({
+            apiKey: process.env.MAILCHIMP_API_KEY,
+            server: process.env.MAILCHIMP_SERVER_PREFIX
+        });
+
+        const response = await mailchimp.lists.getListMembersInfo(process.env.MAILCHIMP_LIST_ID);
+        const subscribers = response.members.map(member => ({
+            firstName: member.merge_fields.FNAME,
+            lastName: member.merge_fields.LNAME,
+            email: member.email_address
+        }));
+
+        res.render('mailingList', {
+            people: subscribers
+        });
+    } catch (error) {
+        console.error('Error fetching mailing list:', error);
+        res.status(500).send('Error fetching mailing list');
+    }
 });
+
+
+
 
 app.get('/adminUsers', async (req, res) => {
     try {
