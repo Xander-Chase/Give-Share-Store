@@ -1,6 +1,6 @@
 <%- include("metadata") %>
 <html lang="en" >
-    <%- include("searchNavBar", {isLoggedIn, isAdmin}) %>
+    <%- include("searchNavBar") %>
     <body>
 
     <!-- Filters -->
@@ -10,12 +10,12 @@
                 <% for (i = 0; i < filterHeaders.length; i++) { %>
                     <div class="col accordion w-100">
                         <div class="accordion-item">
-                            <h2 class="accordion-header" id="heading<%= filterHeaders[i] %>">
-                                <button class="accordion-button bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#<%= filterHeaders[i] %>" aria-expanded="true" aria-controls="<%= filterHeaders[i] %>">
+                            <h2 class="accordion-header" id="heading<%= filtersAnchor[i] %>">
+                                <button class="accordion-button bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#<%= filtersAnchor[i] %>" aria-expanded="true" aria-controls="<%= filtersAnchor[i] %>">
                                     <strong><%= filterHeaders[i] %></strong> <!-- TODO: Variable -->
                                 </button>
                             </h2>
-                            <div id="<%= filterHeaders[i] %>" class="accordion-collapse collapse show" aria-labelledby="heading<%= filterHeaders[i] %>" data-bs-parent="#accordionExample">
+                            <div id="<%= filtersAnchor[i] %>" class="accordion-collapse collapse show" aria-labelledby="heading<%= filtersAnchor[i] %>" data-bs-parent="#accordionExample">
                                 <div class="accordion-body">
                                     <!-- TODO: Session Cookies because based on the collection search, only show the existing categories or just use node again -->
                                     <!-- TODO: Variable-->

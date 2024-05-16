@@ -132,9 +132,9 @@ app.get('/', async (req, res) => {
 
     try {
 
-        let filtersHeader = ["Categories", "Price", "Sorting"];
+        let filtersHeader = [`Category > ${req.session.category} > ${req.session.subcategory}`, "Price", "Sorting"];
+        let filterAnchors = ["Category", "Price", "Sorting"];
         const productsCollection = database.db(mongodb_database).collection('listing_items');
-
         let prices = [];
         let currentListings = await productsCollection.find({ isFeatureItem: false,
             item_title: {$regex: searchKey, $options: 'i'}}).toArray();
@@ -154,11 +154,24 @@ app.get('/', async (req, res) => {
 
         currentListings = await productsCollection.find({ isFeatureItem: false,
             item_title: {$regex: searchKey, $options: 'i'},
-            item_price: {$lt: Math.round(maximumPrice)}}).toArray();
+            item_price: {$lt: Math.round(maximumPrice)}, item_category: req.session.subcategory || req.session.category }).toArray();
 
-        let bodyFilters = getBodyFilters(sortedPrices[0], sortedPrices[prices.length-1], maximumPrice);
+        const categoriesCollection = database.db(mongodb_database).collection('categories');
+        const subCategories = await categoriesCollection.find({category_type: req.session.category}).project({_id: 0, sub_categories: 1}).toArray();
+        let bodyFilters;
+        if (subCategories.length < 1 || subCategories[0].sub_categories.length < 1)
+            bodyFilters = getBodyFilters(sortedPrices[0], sortedPrices[prices.length-1], maximumPrice, []);
+        else
+            bodyFilters = getBodyFilters(sortedPrices[0], sortedPrices[prices.length-1], maximumPrice, subCategories[0].sub_categories);
 
-        res.render("landing", {isLoggedIn, isAdmin, currentListings, filterHeaders: filtersHeader, filterStuff: bodyFilters});
+        res.render("landing", {
+            isLoggedIn,
+            currentListings,
+            filterHeaders: filtersHeader,
+            filtersAnchor: filterAnchors,
+            filterStuff: bodyFilters,
+            categories: await getCategoriesNav()
+        });
     } catch (error) {
         console.error('Failed to fetch current listings:', error);
         res.render("landing", {isLoggedIn, isAdmin, currentListings: []});
@@ -279,27 +292,25 @@ app.post('/userLogInSubmit', async (req, res) => {
     res.redirect("/");
 });
 
-function getBodyFilters(maxVal, minVal, currentPrice)
+function getBodyFilters(maxVal, minVal, currentPrice, subCategories)
 {
+    let categoriesBody =
+        "<ul class=\"list-group list-group-flush\">";
+
+    subCategories.forEach(function(subC) {
+        categoriesBody+="<li class=\"list-group-item\"><form method='post' action='/subcategory=" + subC.split(" ").join("_") + "'><button " +
+            "style='background: none; border: none'" +
+            " type='submit'>" + subC + "</button></form></li>"
+    })
+    categoriesBody+="</ul>";
     return [
 
-        "<ul class=\"list-group list-group-flush\">\n" +
-        " <li class=\"list-group-item\">Home</li>" +
-        " <li class=\"list-group-item\">Garden</li>\n" +
-        " <li class=\"list-group-item\">Jewelry</li>\n" +
-        " <li class=\"list-group-item\">Sports</li>\n" +
-        " <li class=\"list-group-item\">Entertainment</li>\n" +
-        " <li class=\"list-group-item\">Clothing</li>\n" +
-        " <li class=\"list-group-item\">Accessories</li>\n" +
-        " <li class=\"list-group-item\">Family</li>\n" +
-        " <li class=\"list-group-item\">Electronics</li>\n" +
-        " <li class=\"list-group-item\">Collectables</li>\n" +
-        "</ul>",
+        categoriesBody,
 
         "<div class=\"row col-sm\">\n" +
         "        <div class=\"col text-start\">\n" +
         "            <label for=\"priceRange\" class=\"form-label\">" +
-        "               <strong>$"+ (Math.floor(minVal / 5) * 5) + "</strong>" +
+        "               <strong>$" + (Math.floor(minVal / 5) * 5) + "</strong>" +
         "           </label>\n" +
         "        </div>\n" +
         "        <div class=\"col text-middle\">\n" +
@@ -310,7 +321,7 @@ function getBodyFilters(maxVal, minVal, currentPrice)
         "               <strong>$" + (Math.ceil(maxVal / 5) * 5) + "</strong>" +
         "           </label>\n" +
         "        </div>\n" +
-        "        <input id=\"selectedPrice\" type=\"range\" class=\"form-range\" min="+ (Math.floor(minVal / 5) * 5) +" max="+ (Math.ceil(maxVal / 5) * 5) +" step=5 id=\"priceRange\" oninput=\"" +
+        "        <input id=\"selectedPrice\" type=\"range\" class=\"form-range\" min=" + (Math.floor(minVal / 5) * 5) + " max=" + (Math.ceil(maxVal / 5) * 5) + " step=5 id=\"priceRange\" oninput=\"" +
         "{document.getElementById('userRange').innerHTML = `$${this.value}`;}\">\n" +
         "</div>",
 
@@ -319,9 +330,11 @@ function getBodyFilters(maxVal, minVal, currentPrice)
         " <li class='list-group-item'>Sort by Lowest Price</li></ul>"
     ];
 }
-function sup()
+
+async function getCategoriesNav()
 {
-    console.log("Wassup");
+    const categoriesCollection = database.db(mongodb_database).collection('categories');
+    return await categoriesCollection.find({}).toArray();
 
 }
 app.post('/keyword=', (req, res) => {
@@ -338,6 +351,17 @@ app.post('/price=:newMax', (req, res) => {
     res.redirect('/');
 })
 
+app.post('/category=:type', async (req, res) => {
+    req.session.category = req.params.type;
+    req.session.subcategory = "";
+    res.redirect('/');
+})
+
+app.post('/subcategory=:type', async (req, res) => {
+    req.session.subcategory = req.params.type.split("_").join(" ");
+
+    res.redirect('/');
+})
 app.post('/clearFilter', (req, res) =>
 {
     req.session.maxPrice = 0;
@@ -347,7 +371,12 @@ app.post('/clearFilter', (req, res) =>
 
 app.get('/cart', async (req, res) => {
     const cartItems = req.session.cart || [];
-    res.render('cartView', { items: cartItems, paypalClientId: process.env.PAYPAL_CLIENT_ID });
+    res.render('cartView', {
+      isLoggedIn: req.session.loggedIn, 
+      items: cartItems, 
+      paypalClientId: process.env.PAYPAL_CLIENT_ID, 
+      categories: await getCategoriesNav() 
+    });
 });
 
 app.post('/add-to-cart', async (req, res) => {
@@ -415,7 +444,7 @@ app.get('/product-info/:id', async (req, res) => {
         }
 
         const isLoggedIn = req.session.loggedIn;
-        res.render('product-info', { item: item, isLoggedIn : isLoggedIn});
+        res.render('product-info', { item: item, isLoggedIn : isLoggedIn, categories: await getCategoriesNav()});
     } catch (error) {
         console.error('Failed to fetch item:', error);
         res.status(500).send('Error fetching item details');
@@ -423,21 +452,21 @@ app.get('/product-info/:id', async (req, res) => {
 });
 
 
-app.get('/about', (req, res) => {
+app.get('/about', async (req, res) => {
     const isLoggedIn = req.session.loggedIn; 
-    res.render("about", {isLoggedIn : isLoggedIn});
+    res.render("about", {isLoggedIn : isLoggedIn, categories: await getCategoriesNav()});
 });
 
-app.get('/contact-us', (req, res) => {
+app.get('/contact-us', async (req, res) => {
     const isLoggedIn = req.session.loggedIn; 
-    res.render("contact", {isLoggedIn : isLoggedIn});
+    res.render("contact", {isLoggedIn : isLoggedIn, categories: await getCategoriesNav()});
 });
 
-app.get('/manage', (req, res) => {
+app.get('/manage', async (req, res) => {
     if (req.session.loggedIn) {
         const isLoggedIn = req.session.loggedIn;
         const isAdmin = req.session.isAdmin;
-        res.render("product-management", {isLoggedIn, isAdmin});
+        res.render("product-management", {isLoggedIn, isAdmin, categories: await getCategoriesNav()});
     } 
     else {
         res.redirect('/adminLogIn');
@@ -581,7 +610,7 @@ app.get('/editListing/:id', async (req, res) => {
         if (!listing) {
             return res.status(404).send('Listing not found');
         }
-        res.render('editListing', { listing, isLoggedIn});
+        res.render('editListing', { listing, isLoggedIn, categories: await getCategoriesNav()});
     } catch (error) {
         console.error('Failed to fetch listing:', error);
         res.status(500).send('Error fetching listing details');
@@ -642,7 +671,7 @@ app.get('/previousListings', (req, res) => {
     res.render('previousListings');
 });
 
-app.get('/mailingList', (req, res) => {
+app.get('/mailingList', async (req, res) => {
     // Example data representing people on the mailing list
     const mailingList = [
         { name: "Alice Johnson", email: "alice.johnson@example.com" },
@@ -652,8 +681,7 @@ app.get('/mailingList', (req, res) => {
     ];
 
     res.render('mailingList', {
-        people: mailingList,
-        isLoggedIn: req.session.loggedIn
+        people: mailingList
     });
 });
 
@@ -697,7 +725,7 @@ app.get('/editUser/:id', async (req, res) => {
             return;
         }
         const isLoggedIn = req.session.loggedIn;
-        res.render('editUser', { user, isLoggedIn : isLoggedIn});
+        res.render('editUser', { user, isLoggedIn : isLoggedIn, categories: await getCategoriesNav()});
     } catch (error) {
         console.error('Error retrieving user for editing:', error);
         res.status(500).send('Error retrieving user');
@@ -746,6 +774,9 @@ app.get('/featuredItems', async (req, res) => {
     }
 });
 
+app.get('/categoryManagement', async (req, res) => {
+    res.render('categoryManagement');
+})
 // connect to the database and hash passwords if necessary, then start the server
 database.connect().then(async () => {
     console.log('MongoDB connected successfully');
