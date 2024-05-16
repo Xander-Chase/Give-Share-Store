@@ -10,7 +10,7 @@
         <tbody>
             <% people.forEach(function(person) { %>
                 <tr>
-                    <td><%= person.name %></td>
+                    <td><%= person.firstName + " " + person.lastName %></td>
                     <td><%= person.email %></td>
                 </tr>
             <% }); %>

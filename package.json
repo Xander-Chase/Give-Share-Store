@@ -12,6 +12,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.574.0",
     "@aws-sdk/lib-storage": "^3.574.0",
+    "@mailchimp/mailchimp_marketing": "^3.0.80",
     "aws-sdk": "^2.1621.0",
     "bcrypt": "^5.1.1",
     "connect-mongo": "^5.1.0",
@@ -26,9 +27,9 @@
     "jwt-decode": "^4.0.0",
     "multer": "^1.4.5-lts.1",
     "multer-s3": "^3.0.1",
+    "node-fetch": "3.3.2",
     "realm": "^12.8.0",
-    "stripe": "^15.5.0",
-    "node-fetch": "3.3.2"
+    "stripe": "^15.5.0"
   },
   "repository": {
     "type": "git",
