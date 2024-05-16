@@ -62,11 +62,13 @@
                 <div class="col">
                     <h2 class="text-center title">Get Involved!</h2>
                     <div class="text-center">
-                        <input type="text" placeholder="Name" class="input">
-                        <input type="email" placeholder="Email*" required class="input">
-                        <input type="text" placeholder="Where did you hear about us?" class="input">
-                        <textarea placeholder="Tell us a bit about yourself." class="input specialInput" wrap="soft" style="resize: none;"></textarea>
-                        <button type="button" class="btn btn-outline-secondary sendButton">Send</button>
+                        <form id="getInvolvedForm">
+                            <input type="text" name="name" placeholder="Name" class="input">
+                            <input type="email" name="email" placeholder="Email*" required class="input">
+                            <input type="text" name="referral" placeholder="Where did you hear about us?" class="input">
+                            <textarea name="message" placeholder="Tell us a bit about yourself." class="input specialInput" wrap="soft" style="resize: none;"></textarea>
+                            <button type="submit" class="btn btn-outline-secondary sendButton">Send</button>
+                        </form>
                     </div>
                     <p>*Required</p>
                 </div>
@@ -79,8 +81,7 @@
                     <h2 class="title">Find more ways to help!</h2>
                     <p class="text-content">
                         A nonprofit is as strong as the community that holds it up. Together, we can do more than we can do alone. Let's bring our abilities and passions together to affect real change.<br>
-
-                        There are many ways to join us and support our goals. Contact us to find out  more about volunteer opportunities, and ways that you can get  our message to your friends and family.
+                        There are many ways to join us and support our goals. Contact us to find out more about volunteer opportunities, and ways that you can get our message to your friends and family.
                     </p>
                 </div>
             </div>
@@ -90,14 +91,66 @@
                     <h3 class="title text-center">Make a referral</h3>
                     <p class="referral-text text-center">If you are a community service organisation and would like to refer a client in need of furniture or household goods please fill out the form below and we will contact you to see how we can help. (Due to the current public activity restrictions we are low on supply at this time, but hoping for things to change soon). Please leave us a short message along with your phone #, as well as when you are available to contact. We do not need to know client names at this time.</p>
                     <div class="text-center">
-                        <input type="text" class="referral-input" placeholder="Organisation name">
-                        <input type="email" class="referral-input" placeholder="Email*" required>
-                        <textarea name="message" class="referral-input specialInput" placeholder="Message" wrap="soft" style="resize: none;"></textarea>
-                        <button type="button" class="btn btn-outline-secondary referral-send">Send</button>
+                        <form id="makeReferralForm">
+                            <input type="text" name="orgName" class="referral-input" placeholder="Organisation name">
+                            <input type="email" name="email" class="referral-input" placeholder="Email*" required>
+                            <textarea name="message" class="referral-input specialInput" placeholder="Message" wrap="soft" style="resize: none;"></textarea>
+                            <button type="submit" class="btn btn-outline-secondary referral-send">Send</button>
+                        </form>
                         <p>*Required</p>
                     </div>
                 </div>
             </div>
         </div>
+
+        <script>
+            document.getElementById('getInvolvedForm').addEventListener('submit', function(event) {
+                event.preventDefault();
+                const formData = new FormData(this);
+                fetch('/sendContactUsEmail', {
+                    method: 'POST',
+                    body: JSON.stringify(Object.fromEntries(formData)),
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Email sent successfully');
+                    } else {
+                        alert('Error sending email: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error sending email');
+                });
+            });
+
+            document.getElementById('makeReferralForm').addEventListener('submit', function(event) {
+                event.preventDefault();
+                const formData = new FormData(this);
+                fetch('/sendReferralEmail', {
+                    method: 'POST',
+                    body: JSON.stringify(Object.fromEntries(formData)),
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Referral email sent successfully');
+                    } else {
+                        alert('Error sending referral email: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error sending referral email');
+                });
+            });
+        </script>
     </body>
 </html>

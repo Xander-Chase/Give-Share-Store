@@ -14,7 +14,9 @@ const { S3Client } = require("@aws-sdk/client-s3");         // include the S3Cli
 const { Upload } = require("@aws-sdk/lib-storage");         // include the Upload module
 const Realm = require("realm");
 const { google } = require("googleapis");
-const fetch = import('node-fetch');                             // Import node-fetch module to fetch data from API
+const fetch = import('node-fetch');                          // Import node-fetch module to fetch data from API
+const formData = require('form-data');                      // Import form-data module to handle form data
+const Mailgun = require('mailgun.js');                      // Import mailgun.js module to send email
 
 
 const app = express();
@@ -903,3 +905,62 @@ app.post('/create-checkout-session', async (req, res) => {
 });
 
 // ----------------- Stripe Payment END -----------------
+
+// ----------------- Email Sending START -----------------
+const mailgun = new Mailgun(formData);
+const mg = mailgun.client({ 
+    username: 'api', 
+    key: process.env.MAILGUN_API_KEY 
+});
+
+const sendContactUsEmail = (contactDetails) => {
+    const messageData = {
+        from: 'thevintagegaragetest@gmail.com',
+        to: 'ajgabl18@gmail.com',
+        subject: 'New Contact Us Message',
+        text: `You have received a new message from ${contactDetails.name} (${contactDetails.email}):\n\n${contactDetails.message}`
+    };
+
+    return mg.messages.create(process.env.MAILGUN_DOMAIN, messageData);
+};
+
+const sendReferralEmail = (referralDetails) => {
+    const messageData = {
+        from: 'thevintagegaragetest@gmail.com',
+        to: 'ajgabl18@gmail.com',
+        subject: 'New Referral Message',
+        text: `You have received a new referral from ${referralDetails.orgName} (${referralDetails.email}):\n\n${referralDetails.message}`
+    };
+
+    return mg.messages.create(process.env.MAILGUN_DOMAIN, messageData);
+};
+
+app.post('/sendContactUsEmail', (req, res) => {
+    const contactDetails = req.body;
+
+    sendContactUsEmail(contactDetails)
+        .then(info => {
+            console.log('Email sent:', info);
+            res.json({ success: true });
+        })
+        .catch(error => {
+            console.error('Error sending email:', error);
+            res.json({ success: false, message: error.message });
+        });
+});
+
+app.post('/sendReferralEmail', (req, res) => {
+    const referralDetails = req.body;
+
+    sendReferralEmail(referralDetails)
+        .then(info => {
+            console.log('Referral email sent:', info);
+            res.json({ success: true });
+        })
+        .catch(error => {
+            console.error('Error sending referral email:', error);
+            res.json({ success: false, message: error.message });
+        });
+});
+
+// ----------------- Email Sending END -----------------
