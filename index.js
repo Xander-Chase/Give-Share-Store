@@ -320,7 +320,7 @@ app.post('/clearFilter', (req, res) =>
 // Will need to be updated to only pass items that were added to the cart
 app.get('/cart', async (req, res) => {
     const cartItems = req.session.cart || [];
-    res.render('cartView', { items: cartItems, categories: await getCategoriesNav() });
+    res.render('cartView', { isLoggedIn: req.session.loggedIn, items: cartItems, categories: await getCategoriesNav() });
 });
 
 app.post('/add-to-cart', async (req, res) => {
@@ -396,20 +396,20 @@ app.get('/product-info/:id', async (req, res) => {
 });
 
 
-app.get('/about', (req, res) => {
+app.get('/about', async (req, res) => {
     const isLoggedIn = req.session.loggedIn; 
-    res.render("about", {isLoggedIn : isLoggedIn});
+    res.render("about", {isLoggedIn : isLoggedIn, categories: await getCategoriesNav()});
 });
 
-app.get('/contact-us', (req, res) => {
+app.get('/contact-us', async (req, res) => {
     const isLoggedIn = req.session.loggedIn; 
-    res.render("contact", {isLoggedIn : isLoggedIn});
+    res.render("contact", {isLoggedIn : isLoggedIn, categories: await getCategoriesNav()});
 });
 
-app.get('/manage', (req, res) => {
+app.get('/manage', async (req, res) => {
     if (req.session.loggedIn) {
         const isLoggedIn = req.session.loggedIn;
-        res.render("product-management", {isLoggedIn : isLoggedIn});
+        res.render("product-management", {isLoggedIn : isLoggedIn, categories: await getCategoriesNav()});
     } 
     else {
         res.redirect('/adminLogIn');
@@ -494,7 +494,7 @@ app.get('/editListing/:id', async (req, res) => {
         if (!listing) {
             return res.status(404).send('Listing not found');
         }
-        res.render('editListing', { listing, isLoggedIn});
+        res.render('editListing', { listing, isLoggedIn, categories: await getCategoriesNav()});
     } catch (error) {
         console.error('Failed to fetch listing:', error);
         res.status(500).send('Error fetching listing details');
@@ -554,7 +554,7 @@ app.get('/previousListings', (req, res) => {
     res.render('previousListings');
 });
 
-app.get('/mailingList', (req, res) => {
+app.get('/mailingList', async (req, res) => {
     // Example data representing people on the mailing list
     const mailingList = [
         { name: "Alice Johnson", email: "alice.johnson@example.com" },
@@ -564,8 +564,7 @@ app.get('/mailingList', (req, res) => {
     ];
 
     res.render('mailingList', {
-        people: mailingList,
-        isLoggedIn: req.session.loggedIn
+        people: mailingList
     });
 });
 
@@ -600,7 +599,7 @@ app.get('/editUser/:id', async (req, res) => {
             return;
         }
         const isLoggedIn = req.session.loggedIn;
-        res.render('editUser', { user, isLoggedIn : isLoggedIn});
+        res.render('editUser', { user, isLoggedIn : isLoggedIn, categories: await getCategoriesNav()});
     } catch (error) {
         console.error('Error retrieving user for editing:', error);
         res.status(500).send('Error retrieving user');
@@ -649,6 +648,9 @@ app.get('/featuredItems', async (req, res) => {
     }
 });
 
+app.get('/categoryManagement', async (req, res) => {
+    res.render('categoryManagement');
+})
 // connect to the database and hash passwords if necessary, then start the server
 database.connect().then(async () => {
     console.log('MongoDB connected successfully');
