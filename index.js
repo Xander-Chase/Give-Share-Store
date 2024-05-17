@@ -139,12 +139,18 @@ app.get('/', async (req, res) => {
     if (req.session.subcategory != null)
         subCategoryTab = `> ${req.session.subcategory}`;
 
+    let orderCode = 1;
+    if (req.session.sortBy === "descending")
+        orderCode = -1;
+
     try {
 
-        let filtersHeader = [`Category ${categoryTab} ${subCategoryTab}`, "Price", "Sorting"];
-        let filterAnchors = ["Category", "Price", "Sorting"];
+        let filtersHeader = [`Category ${categoryTab} ${subCategoryTab}`, "Sorting", "Price"];
+        let filterAnchors = ["Category", "Sorting", "Price"];
         const productsCollection = database.db(mongodb_database).collection('listing_items');
         let prices = [];
+
+        // Price Setting Up.
         let currentListings = await productsCollection.find({ isFeatureItem: false,
             item_title: {$regex: searchKey, $options: 'i'}}).toArray();
         currentListings.forEach(function(item)
@@ -152,6 +158,8 @@ app.get('/', async (req, res) => {
             prices.push(item.item_price)
         });
 
+        // Way different from aggregate because this is a separate list where it sets it to ascending order. While the other one goes to
+        // either ascending or descending.
         const sortedPrices = prices.sort(function(a, b) {
             if (a < b)
                 return 1;
@@ -165,16 +173,16 @@ app.get('/', async (req, res) => {
         if (req.session.category == null)
             currentListings = await productsCollection.find({ isFeatureItem: false,
                 item_title: {$regex: searchKey, $options: 'i'},
-                item_price: {$lt: Math.round(maximumPrice)} }).toArray();
+                item_price: {$lt: Math.round(maximumPrice)} }).sort({item_price: orderCode}).toArray();
         else
             if (req.session.subcategory == null)
                 currentListings = await productsCollection.find({ isFeatureItem: false,
                     item_title: {$regex: searchKey, $options: 'i'},
-                    item_price: {$lt: Math.round(maximumPrice)}, item_category: req.session.category }).toArray();
+                    item_price: {$lt: Math.round(maximumPrice)}, item_category: req.session.category }).sort({item_price: orderCode}).toArray();
             else
                 currentListings = await productsCollection.find({ isFeatureItem: false,
                     item_title: {$regex: searchKey, $options: 'i'},
-                    item_price: {$lt: Math.round(maximumPrice)}, item_category: req.session.subcategory || req.session.category }).toArray();
+                    item_price: {$lt: Math.round(maximumPrice)}, item_category: req.session.subcategory || req.session.category }).sort({item_price: orderCode}).toArray();
       
         const subCategories = await categoryCollection.find({category_type: req.session.category}).project({_id: 0, sub_categories: 1}).toArray();
         let bodyFilters;
@@ -330,7 +338,9 @@ function getBodyFilters(maxVal, minVal, currentPrice, subCategories)
     return [
 
         categoriesBody,
-
+        "<ul class='list-group list-group-flush'>" +
+        " <li class='list-group-item'><form method='post' action='/sortby=ascending'><button style='background: none; border: none' type='submit'>Sort by Lowest Price</button></form></li>" +
+        " <li class='list-group-item'><form method='post' action='/sortby=descending'><button style='background: none; border: none' type='submit'>Sort by Highest Price</button></form></li>",
         "<div class=\"row col-sm\">\n" +
         "        <div class=\"col text-start\">\n" +
         "            <label for=\"priceRange\" class=\"form-label\">" +
@@ -347,11 +357,7 @@ function getBodyFilters(maxVal, minVal, currentPrice, subCategories)
         "        </div>\n" +
         "        <input id=\"selectedPrice\" type=\"range\" class=\"form-range\" min=" + (Math.floor(minVal / 5) * 5) + " max=" + (Math.ceil(maxVal / 5) * 5) + " step=5 id=\"priceRange\" oninput=\"" +
         "{document.getElementById('userRange').innerHTML = `$${this.value}`;}\">\n" +
-        "</div>",
-
-        "<ul class='list-group list-group-flush'>" +
-        " <li class='list-group-item'>Sort by Highest Price</li>" +
-        " <li class='list-group-item'>Sort by Lowest Price</li></ul>"
+        "</div>"
     ];
 }
 
@@ -365,7 +371,7 @@ app.post('/keyword=', (req, res) => {
     req.session.keyword = null;
     res.redirect('/');
 })
-app.post('/keyword=:key', async (req, res) => {
+app.post('/keyword=:key',  (req, res) => {
     req.session.keyword = req.params.key;
     res.redirect('/');
 });
@@ -375,21 +381,26 @@ app.post('/price=:newMax', (req, res) => {
     res.redirect('/');
 })
 
-app.post('/category=:type', async (req, res) => {
+app.post('/category=:type',  (req, res) => {
     req.session.category = req.params.type;
     req.session.subcategory = null;
     res.redirect('/');
 })
 
-app.post('/category=', async (req, res) => {
+app.post('/category=',  (req, res) => {
     req.session.category = null;
     req.session.subcategory = null;
     res.redirect('/');
 })
 
-app.post('/subcategory=:type', async (req, res) => {
+app.post('/subcategory=:type',  (req, res) => {
     req.session.subcategory = req.params.type.split("_").join(" ");
 
+    res.redirect('/');
+})
+
+app.post('/sortby=:option', async (req, res) => {
+    req.session.sortBy = req.params.option;
     res.redirect('/');
 })
 app.post('/clearFilter', (req, res) =>
@@ -399,6 +410,7 @@ app.post('/clearFilter', (req, res) =>
     req.session.keyword = null;
     req.session.category = null;
     req.session.subcategory = null;
+    req.session.sortBy = 'ascending';
     res.redirect('/');
 })
 
