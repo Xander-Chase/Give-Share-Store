@@ -169,21 +169,54 @@ app.get('/', async (req, res) => {
                 return 0;
         });
 
+        let pageIndexes = [];
+        let previousIndex = req.session.pageIndex - 1;
+        let nextIndex = Number(req.session.pageIndex) + 1;
+        let numberOfPages = sortedPrices.length / 20;
+        if (previousIndex < 1)
+            previousIndex = 1;
+        // todo: test case, use 40+ current listings
+        if (nextIndex>=numberOfPages)
+            nextIndex--;
+        for (let i = 0; i < (numberOfPages-1); i++)
+        {
+            pageIndexes.push(i+1);
+        }
+        const skips = 20*(((req.session.pageIndex-1) < 0 ) ? 0 : (req.session.pageIndex-1));
         // TODO: please make one of them into a variable.
-        if (req.session.category == null)
+        if (req.session.category != null)
+        {
             currentListings = await productsCollection.find({ isFeatureItem: false,
                 item_title: {$regex: searchKey, $options: 'i'},
-                item_price: {$lt: Math.round(maximumPrice)} }).sort({item_price: orderCode}).toArray();
+                item_price: {$lt: Math.round(maximumPrice) },
+                item_category: req.session.category
+            }).sort({item_price: orderCode})
+                .skip(skips)
+                .limit(20)
+                .toArray();
+            if (req.session.subcategory != null)
+                currentListings = await productsCollection.find({ isFeatureItem: false,
+                    item_title: {$regex: searchKey, $options: 'i'},
+                    item_price: {$lt: Math.round(maximumPrice) },
+                    item_category: req.session.category,
+                    item_sub_category: req.session.subcategory
+                }).sort({item_price: orderCode})
+                    .skip(skips)
+                    .limit(20)
+                    .toArray();
+        }
         else
-            if (req.session.subcategory == null)
-                currentListings = await productsCollection.find({ isFeatureItem: false,
-                    item_title: {$regex: searchKey, $options: 'i'},
-                    item_price: {$lt: Math.round(maximumPrice)}, item_category: req.session.category }).sort({item_price: orderCode}).toArray();
-            else
-                currentListings = await productsCollection.find({ isFeatureItem: false,
-                    item_title: {$regex: searchKey, $options: 'i'},
-                    item_price: {$lt: Math.round(maximumPrice)}, item_category: req.session.subcategory || req.session.category }).sort({item_price: orderCode}).toArray();
-      
+            currentListings = await productsCollection.find({ isFeatureItem: false,
+                item_title: {$regex: searchKey, $options: 'i'},
+                item_price: {$lt: Math.round(maximumPrice) },
+            }).sort({item_price: orderCode})
+                .skip(skips)
+                .limit(20)
+                .toArray();
+
+
+        req.session.pageIndex = 0;
+
         const subCategories = await categoryCollection.find({category_type: req.session.category}).project({_id: 0, sub_categories: 1}).toArray();
         let bodyFilters;
         if (subCategories.length < 1 || subCategories[0].sub_categories.length < 1)
@@ -191,6 +224,8 @@ app.get('/', async (req, res) => {
         else
             bodyFilters = getBodyFilters(sortedPrices[0], sortedPrices[prices.length-1], maximumPrice, subCategories[0].sub_categories);
 
+        console.log(nextIndex)
+        // Limit
         res.render("landing", {
             isLoggedIn,
             currentListings,
@@ -198,7 +233,10 @@ app.get('/', async (req, res) => {
             filtersAnchor: filterAnchors,
             filterStuff: bodyFilters,
             categories: await getCategoriesNav(),
-            isAdmin: isAdmin
+            isAdmin: isAdmin,
+            paginationIndex: pageIndexes,
+            previousPage: previousIndex,
+            nextPage: nextIndex
         });
     } catch (error) {
         console.error('Failed to fetch current listings:', error);
@@ -206,6 +244,10 @@ app.get('/', async (req, res) => {
     }
 });
 
+app.post('/page=:index', async (req, res) => {
+    req.session.pageIndex = req.params.index;
+    res.redirect('/');
+})
 
 async function hashExistingPasswords() {
     try {
