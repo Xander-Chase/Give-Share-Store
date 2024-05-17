@@ -81,9 +81,13 @@
                                 </div>
                                 <div class="col-sm-7">
                                     <span class="item-title"><%= item.item_title %></span>
+                                    <div>
+                                        <label><input type="checkbox" class="insurance-checkbox" data-id="<%= item._id %>" data-cost="<%= item.item_estimatedInsuranceCost %>" /> Insurance ($<%= item.item_estimatedInsuranceCost %>)</label>
+                                        <label><input type="checkbox" class="shipping-checkbox" data-id="<%= item._id %>" data-cost="<%= item.item_estimatedShippingCost %>" /> Shipping ($<%= item.item_estimatedShippingCost %>)</label>
+                                        <label><input type="checkbox" class="pickup-checkbox" data-id="<%= item._id %>" /> Pickup</label>
+                                    </div>
                                 </div>
                                 <div class="col-sm-5">
-                                    <h2><%= item.item_title %></h2>
                                     <button class="btn btn-danger btn-sm" onclick="removeFromCart('<%= item._id %>')">Remove</button>
                                 </div>
                             </div>
@@ -99,7 +103,7 @@
                     <h4 class="d-flex justify-content-between align-items-center mb-3">
                         <span class="text-primary">Your cart</span>
                     </h4>
-                    <ul class="list-group mb-3">
+                    <ul class="list-group mb-3" id="cart-summary">
                         <% var total = 0; %>
                         <% items.forEach(function(item) { %>
                             <li class="list-group-item d-flex justify-content-between lh-sm">
@@ -112,21 +116,48 @@
                         <% }); %>
                         <li class="list-group-item d-flex justify-content-between">
                             <span>Subtotal (CAN)</span>
-                            <strong>$<%= total.toFixed(2) %></strong>
+                            <strong id="subtotal">$<%= total.toFixed(2) %></strong>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Shipping (CAN)</span>
+                            <strong id="shipping-total">$0.00</strong>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Insurance (CAN)</span>
+                            <strong id="insurance-total">$0.00</strong>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Tax (5% GST + 7% PST)</span>
+                            <strong id="tax-total">$0.00</strong>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Total (CAN)</span>
+                            <strong id="total">$<%= total.toFixed(2) %></strong>
                         </li>
                     </ul>
                     <form class="card p2" action="/create-checkout-session" method="POST">
                         <% items.forEach(function(item) { %>
                             <input type="hidden" name="productIds" value="<%= item._id.toString() %>">
                         <% }); %>
+                        <input type="hidden" name="insuranceTotal" id="insuranceTotalInput" value="0">
+                        <input type="hidden" name="shippingTotal" id="shippingTotalInput" value="0">
+                        <input type="hidden" name="taxTotal" id="taxTotalInput" value="0">
+                        <input type="hidden" name="finalTotal" id="finalTotalInput" value="0">
                         <button type="submit" id="checkout-button" class="btn btn-primary">Proceed to Checkout</button>
-                    </form>   
+                    </form>
+                    
                     <div id="paypal-button-container"></div>
                     <script src="https://www.paypal.com/sdk/js?client-id=<%= paypalClientId %>&currency=CAD"></script>
                     <script>
                         paypal.Buttons({
-                            fundingSource: paypal.FUNDING.PAYPAL, 
+                            fundingSource: paypal.FUNDING.PAYPAL,
                             createOrder: async function() {
+                                const insuranceTotal = parseFloat(document.getElementById('insuranceTotalInput').value);
+                                const shippingTotal = parseFloat(document.getElementById('shippingTotalInput').value);
+                                const taxTotal = parseFloat(document.getElementById('taxTotalInput').value);
+                                const finalTotal = parseFloat(document.getElementById('finalTotalInput').value);
+                                const subtotal = parseFloat(document.getElementById('subtotal').textContent.replace('$', ''));
+                    
                                 const response = await fetch("/create-paypal-order", {
                                     method: "POST",
                                     headers: {
@@ -134,10 +165,20 @@
                                     },
                                     body: JSON.stringify({
                                         intent: "CAPTURE",
+                                        insuranceTotal,
+                                        shippingTotal,
+                                        taxTotal,
+                                        finalTotal,
                                         purchase_units: [{
                                             amount: {
                                                 currency_code: "CAD",
-                                                value: "<%= total.toFixed(2) %>"
+                                                value: finalTotal.toFixed(2),
+                                                breakdown: {
+                                                    item_total: { value: subtotal.toFixed(2), currency_code: "CAD" },
+                                                    shipping: { value: shippingTotal.toFixed(2), currency_code: "CAD" },
+                                                    insurance: { value: insuranceTotal.toFixed(2), currency_code: "CAD" },
+                                                    tax_total: { value: taxTotal.toFixed(2), currency_code: "CAD" }
+                                                }
                                             }
                                         }]
                                     })
@@ -145,21 +186,31 @@
                                 const order = await response.json();
                                 return order.id;
                             },
-                            onApprove: function(data, actions) {
-                                return actions.order.capture().then(function(details) {
+                            onApprove: async function(data, actions) {
+                                return actions.order.capture().then(async function(details) {
                                     alert('Transaction completed by ' + details.payer.name.given_name);
-
-                                    <!-- TODO Redirect and perform other actions after successful payment -->
-
+                    
+                                    // Mark items as sold in the database
+                                    const itemIds = `<%- JSON.stringify(items.map(item => item._id.toString())) %>`;
+                                    await fetch('/mark-items-sold', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify({ itemIds })
+                                    });
+                    
+                                    // TODO Redirect and perform other actions after successful payment
+                                    window.location.href = '/';
                                 });
                             }
                         }).render('#paypal-button-container');
-                    </script>                    
+                    </script>                                                             
             </div>
         </div>
     </div>
 </body>
-<%- include("footer") %>
+<!-- <%- include("footer") %> -->
 <script>
     function removeFromCart(itemId) {
         fetch('/remove-from-cart', {
@@ -179,5 +230,45 @@
                 console.error('Error removing item from cart:', error);
             });
     }
+
+    document.querySelectorAll('.insurance-checkbox, .shipping-checkbox, .pickup-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', updateTotals);
+    });
+
+    function updateTotals() {
+        let shippingTotal = 0;
+        let insuranceTotal = 0;
+        let subtotal = parseFloat(document.getElementById('subtotal').textContent.replace('$', ''));
+
+        document.querySelectorAll('.insurance-checkbox:checked').forEach(checkbox => {
+            insuranceTotal += parseFloat(checkbox.getAttribute('data-cost'));
+        });
+
+        document.querySelectorAll('.shipping-checkbox:checked').forEach(checkbox => {
+            shippingTotal += parseFloat(checkbox.getAttribute('data-cost'));
+        });
+
+        const taxRate = 0.12; // 12% GST and PST
+        let total = subtotal + shippingTotal + insuranceTotal;
+        let taxTotal = total * taxRate;
+        let finalTotal = total + taxTotal;
+
+        document.getElementById('shipping-total').textContent = `$${shippingTotal.toFixed(2)}`;
+        document.getElementById('insurance-total').textContent = `$${insuranceTotal.toFixed(2)}`;
+        document.getElementById('tax-total').textContent = `$${taxTotal.toFixed(2)}`;
+        document.getElementById('total').textContent = `$${finalTotal.toFixed(2)}`;
+
+        document.getElementById('insuranceTotalInput').value = insuranceTotal.toFixed(2);
+        document.getElementById('shippingTotalInput').value = shippingTotal.toFixed(2);
+        document.getElementById('taxTotalInput').value = taxTotal.toFixed(2);
+        document.getElementById('finalTotalInput').value = finalTotal.toFixed(2);
+    }
+
+    // Initial call to updateTotals when the page loads
+    window.onload = updateTotals;
+
+    document.querySelectorAll('.insurance-checkbox, .shipping-checkbox, .pickup-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', updateTotals);
+    });
 </script>
 </html>

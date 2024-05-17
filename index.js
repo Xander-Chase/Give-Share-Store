@@ -27,7 +27,7 @@ app.use(express.static('css'));                             // serve static css 
 app.use(express.static('js'));                              // serve static js files
 app.use(express.json());                                    // parse json request bodies
 
-const port = process.env.PORT || 5000;                      // Set port to 8000 if not defined in ..env file
+const port = process.env.PORT || 5000;                      // Set port to 5000 if not defined in ..env file
 
 
 // secret variables located in ..env file
@@ -1025,6 +1025,7 @@ database.connect().then(async () => {
 // ----------------- PayPal Payment START -----------------
 
 async function getAccessToken() {
+    const fetch = await import('node-fetch').then(module => module.default);
     const auth = `${PayPalClientID}:${PayPalSecret}`;
     const data = 'grant_type=client_credentials';
 
@@ -1042,10 +1043,25 @@ async function getAccessToken() {
 
 app.post('/create-paypal-order', async (req, res) => {
     try {
+        const fetch = await import('node-fetch').then(module => module.default);
         const accessToken = await getAccessToken();
+
+        const { intent, purchase_units, insuranceTotal, shippingTotal, taxTotal, finalTotal } = req.body;
+
         const orderData = {
-            intent: req.body.intent.toUpperCase(),
-            purchase_units: req.body.purchase_units
+            intent: intent.toUpperCase(),
+            purchase_units: [{
+                amount: {
+                    currency_code: "CAD",
+                    value: finalTotal.toFixed(2),
+                    breakdown: {
+                        item_total: { value: (finalTotal - insuranceTotal - shippingTotal - taxTotal).toFixed(2), currency_code: "CAD" },
+                        shipping: { value: shippingTotal.toFixed(2), currency_code: "CAD" },
+                        insurance: { value: insuranceTotal.toFixed(2), currency_code: "CAD" },
+                        tax_total: { value: taxTotal.toFixed(2), currency_code: "CAD" }
+                    }
+                }
+            }]
         };
 
         const response = await fetch(`${PayPal_endpoint_url}/v2/checkout/orders`, {
@@ -1065,30 +1081,50 @@ app.post('/create-paypal-order', async (req, res) => {
     }
 });
 
+app.post('/mark-items-sold', async (req, res) => {
+    const itemIds = req.query.itemIds ? req.query.itemIds.split(',') : [];
+
+    try {
+        if (itemIds.length > 0) {
+            const productsCollection = database.db(mongodb_database).collection('listing_items');
+            await productsCollection.updateMany(
+                { _id: { $in: itemIds.map(id => new ObjectId(id)) } },
+                { $set: { isSold: true } }
+            );
+        }
+
+        // Clear the cart
+        req.session.cart = [];
+        req.session.save(err => {
+            if (err) {
+                console.error('Error saving session:', err);
+                return res.status(500).send('Error clearing the cart');
+            }
+            res.render('paypalSuccess', { message: 'Payment successful, items marked as sold.' });
+        });
+    } catch (error) {
+        console.error('Error updating items as sold:', error);
+        res.status(500).send('Error updating items as sold: ' + error.message);
+    }
+});
+
+
 // ----------------- PayPal Payment END -----------------
 
 // ----------------- Stripe Payment START -----------------
 
-app.get('/StripeSuccess', (req, res) => {
-    res.render('StripeSuccess');
-});
-
-app.get('/StripeCancel', (req, res) => {
-    res.render('StripeCancel');
-});
-
-// Stripe test secret API key.
 const stripe = require('stripe')('sk_test_51OZSVHAcq23T9yD7gpE3kQS73T5AnO6UEaecXMwkzvGc9hVh1QlPNFmM3rzI9cxJ2tU2FtUAPzvcSc1obqPcrUfZ00PojCiOni');
 
-app.use(express.static('public'));
-
-const YOUR_DOMAIN = 'http://localhost:8000';
-
-// Endpoint to create a Stripe checkout session
 app.post('/create-checkout-session', async (req, res) => {
     try {
         // Extract product IDs from the POST data
         const itemIds = req.body.productIds;
+        const insuranceTotal = parseFloat(req.body.insuranceTotal) || 0;
+        const shippingTotal = parseFloat(req.body.shippingTotal) || 0;
+        const taxTotal = parseFloat(req.body.taxTotal) || 0;
+
+        const YOUR_DOMAIN = 'http://localhost:5000'; // Replace with clients domain
+
         if (!itemIds || !Array.isArray(itemIds)) {
             throw new Error('Product IDs not received or not in array format');
         }
@@ -1109,15 +1145,55 @@ app.post('/create-checkout-session', async (req, res) => {
                 },
                 unit_amount: Math.round(item.item_price * 100), // Convert price to cents
             },
-            quantity: parseInt(item.item_quantity),
+            quantity: 1,
         }));
+
+        // Include shipping, insurance, and tax as separate line items
+        if (shippingTotal > 0) {
+            line_items.push({
+                price_data: {
+                    currency: 'cad',
+                    product_data: {
+                        name: 'Shipping'
+                    },
+                    unit_amount: Math.round(shippingTotal * 100), // Convert price to cents
+                },
+                quantity: 1,
+            });
+        }
+
+        if (insuranceTotal > 0) {
+            line_items.push({
+                price_data: {
+                    currency: 'cad',
+                    product_data: {
+                        name: 'Insurance'
+                    },
+                    unit_amount: Math.round(insuranceTotal * 100), // Convert price to cents
+                },
+                quantity: 1,
+            });
+        }
+
+        if (taxTotal > 0) {
+            line_items.push({
+                price_data: {
+                    currency: 'cad',
+                    product_data: {
+                        name: 'Tax'
+                    },
+                    unit_amount: Math.round(taxTotal * 100), // Convert price to cents
+                },
+                quantity: 1,
+            });
+        }
 
         // Create Stripe checkout session
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
             line_items,
             mode: 'payment',
-            success_url: `${YOUR_DOMAIN}/StripeSuccess`,
+            success_url: `${YOUR_DOMAIN}/StripeSuccess?itemIds=${itemIds.join(',')}`,
             cancel_url: `${YOUR_DOMAIN}/StripeCancel`,
         });
 
@@ -1129,4 +1205,50 @@ app.post('/create-checkout-session', async (req, res) => {
     }
 });
 
+app.get('/StripeSuccess', async (req, res) => {
+    const itemIds = req.query.itemIds ? req.query.itemIds.split(',') : [];
+
+    try {
+        if (itemIds.length > 0) {
+            const productsCollection = database.db(mongodb_database).collection('listing_items');
+            await productsCollection.updateMany(
+                { _id: { $in: itemIds.map(id => new ObjectId(id)) } },
+                { $set: { isSold: true } }
+            );
+        }
+
+        // Clear the cart
+        req.session.cart = [];
+        req.session.save(err => {
+            if (err) {
+                console.error('Error saving session:', err);
+                return res.status(500).send('Error clearing the cart');
+            }
+            res.render('StripeSuccess', { message: 'Payment successful, items marked as sold.' });
+        });
+    } catch (error) {
+        console.error('Error updating items as sold:', error);
+        res.status(500).send('Error updating items as sold: ' + error.message);
+    }
+});
+
+
+app.get('/StripeCancel', (req, res) => {
+    res.render('StripeCancel');
+}); 
+
 // ----------------- Stripe Payment END -----------------
+
+async function markItemsAsSold(itemIds) {
+    const productsCollection = database.db(mongodb_database).collection('listing_items');
+    const objectIds = itemIds.map(id => ObjectId.createFromHexString(id));
+    try {
+        await productsCollection.updateMany(
+            { '_id': { $in: objectIds } },
+            { $set: { 'isSold': true } }
+        );
+        console.log('Items marked as sold');
+    } catch (error) {
+        console.error('Error marking items as sold:', error);
+    }
+}
