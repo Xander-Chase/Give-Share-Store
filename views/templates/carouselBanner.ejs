@@ -1,13 +1,33 @@
+<head>
+    <style>
+        .text-main {
+            font-size: 16pt;
+        }
+
+        .btn-lg {
+            font-size: 18pt;
+        }
+
+        @media (max-width: 576px) {
+            .text-main {
+                font-size: 20pt;
+            }
+
+            .btn-lg {
+                font-size: 20pt;
+            }
+        }
+    </style>
+</head>
 <!-- FIXME Increase Height Size-->
-<div class="carousel-item <%= activeStatus %>" style="width: 100%; height: 40rem; background-image: url('<%= source
-%>'); background-repeat: no-repeat; background-size: cover">
+<div class="carousel-item <%= activeStatus %>" style="width: 100%; height: 40rem; background-image: url('<%= source %>'); background-repeat: no-repeat; background-size: cover">
 <!--    <img class="bd-placeholder-img" width="100%" style="height: 50rem" src="<%= source
     %>" alt="">-->
 
     <!--<svg class="bd-placeholder-img" width="100%" height="25rem" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" preserveAspectRatio="xMidYMid slice" focusable="false"><rect width="100%" height="100%" fill="var(&#45;&#45;bs-secondary-color)"></rect></svg>-->
     <div class="container">
         <div class="carousel-caption text-dark p-3 mb-2">
-            <p class="opacity-75"><strong><%= description%></strong></p>
+            <p class="opacity-75"><strong class="text-main"><%= description%></strong></p>
             <p><a class="btn btn-lg btn-primary" href="#"><%= slogan %></a></p>
         </div>
     </div>

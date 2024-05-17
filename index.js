@@ -14,7 +14,7 @@ const { S3Client } = require("@aws-sdk/client-s3");         // include the S3Cli
 const { Upload } = require("@aws-sdk/lib-storage");         // include the Upload module
 const Realm = require("realm");
 const { google } = require("googleapis");
-const fetch = require('node-fetch');                             // Import node-fetch module to fetch data from API
+const fetch = import('node-fetch');                             // Import node-fetch module to fetch data from API
 
 
 const app = express();
