@@ -36,9 +36,6 @@ const mongodb_password = process.env.MONGODB_PASSWORD;
 const mongodb_database = process.env.MONGODB_DATABASE;
 const mongodb_session_secret = process.env.MONGODB_SESSION_SECRET;
 const node_session_secret = process.env.NODE_SESSION_SECRET;
-const google_client_id = process.env.GOOGLE_CLIENT_ID;
-const google_project_id = process.env.GOOGLE_PROJECT_ID;
-const google_client_secret = process.env.GOOGLE_CLIENT_SECRET;
 const PayPalEnvironment = process.env.PAYPAL_ENVIRONMENT;   // Import PayPal Environment from ..env file
 const PayPalClientID = process.env.PAYPAL_CLIENT_ID;        // Import PayPal Client ID from ..env file
 const PayPalSecret = process.env.PAYPAL_CLIENT_SECRET;      // Import PayPal Secret from ..env file
@@ -116,6 +113,7 @@ app.use((req, res, next) => {
         req.session.cart = [];
     }
     res.locals.cartItemCount = req.session.cart ? req.session.cart.length : 0;
+    res.locals.subCategories = [];
     next();
 });
 
@@ -566,9 +564,9 @@ const upload = multer({
 
 // ------------------ multer END ------------------
 
-app.get('/addListing', (req, res) => {
+app.get('/addListing', async (req, res) => {
 
-    res.render('addListing');
+    res.render('addListing', {categories: await categoryCollection.find().toArray()});
 });
 
 // Route to handle form submission
@@ -587,7 +585,14 @@ app.post('/submitListing', upload.fields([{ name: 'photo', maxCount: 10 }, { nam
         item_estimatedShippingCost: parseFloat(req.body.item_estimatedShippingCost) || 0.0,
         item_estimatedInsuranceCost: parseFloat(req.body.item_estimatedInsuranceCost) || 0.0,
         isFeatureItem: req.body.isFeatureItem === 'true',
-        item_category: Array.isArray(req.body.item_category) ? req.body.item_category : [req.body.item_category]
+        item_category: Array.isArray(req.body.item_category) ? req.body.item_category.map(function(item)
+        {
+            return item.replace(/"/g, '');
+        }) : [req.body.item_category.replace(/"/g, '')],
+        item_sub_category: Array.isArray(req.body.item_sub_category) ? req.body.item_sub_category.map(function(item)
+        {
+            return item.replace(/"/g, '');
+        }) : [req.body.item_sub_category.replace(/"/g, '')]
     };
 
     try {
@@ -842,7 +847,42 @@ app.post('/addCategory', async (req, res) => {
     }
 });
 
+app.post('/load-subcategory', async (req, res) => {
 
+    const type = req.body.categoryType.replace(/"/g, '');
+    const {sub_categories} = await categoryCollection.findOne({category_type: type});
+    try{
+        req.session.save(err => {
+            if (err) {
+                console.error('Error saving session:', err);
+                return res.json({ success: false, message: 'Error saving session' });
+            }
+            res.json({ success: true, subCategories: sub_categories });
+        });
+    }catch (error)
+    {
+        console.error('Failed to remove item from cart:', error);
+        res.json({ success: false, message: 'Error removing item from cart' });
+    }
+
+    /*try {
+        if (!req.session.cart) {
+            return res.json({ success: false, message: 'Cart is empty' });
+        }
+
+        req.session.cart = req.session.cart.filter(item => item._id.toString() !== itemId);
+        req.session.save(err => {
+            if (err) {
+                console.error('Error saving session:', err);
+                return res.json({ success: false, message: 'Error saving session' });
+            }
+            res.json({ success: true, cartItemCount: req.session.cart.length });
+        });
+    } catch (error) {
+        console.error('Failed to remove item from cart:', error);
+        res.json({ success: false, message: 'Error removing item from cart' });
+    }*/
+})
 // connect to the database and hash passwords if necessary, then start the server
 database.connect().then(async () => {
     console.log('MongoDB connected successfully');
