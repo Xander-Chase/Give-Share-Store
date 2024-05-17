@@ -68,15 +68,25 @@
 
             <!-- Category Selection -->
             <div class="mb-3">
-                <label for="itemCategory" class="form-label">Category <span class="mandatory">*</span> </label>
-                <select class="form-select" id="itemCategory" name="item_category" multiple aria-label="multiple select example">
-                    <option value="tools">Tools</option>
-                    <option value="furniture">Furniture</option>
-                    <option value="household">Household</option>
-                    <option value="garden">Garden</option>
-                    <option value="appliances">Appliances</option>
-                </select>
+                <div class="container">
+                    <div class="row">
+                        <div class="col-md ">
+                            <label for="item_category" class="form-label">Category <span class="mandatory">*</span> </label>
+                            <select class="form-select" id="itemCategory" name="item_category" multiple aria-label="multiple select example" onchange="loadThing(this)">
+                                <% categories.forEach(function(category) { %>
+                                <option value='"<%= category.category_type %>"'><%= category.category_type%></option>
+                                <% }) %>
+                            </select>
+                        </div>
+                        <div class="col-md ">
+                            <label for="item_sub_category" class="form-label">Sub-Category <span class="mandatory">*</span> </label>
+                            <select class="form-select" id="itemSubCategory" name="item_sub_category" multiple aria-label="multiple select example" >
+                            </select>
+                        </div>
+                    </div>
+                </div>
             </div>
+
 
             <!-- Submit Button -->
             <button type="submit" class="btn btn-primary">Submit Listing</button>
@@ -85,4 +95,8 @@
 
         </form>
     </div>
+    <script>
+
+
+    </script>
 </body>

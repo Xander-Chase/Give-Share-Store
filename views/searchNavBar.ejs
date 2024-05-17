@@ -132,6 +132,15 @@
         <div class="container">
             <header class="d-flex justify-content-center py-3">
                 <ul class="nav nav-pills">
+                    <li class="list1 nav-item" id="dashboard">
+                        <form method="POST" class="nav-link"
+                              action="/category=">
+                            <button type="submit" style="border: none; background: none"
+                                    aria-current="page">
+                                Dashboard
+                            </button>
+                        </form>
+                    </li>
                     <% categories.forEach(function(category) { %>
                     <li class="list1 nav-item" id="<%= category.category_type %>">
                         <form method="POST" class="nav-link"

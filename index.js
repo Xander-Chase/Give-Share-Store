@@ -1,20 +1,21 @@
-require ('dotenv').config();                                // Import dotenv module to read ..env file
-require ('./utils');                                        // Import utils.js file to define include function
-const express = require('express');                         // Import express module to create server
-const session = require('express-session');                 // Import express-session module to manage session
-const MongoDBStore = require('connect-mongo');              // Import connect-mongo module to store session in MongoDB
-const Joi = require('joi');                                 // include the joi module
-const bcrypt = require('bcrypt');                           // include the bcrypt module
-const { ObjectId } = require('mongodb');                    // include the ObjectId module
-const { MongoClient} = require('mongodb');                  // include the MongoClient modules
-const AWS = require('aws-sdk');                             // include the AWS module
-const multer = require('multer');                           // include the multer module
-const multerS3 = require('multer-s3');                      // include the multer-s3 module
-const { S3Client } = require("@aws-sdk/client-s3");         // include the S3Client module
-const { Upload } = require("@aws-sdk/lib-storage");         // include the Upload module
-const Realm = require("realm");
-const { google } = require("googleapis");
+require ('dotenv').config();                                    // Import dotenv module to read ..env file
+require ('./utils');                                            // Import utils.js file to define include function
+const express = require('express');                             // Import express module to create server
+const session = require('express-session');                     // Import express-session module to manage session
+const MongoDBStore = require('connect-mongo');                  // Import connect-mongo module to store session in MongoDB
+const Joi = require('joi');                                     // include the joi module
+const bcrypt = require('bcrypt');                               // include the bcrypt module
+const { ObjectId } = require('mongodb');                        // include the ObjectId module
+const { MongoClient} = require('mongodb');                      // include the MongoClient modules
+const AWS = require('aws-sdk');                                 // include the AWS module
+const multer = require('multer');                               // include the multer module
+const multerS3 = require('multer-s3');                          // include the multer-s3 module
+const { S3Client } = require("@aws-sdk/client-s3");             // include the S3Client module
+const { Upload } = require("@aws-sdk/lib-storage");             // include the Upload module
+const Realm = require("realm");                                 // Import Realm module to interact with MongoDB Realm
+const { google } = require("googleapis");                       // Import googleapis module to interact with Google APIs
 const fetch = import('node-fetch');                             // Import node-fetch module to fetch data from API
+const mailchimp = require('@mailchimp/mailchimp_marketing');    // Import mailchimp_marketing module to interact with Mailchimp API
 
 
 const app = express();
@@ -26,7 +27,7 @@ app.use(express.static('css'));                             // serve static css 
 app.use(express.static('js'));                              // serve static js files
 app.use(express.json());                                    // parse json request bodies
 
-const port = process.env.PORT || 5000;                      // Set port to 8000 if not defined in ..env file
+const port = process.env.PORT || 5000;                      // Set port to 5000 if not defined in ..env file
 
 
 // secret variables located in ..env file
@@ -36,13 +37,11 @@ const mongodb_password = process.env.MONGODB_PASSWORD;
 const mongodb_database = process.env.MONGODB_DATABASE;
 const mongodb_session_secret = process.env.MONGODB_SESSION_SECRET;
 const node_session_secret = process.env.NODE_SESSION_SECRET;
-const google_client_id = process.env.GOOGLE_CLIENT_ID;
-const google_project_id = process.env.GOOGLE_PROJECT_ID;
-const google_client_secret = process.env.GOOGLE_CLIENT_SECRET;
 const PayPalEnvironment = process.env.PAYPAL_ENVIRONMENT;   // Import PayPal Environment from ..env file
 const PayPalClientID = process.env.PAYPAL_CLIENT_ID;        // Import PayPal Client ID from ..env file
 const PayPalSecret = process.env.PAYPAL_CLIENT_SECRET;      // Import PayPal Secret from ..env file
 const PayPal_endpoint_url = PayPalEnvironment === 'sandbox' ? 'https://api-m.sandbox.paypal.com' : 'https://api-m.paypal.com'; // Import PayPal endpoint URL from ..env file
+
 
 // Configure and instantiate Google OAuth2.0 client
 /*const oauthConfig = {
@@ -83,6 +82,7 @@ var { database } = include('databaseConnection');
 const adminCollection = database.db(mongodb_database).collection('admins');
 const userCollection = database.db(mongodb_database).collection('users');
 
+const categoryCollection = database.db(mongodb_database).collection('categories');
 // linking to mongoDb database
 var mongoStore = MongoDBStore.create({
     mongoUrl: `mongodb+srv://${mongodb_user}:${mongodb_password}@${mongodb_cluster}/${mongodb_database}`,
@@ -115,6 +115,7 @@ app.use((req, res, next) => {
         req.session.cart = [];
     }
     res.locals.cartItemCount = req.session.cart ? req.session.cart.length : 0;
+    res.locals.subCategories = [];
     next();
 });
 
@@ -130,12 +131,26 @@ app.get('/', async (req, res) => {
     if (req.session.maxPrice > 0)
         maximumPrice = req.session.maxPrice;
 
+    let categoryTab = "";
+    let subCategoryTab = "";
+    if (req.session.category != null )
+        categoryTab = `> ${req.session.category}`;
+
+    if (req.session.subcategory != null)
+        subCategoryTab = `> ${req.session.subcategory}`;
+
+    let orderCode = 1;
+    if (req.session.sortBy === "descending")
+        orderCode = -1;
+
     try {
 
-        let filtersHeader = [`Category > ${req.session.category} > ${req.session.subcategory}`, "Price", "Sorting"];
-        let filterAnchors = ["Category", "Price", "Sorting"];
+        let filtersHeader = [`Category ${categoryTab} ${subCategoryTab}`, "Sorting", "Price"];
+        let filterAnchors = ["Category", "Sorting", "Price"];
         const productsCollection = database.db(mongodb_database).collection('listing_items');
         let prices = [];
+
+        // Price Setting Up.
         let currentListings = await productsCollection.find({ isFeatureItem: false,
             item_title: {$regex: searchKey, $options: 'i'}}).toArray();
         currentListings.forEach(function(item)
@@ -143,6 +158,8 @@ app.get('/', async (req, res) => {
             prices.push(item.item_price)
         });
 
+        // Way different from aggregate because this is a separate list where it sets it to ascending order. While the other one goes to
+        // either ascending or descending.
         const sortedPrices = prices.sort(function(a, b) {
             if (a < b)
                 return 1;
@@ -152,12 +169,22 @@ app.get('/', async (req, res) => {
                 return 0;
         });
 
-        currentListings = await productsCollection.find({ isFeatureItem: false,
-            item_title: {$regex: searchKey, $options: 'i'},
-            item_price: {$lt: Math.round(maximumPrice)}, item_category: req.session.subcategory || req.session.category }).toArray();
-
-        const categoriesCollection = database.db(mongodb_database).collection('categories');
-        const subCategories = await categoriesCollection.find({category_type: req.session.category}).project({_id: 0, sub_categories: 1}).toArray();
+        // TODO: please make one of them into a variable.
+        if (req.session.category == null)
+            currentListings = await productsCollection.find({ isFeatureItem: false,
+                item_title: {$regex: searchKey, $options: 'i'},
+                item_price: {$lt: Math.round(maximumPrice)} }).sort({item_price: orderCode}).toArray();
+        else
+            if (req.session.subcategory == null)
+                currentListings = await productsCollection.find({ isFeatureItem: false,
+                    item_title: {$regex: searchKey, $options: 'i'},
+                    item_price: {$lt: Math.round(maximumPrice)}, item_category: req.session.category }).sort({item_price: orderCode}).toArray();
+            else
+                currentListings = await productsCollection.find({ isFeatureItem: false,
+                    item_title: {$regex: searchKey, $options: 'i'},
+                    item_price: {$lt: Math.round(maximumPrice)}, item_category: req.session.subcategory || req.session.category }).sort({item_price: orderCode}).toArray();
+      
+        const subCategories = await categoryCollection.find({category_type: req.session.category}).project({_id: 0, sub_categories: 1}).toArray();
         let bodyFilters;
         if (subCategories.length < 1 || subCategories[0].sub_categories.length < 1)
             bodyFilters = getBodyFilters(sortedPrices[0], sortedPrices[prices.length-1], maximumPrice, []);
@@ -170,11 +197,12 @@ app.get('/', async (req, res) => {
             filterHeaders: filtersHeader,
             filtersAnchor: filterAnchors,
             filterStuff: bodyFilters,
-            categories: await getCategoriesNav()
+            categories: await getCategoriesNav(),
+            isAdmin: isAdmin
         });
     } catch (error) {
         console.error('Failed to fetch current listings:', error);
-        res.render("landing", {isLoggedIn, isAdmin, currentListings: []});
+        res.render("landing", {isLoggedIn: isLoggedIn, isAdmin: isAdmin, currentListings: []});
     }
 });
 
@@ -249,6 +277,7 @@ app.post('/adminLogInSubmit', async (req, res) => {
     req.session.name = user.name;
     req.session.email = user.email;
     req.session.password = user.password;
+    req.session.userId = user._id;
     res.redirect("/");
 });
 
@@ -289,6 +318,7 @@ app.post('/userLogInSubmit', async (req, res) => {
     req.session.email = user.email;
     req.session.password = user.password;
     console.log("user isLoggedIn:" + req.session.loggedIn);
+    req.session.userId = user._id;
     res.redirect("/");
 });
 
@@ -297,6 +327,8 @@ function getBodyFilters(maxVal, minVal, currentPrice, subCategories)
     let categoriesBody =
         "<ul class=\"list-group list-group-flush\">";
 
+    // for each subCategories on that array, assign it as a list element on the sub-category filter on the left
+    // since some of them are spaces, we split the spaces and join them with '_'
     subCategories.forEach(function(subC) {
         categoriesBody+="<li class=\"list-group-item\"><form method='post' action='/subcategory=" + subC.split(" ").join("_") + "'><button " +
             "style='background: none; border: none'" +
@@ -306,7 +338,9 @@ function getBodyFilters(maxVal, minVal, currentPrice, subCategories)
     return [
 
         categoriesBody,
-
+        "<ul class='list-group list-group-flush'>" +
+        " <li class='list-group-item'><form method='post' action='/sortby=ascending'><button style='background: none; border: none' type='submit'>Sort by Lowest Price</button></form></li>" +
+        " <li class='list-group-item'><form method='post' action='/sortby=descending'><button style='background: none; border: none' type='submit'>Sort by Highest Price</button></form></li>",
         "<div class=\"row col-sm\">\n" +
         "        <div class=\"col text-start\">\n" +
         "            <label for=\"priceRange\" class=\"form-label\">" +
@@ -323,11 +357,7 @@ function getBodyFilters(maxVal, minVal, currentPrice, subCategories)
         "        </div>\n" +
         "        <input id=\"selectedPrice\" type=\"range\" class=\"form-range\" min=" + (Math.floor(minVal / 5) * 5) + " max=" + (Math.ceil(maxVal / 5) * 5) + " step=5 id=\"priceRange\" oninput=\"" +
         "{document.getElementById('userRange').innerHTML = `$${this.value}`;}\">\n" +
-        "</div>",
-
-        "<ul class='list-group list-group-flush'>" +
-        " <li class='list-group-item'>Sort by Highest Price</li>" +
-        " <li class='list-group-item'>Sort by Lowest Price</li></ul>"
+        "</div>"
     ];
 }
 
@@ -341,7 +371,7 @@ app.post('/keyword=', (req, res) => {
     req.session.keyword = null;
     res.redirect('/');
 })
-app.post('/keyword=:key', async (req, res) => {
+app.post('/keyword=:key',  (req, res) => {
     req.session.keyword = req.params.key;
     res.redirect('/');
 });
@@ -351,21 +381,36 @@ app.post('/price=:newMax', (req, res) => {
     res.redirect('/');
 })
 
-app.post('/category=:type', async (req, res) => {
+app.post('/category=:type',  (req, res) => {
     req.session.category = req.params.type;
-    req.session.subcategory = "";
+    req.session.subcategory = null;
     res.redirect('/');
 })
 
-app.post('/subcategory=:type', async (req, res) => {
+app.post('/category=',  (req, res) => {
+    req.session.category = null;
+    req.session.subcategory = null;
+    res.redirect('/');
+})
+
+app.post('/subcategory=:type',  (req, res) => {
     req.session.subcategory = req.params.type.split("_").join(" ");
 
     res.redirect('/');
 })
+
+app.post('/sortby=:option', async (req, res) => {
+    req.session.sortBy = req.params.option;
+    res.redirect('/');
+})
 app.post('/clearFilter', (req, res) =>
 {
+
     req.session.maxPrice = 0;
     req.session.keyword = null;
+    req.session.category = null;
+    req.session.subcategory = null;
+    req.session.sortBy = 'ascending';
     res.redirect('/');
 })
 
@@ -375,7 +420,8 @@ app.get('/cart', async (req, res) => {
       isLoggedIn: req.session.loggedIn, 
       items: cartItems, 
       paypalClientId: process.env.PAYPAL_CLIENT_ID, 
-      categories: await getCategoriesNav() 
+      categories: await getCategoriesNav(),
+      isAdmin: req.session.isAdmin || false
     });
 });
 
@@ -444,7 +490,7 @@ app.get('/product-info/:id', async (req, res) => {
         }
 
         const isLoggedIn = req.session.loggedIn;
-        res.render('product-info', { item: item, isLoggedIn : isLoggedIn, categories: await getCategoriesNav()});
+        res.render('product-info', { item: item, isLoggedIn : isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav()});
     } catch (error) {
         console.error('Failed to fetch item:', error);
         res.status(500).send('Error fetching item details');
@@ -454,12 +500,12 @@ app.get('/product-info/:id', async (req, res) => {
 
 app.get('/about', async (req, res) => {
     const isLoggedIn = req.session.loggedIn; 
-    res.render("about", {isLoggedIn : isLoggedIn, categories: await getCategoriesNav()});
+    res.render("about", {isLoggedIn : isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav()});
 });
 
 app.get('/contact-us', async (req, res) => {
     const isLoggedIn = req.session.loggedIn; 
-    res.render("contact", {isLoggedIn : isLoggedIn, categories: await getCategoriesNav()});
+    res.render("contact", {isLoggedIn : isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav()});
 });
 
 app.get('/manage', async (req, res) => {
@@ -473,23 +519,72 @@ app.get('/manage', async (req, res) => {
     }
 });
 
-app.get('/manageUser', (req, res) => {
+app.get('/manageUser', async (req, res) => {
     if (req.session.loggedIn) {
         const isLoggedIn = req.session.loggedIn;
         const isAdmin = req.session.isAdmin;
-        res.render("user-management", {isLoggedIn, isAdmin});
+        res.render("user-management", {isLoggedIn, isAdmin, categories: await getCategoriesNav()});
     } 
     else {
         res.redirect('/userLogIn');
     }
 });
 
-app.get('/settings', (req, res) => {
+app.get('/pastOrders', async (req, res) => {
+    try {
+        const ordersCollection = database.db(mongodb_database).collection('orders');
+        const userOrders = await ordersCollection.find({ userId: req.session.userId }).toArray();
+        const isLoggedIn = req.session.loggedIn;
+        const isAdmin = req.session.isAdmin || false;
+
+        res.render('pastOrders', {
+            orders: userOrders,
+            isLoggedIn,
+            isAdmin,
+            categories: await getCategoriesNav()
+        });
+    } catch (error) {
+        console.error('Error fetching past orders:', error);
+        res.status(500).send('Error fetching past orders');
+    }
+});
+
+async function addTestOrder() {
+    try {
+        const ordersCollection = database.db(mongodb_database).collection('orders');
+        const testOrder = {
+            userId: 'testUserId',
+            date: new Date(),
+            totalAmount: 100.00,
+            items: [
+                {
+                    item_title: 'Test Item 1',
+                    item_price: 50.00,
+                    item_quantity: 1
+                },
+                {
+                    item_title: 'Test Item 2',
+                    item_price: 25.00,
+                    item_quantity: 2
+                }
+            ]
+        };
+        await ordersCollection.insertOne(testOrder);
+        console.log('Test order added successfully');
+    } catch (error) {
+        console.error('Error adding test order:', error);
+    }
+}
+
+addTestOrder();
+
+
+app.get('/settings', async (req, res) => {
     if (req.session.loggedIn) {
         const isLoggedIn = req.session.loggedIn;
         const user = req.session.name;
         const email = req.session.email;
-        res.render("settings", {isLoggedIn : isLoggedIn, user : user, email : email});
+        res.render("settings", {isLoggedIn : isLoggedIn, isAdmin, user : user, email : email, categories: await getCategoriesNav()});
     } 
     else {
         res.redirect('/adminLogIn');
@@ -509,26 +604,26 @@ app.post('/changePassword', async (req, res) => {
     const validationResult = schema.validate({ currentPassword, newPassword, confirmPassword });
     if (validationResult.error) {
         console.log(validationResult.error);
-        return res.render('settings', { isLoggedIn, user: req.session.name, email, error: validationResult.error.message });
+        return res.render('settings', { isLoggedIn, isAdmin, categories: await getCategoriesNav(), user: req.session.name, email, error: validationResult.error.message });
     }
 
     const user = await adminCollection.findOne({ email });
     if (!user) {
         console.log('User not found');
-        return res.render('settings', { isLoggedIn, user: req.session.name, email, error: 'User not found' });
+        return res.render('settings', { isLoggedIn, isAdmin, categories: await getCategoriesNav(), user: req.session.name, email, error: 'User not found' });
     }
 
     const passwordMatch = await bcrypt.compare(currentPassword, user.password);
     if (!passwordMatch) {
         console.log('Wrong current password');
-        return res.render('settings', { isLoggedIn, user: req.session.name, email, error: 'Incorrect current password' });
+        return res.render('settings', { isLoggedIn, isAdmin, categories: await getCategoriesNav(), user: req.session.name, email, error: 'Incorrect current password' });
     }
 
     const hashedNewPassword = await bcrypt.hash(newPassword, 10);
     await adminCollection.updateOne({ email }, { $set: { password: hashedNewPassword } });
     req.session.password = hashedNewPassword;
 
-    res.render('passwordUpdated', { isLoggedIn });
+    res.render('passwordUpdated', { isLoggedIn, isAdmin, categories: await getCategoriesNav()});
 });
 
 
@@ -564,8 +659,9 @@ const upload = multer({
 
 // ------------------ multer END ------------------
 
-app.get('/addListing', (req, res) => {
-    res.render('addListing');
+app.get('/addListing', async (req, res) => {
+
+    res.render('addListing', {categories: await categoryCollection.find().toArray()});
 });
 
 // Route to handle form submission
@@ -584,7 +680,15 @@ app.post('/submitListing', upload.fields([{ name: 'photo', maxCount: 10 }, { nam
         item_estimatedShippingCost: parseFloat(req.body.item_estimatedShippingCost) || 0.0,
         item_estimatedInsuranceCost: parseFloat(req.body.item_estimatedInsuranceCost) || 0.0,
         isFeatureItem: req.body.isFeatureItem === 'true',
-        item_category: Array.isArray(req.body.item_category) ? req.body.item_category : [req.body.item_category]
+        item_category: Array.isArray(req.body.item_category) ? req.body.item_category.map(function(item)
+        {
+            return item.replace(/"/g, '');
+        }) : [req.body.item_category.replace(/"/g, '')],
+        item_sub_category: Array.isArray(req.body.item_sub_category) ? req.body.item_sub_category.map(function(item)
+        {
+            return item.replace(/"/g, '');
+        }) : [req.body.item_sub_category.replace(/"/g, '')],
+        status: 'available' // Default status when a listing is created
     };
 
     try {
@@ -598,7 +702,9 @@ app.post('/submitListing', upload.fields([{ name: 'photo', maxCount: 10 }, { nam
 
 app.get('/editListing/:id', async (req, res) => {
     const itemId = req.params.id;
-    isLoggedIn = req.session.loggedIn;
+    const isLoggedIn = req.session.loggedIn;
+    const isAdmin = req.session.isAdmin || false;
+
     console.log("Received ID for editing:", itemId);
 
     if (!ObjectId.isValid(itemId)) {
@@ -610,7 +716,7 @@ app.get('/editListing/:id', async (req, res) => {
         if (!listing) {
             return res.status(404).send('Listing not found');
         }
-        res.render('editListing', { listing, isLoggedIn, categories: await getCategoriesNav()});
+        res.render('editListing', { listing, isLoggedIn, isAdmin, categories: await getCategoriesNav()});
     } catch (error) {
         console.error('Failed to fetch listing:', error);
         res.status(500).send('Error fetching listing details');
@@ -630,6 +736,7 @@ app.post('/updateListing/:id', upload.none(), async (req, res) => {
         item_estimatedShippingCost: parseFloat(req.body.item_estimatedShippingCost) || 0.0,
         item_estimatedInsuranceCost: parseFloat(req.body.item_estimatedInsuranceCost) || 0.0,
         isFeatureItem: req.body.isFeatureItem ? req.body.isFeatureItem === 'true' : false,
+        status: req.body.status || 'available' // Allow status update    
     };
 
 
@@ -667,23 +774,51 @@ app.get('/currentListings', async (req, res) => {
 });
 
 
-app.get('/previousListings', (req, res) => {
-    res.render('previousListings');
+app.get('/previousListings', async (req, res) => {
+    try {
+        const productsCollection = database.db(mongodb_database).collection('listing_items');
+        const soldListings = await productsCollection.find({ status: 'sold' }).toArray();
+        const isLoggedIn = req.session.loggedIn;
+        const isAdmin = req.session.isAdmin || false;
+
+        res.render('previousListings', {
+            listings: soldListings,
+            isLoggedIn,
+            isAdmin,
+            categories: await getCategoriesNav()
+        });
+    } catch (error) {
+        console.error('Failed to fetch previous listings:', error);
+        res.status(500).send('Error fetching previous listings');
+    }
 });
+
 
 app.get('/mailingList', async (req, res) => {
-    // Example data representing people on the mailing list
-    const mailingList = [
-        { name: "Alice Johnson", email: "alice.johnson@example.com" },
-        { name: "Bob Smith", email: "bob.smith@example.com" },
-        { name: "Carolyn B. Yates", email: "carolyn.yates@example.com" },
-        { name: "David Gilmore", email: "david.gilmore@example.com" }
-    ];
+    try {
+        mailchimp.setConfig({
+            apiKey: process.env.MAILCHIMP_API_KEY,
+            server: process.env.MAILCHIMP_SERVER_PREFIX
+        });
 
-    res.render('mailingList', {
-        people: mailingList
-    });
+        const response = await mailchimp.lists.getListMembersInfo(process.env.MAILCHIMP_LIST_ID);
+        const subscribers = response.members.map(member => ({
+            firstName: member.merge_fields.FNAME,
+            lastName: member.merge_fields.LNAME,
+            email: member.email_address
+        }));
+
+        res.render('mailingList', {
+            people: subscribers
+        });
+    } catch (error) {
+        console.error('Error fetching mailing list:', error);
+        res.status(500).send('Error fetching mailing list');
+    }
 });
+
+
+
 
 app.get('/adminUsers', async (req, res) => {
     try {
@@ -725,7 +860,8 @@ app.get('/editUser/:id', async (req, res) => {
             return;
         }
         const isLoggedIn = req.session.loggedIn;
-        res.render('editUser', { user, isLoggedIn : isLoggedIn, categories: await getCategoriesNav()});
+        res.render('editUser', { user, isLoggedIn : isLoggedIn, isAdmin, categories: await getCategoriesNav()});
+      
     } catch (error) {
         console.error('Error retrieving user for editing:', error);
         res.status(500).send('Error retrieving user');
@@ -775,7 +911,105 @@ app.get('/featuredItems', async (req, res) => {
 });
 
 app.get('/categoryManagement', async (req, res) => {
-    res.render('categoryManagement');
+    const categoriesArray = await categoryCollection.find().toArray();
+    res.render('categoryManagement', {
+        categories: categoriesArray
+    });
+})
+
+app.get('/editCategory/:id', async (req, res) =>
+{
+    try
+    {
+        const category = await categoryCollection.findOne({ _id: new ObjectId(req.params.id) });
+        res.render('editCategory', { category, isAdmin: req.session.isAdmin, isLoggedIn : req.session.loggedIn, categories: await getCategoriesNav()});
+    }
+    catch (error)
+    {
+        console.error('Error retrieving category for editing:', error);
+        res.status(500).send('Error retrieving category');
+    }
+})
+
+app.post('/updateCategory/:id', async (req, res) => {
+    try {
+        const { name, sub_categories } = req.body;
+        console.log(`${name} and ${sub_categories}`)
+        await categoryCollection.updateOne(
+            { _id: new ObjectId(req.params.id) },
+            { $set: {
+                category_type: name,
+                sub_categories: sub_categories.split(", ")
+            }}
+        );
+        res.redirect('/manage');
+    } catch (error) {
+        console.error('Error updating category:', error);
+        res.status(500).send('Failed to update category');
+    }
+})
+
+app.post('/deleteCategory/:id', async (req, res) => {
+    try {
+        const result = await categoryCollection.deleteOne({ _id: new ObjectId(req.params.id) });
+        if(result.deletedCount === 1) {
+            res.status(200).send('Category deleted successfully');
+        } else {
+            res.status(404).send('Category not found');
+        }
+    } catch (error) {
+        console.error('Failed to delete user:', error);
+        res.status(500).send('Failed to delete user');
+    }
+})
+
+app.post('/addCategory', async (req, res) => {
+    const { category_name, sub_categories} = req.body;
+    try {
+        await categoryCollection.insertOne({ category_type: category_name, sub_categories: sub_categories.split(", ")});
+        res.redirect('/manage');
+
+    } catch (error) {
+        console.error('Error adding new category:', error);
+        res.status(500).send('Failed to add new user');
+    }
+});
+
+app.post('/load-subcategory', async (req, res) => {
+
+    const type = req.body.categoryType.replace(/"/g, '');
+    const {sub_categories} = await categoryCollection.findOne({category_type: type});
+    try{
+        req.session.save(err => {
+            if (err) {
+                console.error('Error saving session:', err);
+                return res.json({ success: false, message: 'Error saving session' });
+            }
+            res.json({ success: true, subCategories: sub_categories });
+        });
+    }catch (error)
+    {
+        console.error('Failed to remove item from cart:', error);
+        res.json({ success: false, message: 'Error removing item from cart' });
+    }
+
+    /*try {
+        if (!req.session.cart) {
+            return res.json({ success: false, message: 'Cart is empty' });
+        }
+
+        req.session.cart = req.session.cart.filter(item => item._id.toString() !== itemId);
+        req.session.save(err => {
+            if (err) {
+                console.error('Error saving session:', err);
+                return res.json({ success: false, message: 'Error saving session' });
+            }
+            res.json({ success: true, cartItemCount: req.session.cart.length });
+        });
+    } catch (error) {
+        console.error('Failed to remove item from cart:', error);
+        res.json({ success: false, message: 'Error removing item from cart' });
+    }*/
 })
 // connect to the database and hash passwords if necessary, then start the server
 database.connect().then(async () => {
@@ -791,6 +1025,7 @@ database.connect().then(async () => {
 // ----------------- PayPal Payment START -----------------
 
 async function getAccessToken() {
+    const fetch = await import('node-fetch').then(module => module.default);
     const auth = `${PayPalClientID}:${PayPalSecret}`;
     const data = 'grant_type=client_credentials';
 
@@ -808,10 +1043,25 @@ async function getAccessToken() {
 
 app.post('/create-paypal-order', async (req, res) => {
     try {
+        const fetch = await import('node-fetch').then(module => module.default);
         const accessToken = await getAccessToken();
+
+        const { intent, purchase_units, insuranceTotal, shippingTotal, taxTotal, finalTotal } = req.body;
+
         const orderData = {
-            intent: req.body.intent.toUpperCase(),
-            purchase_units: req.body.purchase_units
+            intent: intent.toUpperCase(),
+            purchase_units: [{
+                amount: {
+                    currency_code: "CAD",
+                    value: finalTotal.toFixed(2),
+                    breakdown: {
+                        item_total: { value: (finalTotal - insuranceTotal - shippingTotal - taxTotal).toFixed(2), currency_code: "CAD" },
+                        shipping: { value: shippingTotal.toFixed(2), currency_code: "CAD" },
+                        insurance: { value: insuranceTotal.toFixed(2), currency_code: "CAD" },
+                        tax_total: { value: taxTotal.toFixed(2), currency_code: "CAD" }
+                    }
+                }
+            }]
         };
 
         const response = await fetch(`${PayPal_endpoint_url}/v2/checkout/orders`, {
@@ -831,30 +1081,50 @@ app.post('/create-paypal-order', async (req, res) => {
     }
 });
 
+app.post('/mark-items-sold', async (req, res) => {
+    const itemIds = req.query.itemIds ? req.query.itemIds.split(',') : [];
+
+    try {
+        if (itemIds.length > 0) {
+            const productsCollection = database.db(mongodb_database).collection('listing_items');
+            await productsCollection.updateMany(
+                { _id: { $in: itemIds.map(id => new ObjectId(id)) } },
+                { $set: { isSold: true } }
+            );
+        }
+
+        // Clear the cart
+        req.session.cart = [];
+        req.session.save(err => {
+            if (err) {
+                console.error('Error saving session:', err);
+                return res.status(500).send('Error clearing the cart');
+            }
+            res.render('paypalSuccess', { message: 'Payment successful, items marked as sold.' });
+        });
+    } catch (error) {
+        console.error('Error updating items as sold:', error);
+        res.status(500).send('Error updating items as sold: ' + error.message);
+    }
+});
+
+
 // ----------------- PayPal Payment END -----------------
 
 // ----------------- Stripe Payment START -----------------
 
-app.get('/StripeSuccess', (req, res) => {
-    res.render('StripeSuccess');
-});
-
-app.get('/StripeCancel', (req, res) => {
-    res.render('StripeCancel');
-});
-
-// Stripe test secret API key.
 const stripe = require('stripe')('sk_test_51OZSVHAcq23T9yD7gpE3kQS73T5AnO6UEaecXMwkzvGc9hVh1QlPNFmM3rzI9cxJ2tU2FtUAPzvcSc1obqPcrUfZ00PojCiOni');
 
-app.use(express.static('public'));
-
-const YOUR_DOMAIN = 'http://localhost:8000';
-
-// Endpoint to create a Stripe checkout session
 app.post('/create-checkout-session', async (req, res) => {
     try {
         // Extract product IDs from the POST data
         const itemIds = req.body.productIds;
+        const insuranceTotal = parseFloat(req.body.insuranceTotal) || 0;
+        const shippingTotal = parseFloat(req.body.shippingTotal) || 0;
+        const taxTotal = parseFloat(req.body.taxTotal) || 0;
+
+        const YOUR_DOMAIN = 'http://localhost:5000'; // Replace with clients domain
+
         if (!itemIds || !Array.isArray(itemIds)) {
             throw new Error('Product IDs not received or not in array format');
         }
@@ -875,15 +1145,55 @@ app.post('/create-checkout-session', async (req, res) => {
                 },
                 unit_amount: Math.round(item.item_price * 100), // Convert price to cents
             },
-            quantity: parseInt(item.item_quantity),
+            quantity: 1,
         }));
+
+        // Include shipping, insurance, and tax as separate line items
+        if (shippingTotal > 0) {
+            line_items.push({
+                price_data: {
+                    currency: 'cad',
+                    product_data: {
+                        name: 'Shipping'
+                    },
+                    unit_amount: Math.round(shippingTotal * 100), // Convert price to cents
+                },
+                quantity: 1,
+            });
+        }
+
+        if (insuranceTotal > 0) {
+            line_items.push({
+                price_data: {
+                    currency: 'cad',
+                    product_data: {
+                        name: 'Insurance'
+                    },
+                    unit_amount: Math.round(insuranceTotal * 100), // Convert price to cents
+                },
+                quantity: 1,
+            });
+        }
+
+        if (taxTotal > 0) {
+            line_items.push({
+                price_data: {
+                    currency: 'cad',
+                    product_data: {
+                        name: 'Tax'
+                    },
+                    unit_amount: Math.round(taxTotal * 100), // Convert price to cents
+                },
+                quantity: 1,
+            });
+        }
 
         // Create Stripe checkout session
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
             line_items,
             mode: 'payment',
-            success_url: `${YOUR_DOMAIN}/StripeSuccess`,
+            success_url: `${YOUR_DOMAIN}/StripeSuccess?itemIds=${itemIds.join(',')}`,
             cancel_url: `${YOUR_DOMAIN}/StripeCancel`,
         });
 
@@ -895,4 +1205,50 @@ app.post('/create-checkout-session', async (req, res) => {
     }
 });
 
+app.get('/StripeSuccess', async (req, res) => {
+    const itemIds = req.query.itemIds ? req.query.itemIds.split(',') : [];
+
+    try {
+        if (itemIds.length > 0) {
+            const productsCollection = database.db(mongodb_database).collection('listing_items');
+            await productsCollection.updateMany(
+                { _id: { $in: itemIds.map(id => new ObjectId(id)) } },
+                { $set: { isSold: true } }
+            );
+        }
+
+        // Clear the cart
+        req.session.cart = [];
+        req.session.save(err => {
+            if (err) {
+                console.error('Error saving session:', err);
+                return res.status(500).send('Error clearing the cart');
+            }
+            res.render('StripeSuccess', { message: 'Payment successful, items marked as sold.' });
+        });
+    } catch (error) {
+        console.error('Error updating items as sold:', error);
+        res.status(500).send('Error updating items as sold: ' + error.message);
+    }
+});
+
+
+app.get('/StripeCancel', (req, res) => {
+    res.render('StripeCancel');
+}); 
+
 // ----------------- Stripe Payment END -----------------
+
+async function markItemsAsSold(itemIds) {
+    const productsCollection = database.db(mongodb_database).collection('listing_items');
+    const objectIds = itemIds.map(id => ObjectId.createFromHexString(id));
+    try {
+        await productsCollection.updateMany(
+            { '_id': { $in: objectIds } },
+            { $set: { 'isSold': true } }
+        );
+        console.log('Items marked as sold');
+    } catch (error) {
+        console.error('Error marking items as sold:', error);
+    }
+}

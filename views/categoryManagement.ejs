@@ -1,5 +1,40 @@
 <body>
     <div class="container mt-5">
         <h2>Category Management</h2>
+        <table class="table">
+            <thead>
+            <tr>
+                <th>Name</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+            <% categories.forEach(function(category) { %>
+                <tr>
+                    <td><%= category.category_type %></td>
+                    <td>
+                        <a href="/editCategory/<%= category._id %>" class="btn btn-sm btn-primary">Edit</a>
+                    </td>
+                </tr>
+            <% }); %>
+            </tbody>
+        </table>
+        <h3>Add New Category</h3>
+        <form action="/addCategory" method="post">
+            <div class="mb-3">
+                <label for="category_name" class="form-label">Category Name</label>
+                <input type="text" class="form-control" id="category_name" name="category_name" required>
+            </div>
+            <div class="mb-3">
+                <label for="sub_categories" class="form-label">Sub-Categories</label>
+                <input type="text" class="form-control" id="sub_categories" name="sub_categories" required>
+            </div>
+            <button type="submit" class="btn btn-success">Add Category</button>
+        </form>
+
+
     </div>
 </body>
+<script>
+
+</script>
