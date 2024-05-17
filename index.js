@@ -966,11 +966,14 @@ app.use(express.static('public'));
 
 const YOUR_DOMAIN = 'http://localhost:8000';
 
-// Endpoint to create a Stripe checkout session
+// Stripe Payment Endpoint
 app.post('/create-checkout-session', async (req, res) => {
     try {
-        // Extract product IDs from the POST data
+        // Extract product IDs and additional costs from the POST data
         const itemIds = req.body.productIds;
+        const insuranceTotal = parseFloat(req.body.insuranceTotal);
+        const shippingTotal = parseFloat(req.body.shippingTotal);
+
         if (!itemIds || !Array.isArray(itemIds)) {
             throw new Error('Product IDs not received or not in array format');
         }
@@ -994,11 +997,42 @@ app.post('/create-checkout-session', async (req, res) => {
             quantity: parseInt(item.item_quantity),
         }));
 
+        // Add insurance as a line item with tax rates
+        if (insuranceTotal > 0) {
+            line_items.push({
+                price_data: {
+                    currency: 'cad',
+                    product_data: {
+                        name: 'Insurance',
+                    },
+                    unit_amount: Math.round(insuranceTotal * 100), // Convert price to cents
+                },
+                quantity: 1,
+            });
+        }
+
+        // Add shipping as a line item with tax rates
+        if (shippingTotal > 0) {
+            line_items.push({
+                price_data: {
+                    currency: 'cad',
+                    product_data: {
+                        name: 'Shipping',
+                    },
+                    unit_amount: Math.round(shippingTotal * 100), // Convert price to cents
+                },
+                quantity: 1,
+            });
+        }
+
         // Create Stripe checkout session
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
             line_items,
             mode: 'payment',
+            automatic_tax: {
+                enabled: true,
+            },
             success_url: `${YOUR_DOMAIN}/StripeSuccess`,
             cancel_url: `${YOUR_DOMAIN}/StripeCancel`,
         });
