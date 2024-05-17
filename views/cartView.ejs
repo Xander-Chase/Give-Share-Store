@@ -186,14 +186,26 @@
                                 const order = await response.json();
                                 return order.id;
                             },
-                            onApprove: function(data, actions) {
-                                return actions.order.capture().then(function(details) {
+                            onApprove: async function(data, actions) {
+                                return actions.order.capture().then(async function(details) {
                                     alert('Transaction completed by ' + details.payer.name.given_name);
+                    
+                                    // Mark items as sold in the database
+                                    const itemIds = <%- JSON.stringify(items.map(item => item._id.toString())) %>;
+                                    await fetch('/mark-items-sold', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify({ itemIds })
+                                    });
+                    
                                     // TODO Redirect and perform other actions after successful payment
+                                    window.location.href = '/';
                                 });
                             }
                         }).render('#paypal-button-container');
-                    </script>                                          
+                    </script>                                                             
             </div>
         </div>
     </div>

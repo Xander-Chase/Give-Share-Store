@@ -27,7 +27,7 @@ app.use(express.static('css'));                             // serve static css 
 app.use(express.static('js'));                              // serve static js files
 app.use(express.json());                                    // parse json request bodies
 
-const port = process.env.PORT || 5000;                      // Set port to 8000 if not defined in ..env file
+const port = process.env.PORT || 5000;                      // Set port to 5000 if not defined in ..env file
 
 
 // secret variables located in ..env file
@@ -963,6 +963,22 @@ app.post('/create-paypal-order', async (req, res) => {
     }
 });
 
+app.post('/mark-items-sold', async (req, res) => {
+    const itemIds = req.body.itemIds;
+    if (!itemIds || !Array.isArray(itemIds)) {
+        return res.status(400).send('Invalid item IDs');
+    }
+
+    try {
+        await markItemsAsSold(itemIds);
+        res.status(200).send('Items marked as sold');
+    } catch (error) {
+        console.error('Error marking items as sold:', error);
+        res.status(500).send('Failed to mark items as sold');
+    }
+});
+
+
 // ----------------- PayPal Payment END -----------------
 
 // ----------------- Stripe Payment START -----------------
@@ -977,7 +993,7 @@ app.post('/create-checkout-session', async (req, res) => {
         const shippingTotal = parseFloat(req.body.shippingTotal) || 0;
         const taxTotal = parseFloat(req.body.taxTotal) || 0;
 
-        const YOUR_DOMAIN = 'http://localhost:8000';
+        const YOUR_DOMAIN = 'http://localhost:5000'; // Replace with clients domain
 
         if (!itemIds || !Array.isArray(itemIds)) {
             throw new Error('Product IDs not received or not in array format');
@@ -999,7 +1015,7 @@ app.post('/create-checkout-session', async (req, res) => {
                 },
                 unit_amount: Math.round(item.item_price * 100), // Convert price to cents
             },
-            quantity: parseInt(item.item_quantity),
+            quantity: 1,
         }));
 
         // Include shipping, insurance, and tax as separate line items
@@ -1047,7 +1063,7 @@ app.post('/create-checkout-session', async (req, res) => {
             payment_method_types: ['card'],
             line_items,
             mode: 'payment',
-            success_url: `${YOUR_DOMAIN}/StripeSuccess`,
+            success_url: `${YOUR_DOMAIN}/StripeSuccess?itemIds=${itemIds.join(',')}`,
             cancel_url: `${YOUR_DOMAIN}/StripeCancel`,
         });
 
@@ -1059,5 +1075,41 @@ app.post('/create-checkout-session', async (req, res) => {
     }
 });
 
+app.get('/StripeSuccess', async (req, res) => {
+    const itemIds = req.query.itemIds ? req.query.itemIds.split(',') : [];
+
+    try {
+        if (itemIds.length > 0) {
+            const productsCollection = database.db(mongodb_database).collection('listing_items');
+            await productsCollection.updateMany(
+                { _id: { $in: itemIds.map(id => new ObjectId(id)) } }, // Use 'new' keyword
+                { $set: { isSold: true } }
+            );
+        }
+
+        res.render('StripeSuccess', { message: 'Payment successful, items marked as sold.' });
+    } catch (error) {
+        console.error('Error updating items as sold:', error);
+        res.status(500).send('Error updating items as sold: ' + error.message);
+    }
+});
+
+app.get('/StripeCancel', (req, res) => {
+    res.render('StripeCancel');
+}); 
+
 // ----------------- Stripe Payment END -----------------
 
+async function markItemsAsSold(itemIds) {
+    const productsCollection = database.db(mongodb_database).collection('listing_items');
+    const objectIds = itemIds.map(id => ObjectId.createFromHexString(id));
+    try {
+        await productsCollection.updateMany(
+            { '_id': { $in: objectIds } },
+            { $set: { 'isSold': true } }
+        );
+        console.log('Items marked as sold');
+    } catch (error) {
+        console.error('Error marking items as sold:', error);
+    }
+}
