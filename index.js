@@ -82,6 +82,7 @@ var { database } = include('databaseConnection');
 const adminCollection = database.db(mongodb_database).collection('admins');
 const userCollection = database.db(mongodb_database).collection('users');
 
+const categoryCollection = database.db(mongodb_database).collection('categories');
 // linking to mongoDb database
 var mongoStore = MongoDBStore.create({
     mongoUrl: `mongodb+srv://${mongodb_user}:${mongodb_password}@${mongodb_cluster}/${mongodb_database}`,
@@ -114,6 +115,7 @@ app.use((req, res, next) => {
         req.session.cart = [];
     }
     res.locals.cartItemCount = req.session.cart ? req.session.cart.length : 0;
+    res.locals.subCategories = [];
     next();
 });
 
@@ -173,12 +175,8 @@ app.get('/', async (req, res) => {
                 currentListings = await productsCollection.find({ isFeatureItem: false,
                     item_title: {$regex: searchKey, $options: 'i'},
                     item_price: {$lt: Math.round(maximumPrice)}, item_category: req.session.subcategory || req.session.category }).toArray();
-
-        const categoriesCollection = database.db(mongodb_database).collection('categories');
-
-        // Find the category with the type based on the req.session.category keyword
-        // then project meaning to only get the sub_categories field excluding the ID field
-        const subCategories = await categoriesCollection.find({category_type: req.session.category}).project({_id: 0, sub_categories: 1}).toArray();
+      
+        const subCategories = await categoryCollection.find({category_type: req.session.category}).project({_id: 0, sub_categories: 1}).toArray();
         let bodyFilters;
         if (subCategories.length < 1 || subCategories[0].sub_categories.length < 1)
             bodyFilters = getBodyFilters(sortedPrices[0], sortedPrices[prices.length-1], maximumPrice, []);
@@ -649,8 +647,9 @@ const upload = multer({
 
 // ------------------ multer END ------------------
 
-app.get('/addListing', (req, res) => {
-    res.render('addListing');
+app.get('/addListing', async (req, res) => {
+
+    res.render('addListing', {categories: await categoryCollection.find().toArray()});
 });
 
 // Route to handle form submission
@@ -669,7 +668,14 @@ app.post('/submitListing', upload.fields([{ name: 'photo', maxCount: 10 }, { nam
         item_estimatedShippingCost: parseFloat(req.body.item_estimatedShippingCost) || 0.0,
         item_estimatedInsuranceCost: parseFloat(req.body.item_estimatedInsuranceCost) || 0.0,
         isFeatureItem: req.body.isFeatureItem === 'true',
-        item_category: Array.isArray(req.body.item_category) ? req.body.item_category : [req.body.item_category],
+        item_category: Array.isArray(req.body.item_category) ? req.body.item_category.map(function(item)
+        {
+            return item.replace(/"/g, '');
+        }) : [req.body.item_category.replace(/"/g, '')],
+        item_sub_category: Array.isArray(req.body.item_sub_category) ? req.body.item_sub_category.map(function(item)
+        {
+            return item.replace(/"/g, '');
+        }) : [req.body.item_sub_category.replace(/"/g, '')],
         status: 'available' // Default status when a listing is created
     };
 
@@ -686,6 +692,7 @@ app.get('/editListing/:id', async (req, res) => {
     const itemId = req.params.id;
     const isLoggedIn = req.session.loggedIn;
     const isAdmin = req.session.isAdmin || false;
+
     console.log("Received ID for editing:", itemId);
 
     if (!ObjectId.isValid(itemId)) {
@@ -842,6 +849,7 @@ app.get('/editUser/:id', async (req, res) => {
         }
         const isLoggedIn = req.session.loggedIn;
         res.render('editUser', { user, isLoggedIn : isLoggedIn, isAdmin, categories: await getCategoriesNav()});
+      
     } catch (error) {
         console.error('Error retrieving user for editing:', error);
         res.status(500).send('Error retrieving user');
@@ -891,7 +899,105 @@ app.get('/featuredItems', async (req, res) => {
 });
 
 app.get('/categoryManagement', async (req, res) => {
-    res.render('categoryManagement');
+    const categoriesArray = await categoryCollection.find().toArray();
+    res.render('categoryManagement', {
+        categories: categoriesArray
+    });
+})
+
+app.get('/editCategory/:id', async (req, res) =>
+{
+    try
+    {
+        const category = await categoryCollection.findOne({ _id: new ObjectId(req.params.id) });
+        res.render('editCategory', { category, isAdmin: req.session.isAdmin, isLoggedIn : req.session.loggedIn, categories: await getCategoriesNav()});
+    }
+    catch (error)
+    {
+        console.error('Error retrieving category for editing:', error);
+        res.status(500).send('Error retrieving category');
+    }
+})
+
+app.post('/updateCategory/:id', async (req, res) => {
+    try {
+        const { name, sub_categories } = req.body;
+        console.log(`${name} and ${sub_categories}`)
+        await categoryCollection.updateOne(
+            { _id: new ObjectId(req.params.id) },
+            { $set: {
+                category_type: name,
+                sub_categories: sub_categories.split(", ")
+            }}
+        );
+        res.redirect('/manage');
+    } catch (error) {
+        console.error('Error updating category:', error);
+        res.status(500).send('Failed to update category');
+    }
+})
+
+app.post('/deleteCategory/:id', async (req, res) => {
+    try {
+        const result = await categoryCollection.deleteOne({ _id: new ObjectId(req.params.id) });
+        if(result.deletedCount === 1) {
+            res.status(200).send('Category deleted successfully');
+        } else {
+            res.status(404).send('Category not found');
+        }
+    } catch (error) {
+        console.error('Failed to delete user:', error);
+        res.status(500).send('Failed to delete user');
+    }
+})
+
+app.post('/addCategory', async (req, res) => {
+    const { category_name, sub_categories} = req.body;
+    try {
+        await categoryCollection.insertOne({ category_type: category_name, sub_categories: sub_categories.split(", ")});
+        res.redirect('/manage');
+
+    } catch (error) {
+        console.error('Error adding new category:', error);
+        res.status(500).send('Failed to add new user');
+    }
+});
+
+app.post('/load-subcategory', async (req, res) => {
+
+    const type = req.body.categoryType.replace(/"/g, '');
+    const {sub_categories} = await categoryCollection.findOne({category_type: type});
+    try{
+        req.session.save(err => {
+            if (err) {
+                console.error('Error saving session:', err);
+                return res.json({ success: false, message: 'Error saving session' });
+            }
+            res.json({ success: true, subCategories: sub_categories });
+        });
+    }catch (error)
+    {
+        console.error('Failed to remove item from cart:', error);
+        res.json({ success: false, message: 'Error removing item from cart' });
+    }
+
+    /*try {
+        if (!req.session.cart) {
+            return res.json({ success: false, message: 'Cart is empty' });
+        }
+
+        req.session.cart = req.session.cart.filter(item => item._id.toString() !== itemId);
+        req.session.save(err => {
+            if (err) {
+                console.error('Error saving session:', err);
+                return res.json({ success: false, message: 'Error saving session' });
+            }
+            res.json({ success: true, cartItemCount: req.session.cart.length });
+        });
+    } catch (error) {
+        console.error('Failed to remove item from cart:', error);
+        res.json({ success: false, message: 'Error removing item from cart' });
+    }*/
 })
 // connect to the database and hash passwords if necessary, then start the server
 database.connect().then(async () => {
