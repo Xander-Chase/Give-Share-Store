@@ -907,6 +907,7 @@ database.connect().then(async () => {
 // ----------------- PayPal Payment START -----------------
 
 async function getAccessToken() {
+    const fetch = await import('node-fetch').then(module => module.default);
     const auth = `${PayPalClientID}:${PayPalSecret}`;
     const data = 'grant_type=client_credentials';
 
@@ -924,10 +925,25 @@ async function getAccessToken() {
 
 app.post('/create-paypal-order', async (req, res) => {
     try {
+        const fetch = await import('node-fetch').then(module => module.default);
         const accessToken = await getAccessToken();
+
+        const { intent, purchase_units, insuranceTotal, shippingTotal, taxTotal, finalTotal } = req.body;
+
         const orderData = {
-            intent: req.body.intent.toUpperCase(),
-            purchase_units: req.body.purchase_units
+            intent: intent.toUpperCase(),
+            purchase_units: [{
+                amount: {
+                    currency_code: "CAD",
+                    value: finalTotal.toFixed(2),
+                    breakdown: {
+                        item_total: { value: (finalTotal - insuranceTotal - shippingTotal - taxTotal).toFixed(2), currency_code: "CAD" },
+                        shipping: { value: shippingTotal.toFixed(2), currency_code: "CAD" },
+                        insurance: { value: insuranceTotal.toFixed(2), currency_code: "CAD" },
+                        tax_total: { value: taxTotal.toFixed(2), currency_code: "CAD" }
+                    }
+                }
+            }]
         };
 
         const response = await fetch(`${PayPal_endpoint_url}/v2/checkout/orders`, {
@@ -951,28 +967,17 @@ app.post('/create-paypal-order', async (req, res) => {
 
 // ----------------- Stripe Payment START -----------------
 
-app.get('/StripeSuccess', (req, res) => {
-    res.render('StripeSuccess');
-});
-
-app.get('/StripeCancel', (req, res) => {
-    res.render('StripeCancel');
-});
-
-// Stripe test secret API key.
 const stripe = require('stripe')('sk_test_51OZSVHAcq23T9yD7gpE3kQS73T5AnO6UEaecXMwkzvGc9hVh1QlPNFmM3rzI9cxJ2tU2FtUAPzvcSc1obqPcrUfZ00PojCiOni');
 
-app.use(express.static('public'));
-
-const YOUR_DOMAIN = 'http://localhost:8000';
-
-// Stripe Payment Endpoint
 app.post('/create-checkout-session', async (req, res) => {
     try {
-        // Extract product IDs and additional costs from the POST data
+        // Extract product IDs from the POST data
         const itemIds = req.body.productIds;
-        const insuranceTotal = parseFloat(req.body.insuranceTotal);
-        const shippingTotal = parseFloat(req.body.shippingTotal);
+        const insuranceTotal = parseFloat(req.body.insuranceTotal) || 0;
+        const shippingTotal = parseFloat(req.body.shippingTotal) || 0;
+        const taxTotal = parseFloat(req.body.taxTotal) || 0;
+
+        const YOUR_DOMAIN = 'http://localhost:8000';
 
         if (!itemIds || !Array.isArray(itemIds)) {
             throw new Error('Product IDs not received or not in array format');
@@ -997,13 +1002,26 @@ app.post('/create-checkout-session', async (req, res) => {
             quantity: parseInt(item.item_quantity),
         }));
 
-        // Add insurance as a line item with tax rates
+        // Include shipping, insurance, and tax as separate line items
+        if (shippingTotal > 0) {
+            line_items.push({
+                price_data: {
+                    currency: 'cad',
+                    product_data: {
+                        name: 'Shipping'
+                    },
+                    unit_amount: Math.round(shippingTotal * 100), // Convert price to cents
+                },
+                quantity: 1,
+            });
+        }
+
         if (insuranceTotal > 0) {
             line_items.push({
                 price_data: {
                     currency: 'cad',
                     product_data: {
-                        name: 'Insurance',
+                        name: 'Insurance'
                     },
                     unit_amount: Math.round(insuranceTotal * 100), // Convert price to cents
                 },
@@ -1011,15 +1029,14 @@ app.post('/create-checkout-session', async (req, res) => {
             });
         }
 
-        // Add shipping as a line item with tax rates
-        if (shippingTotal > 0) {
+        if (taxTotal > 0) {
             line_items.push({
                 price_data: {
                     currency: 'cad',
                     product_data: {
-                        name: 'Shipping',
+                        name: 'Tax'
                     },
-                    unit_amount: Math.round(shippingTotal * 100), // Convert price to cents
+                    unit_amount: Math.round(taxTotal * 100), // Convert price to cents
                 },
                 quantity: 1,
             });
@@ -1030,9 +1047,6 @@ app.post('/create-checkout-session', async (req, res) => {
             payment_method_types: ['card'],
             line_items,
             mode: 'payment',
-            automatic_tax: {
-                enabled: true,
-            },
             success_url: `${YOUR_DOMAIN}/StripeSuccess`,
             cancel_url: `${YOUR_DOMAIN}/StripeCancel`,
         });
@@ -1046,3 +1060,4 @@ app.post('/create-checkout-session', async (req, res) => {
 });
 
 // ----------------- Stripe Payment END -----------------
+

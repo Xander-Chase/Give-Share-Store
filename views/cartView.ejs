@@ -127,6 +127,10 @@
                             <strong id="insurance-total">$0.00</strong>
                         </li>
                         <li class="list-group-item d-flex justify-content-between">
+                            <span>Tax (5% GST + 7% PST)</span>
+                            <strong id="tax-total">$0.00</strong>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
                             <span>Total (CAN)</span>
                             <strong id="total">$<%= total.toFixed(2) %></strong>
                         </li>
@@ -137,14 +141,23 @@
                         <% }); %>
                         <input type="hidden" name="insuranceTotal" id="insuranceTotalInput" value="0">
                         <input type="hidden" name="shippingTotal" id="shippingTotalInput" value="0">
+                        <input type="hidden" name="taxTotal" id="taxTotalInput" value="0">
+                        <input type="hidden" name="finalTotal" id="finalTotalInput" value="0">
                         <button type="submit" id="checkout-button" class="btn btn-primary">Proceed to Checkout</button>
-                    </form>   
+                    </form>
+                    
                     <div id="paypal-button-container"></div>
                     <script src="https://www.paypal.com/sdk/js?client-id=<%= paypalClientId %>&currency=CAD"></script>
                     <script>
                         paypal.Buttons({
-                            fundingSource: paypal.FUNDING.PAYPAL, 
+                            fundingSource: paypal.FUNDING.PAYPAL,
                             createOrder: async function() {
+                                const insuranceTotal = parseFloat(document.getElementById('insuranceTotalInput').value);
+                                const shippingTotal = parseFloat(document.getElementById('shippingTotalInput').value);
+                                const taxTotal = parseFloat(document.getElementById('taxTotalInput').value);
+                                const finalTotal = parseFloat(document.getElementById('finalTotalInput').value);
+                                const subtotal = parseFloat(document.getElementById('subtotal').textContent.replace('$', ''));
+                    
                                 const response = await fetch("/create-paypal-order", {
                                     method: "POST",
                                     headers: {
@@ -152,10 +165,20 @@
                                     },
                                     body: JSON.stringify({
                                         intent: "CAPTURE",
+                                        insuranceTotal,
+                                        shippingTotal,
+                                        taxTotal,
+                                        finalTotal,
                                         purchase_units: [{
                                             amount: {
                                                 currency_code: "CAD",
-                                                value: "<%= total.toFixed(2) %>"
+                                                value: finalTotal.toFixed(2),
+                                                breakdown: {
+                                                    item_total: { value: subtotal.toFixed(2), currency_code: "CAD" },
+                                                    shipping: { value: shippingTotal.toFixed(2), currency_code: "CAD" },
+                                                    insurance: { value: insuranceTotal.toFixed(2), currency_code: "CAD" },
+                                                    tax_total: { value: taxTotal.toFixed(2), currency_code: "CAD" }
+                                                }
                                             }
                                         }]
                                     })
@@ -166,13 +189,11 @@
                             onApprove: function(data, actions) {
                                 return actions.order.capture().then(function(details) {
                                     alert('Transaction completed by ' + details.payer.name.given_name);
-
-                                    <!-- TODO Redirect and perform other actions after successful payment -->
-
+                                    // TODO Redirect and perform other actions after successful payment
                                 });
                             }
                         }).render('#paypal-button-container');
-                    </script>                    
+                    </script>                                          
             </div>
         </div>
     </div>
@@ -215,14 +236,27 @@
             shippingTotal += parseFloat(checkbox.getAttribute('data-cost'));
         });
 
+        const taxRate = 0.12; // 12% GST and PST
         let total = subtotal + shippingTotal + insuranceTotal;
+        let taxTotal = total * taxRate;
+        let finalTotal = total + taxTotal;
 
         document.getElementById('shipping-total').textContent = `$${shippingTotal.toFixed(2)}`;
         document.getElementById('insurance-total').textContent = `$${insuranceTotal.toFixed(2)}`;
-        document.getElementById('total').textContent = `$${total.toFixed(2)}`;
+        document.getElementById('tax-total').textContent = `$${taxTotal.toFixed(2)}`;
+        document.getElementById('total').textContent = `$${finalTotal.toFixed(2)}`;
 
-        document.getElementById('insuranceTotalInput').value = insuranceTotal;
-        document.getElementById('shippingTotalInput').value = shippingTotal;
+        document.getElementById('insuranceTotalInput').value = insuranceTotal.toFixed(2);
+        document.getElementById('shippingTotalInput').value = shippingTotal.toFixed(2);
+        document.getElementById('taxTotalInput').value = taxTotal.toFixed(2);
+        document.getElementById('finalTotalInput').value = finalTotal.toFixed(2);
     }
+
+    // Initial call to updateTotals when the page loads
+    window.onload = updateTotals;
+
+    document.querySelectorAll('.insurance-checkbox, .shipping-checkbox, .pickup-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', updateTotals);
+    });
 </script>
 </html>
