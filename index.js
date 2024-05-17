@@ -684,6 +684,7 @@ app.post('/submitListing', upload.fields([{ name: 'photo', maxCount: 10 }, { nam
 app.get('/editListing/:id', async (req, res) => {
     const itemId = req.params.id;
     const isLoggedIn = req.session.loggedIn;
+    const isAdmin = req.session.isAdmin || false;
     console.log("Received ID for editing:", itemId);
 
     if (!ObjectId.isValid(itemId)) {
