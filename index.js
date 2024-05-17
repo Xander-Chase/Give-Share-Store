@@ -1070,17 +1070,29 @@ app.post('/create-paypal-order', async (req, res) => {
 });
 
 app.post('/mark-items-sold', async (req, res) => {
-    const itemIds = req.body.itemIds;
-    if (!itemIds || !Array.isArray(itemIds)) {
-        return res.status(400).send('Invalid item IDs');
-    }
+    const itemIds = req.query.itemIds ? req.query.itemIds.split(',') : [];
 
     try {
-        await markItemsAsSold(itemIds);
-        res.status(200).send('Items marked as sold');
+        if (itemIds.length > 0) {
+            const productsCollection = database.db(mongodb_database).collection('listing_items');
+            await productsCollection.updateMany(
+                { _id: { $in: itemIds.map(id => new ObjectId(id)) } },
+                { $set: { isSold: true } }
+            );
+        }
+
+        // Clear the cart
+        req.session.cart = [];
+        req.session.save(err => {
+            if (err) {
+                console.error('Error saving session:', err);
+                return res.status(500).send('Error clearing the cart');
+            }
+            res.render('paypalSuccess', { message: 'Payment successful, items marked as sold.' });
+        });
     } catch (error) {
-        console.error('Error marking items as sold:', error);
-        res.status(500).send('Failed to mark items as sold');
+        console.error('Error updating items as sold:', error);
+        res.status(500).send('Error updating items as sold: ' + error.message);
     }
 });
 
@@ -1188,17 +1200,26 @@ app.get('/StripeSuccess', async (req, res) => {
         if (itemIds.length > 0) {
             const productsCollection = database.db(mongodb_database).collection('listing_items');
             await productsCollection.updateMany(
-                { _id: { $in: itemIds.map(id => new ObjectId(id)) } }, // Use 'new' keyword
+                { _id: { $in: itemIds.map(id => new ObjectId(id)) } },
                 { $set: { isSold: true } }
             );
         }
 
-        res.render('StripeSuccess', { message: 'Payment successful, items marked as sold.' });
+        // Clear the cart
+        req.session.cart = [];
+        req.session.save(err => {
+            if (err) {
+                console.error('Error saving session:', err);
+                return res.status(500).send('Error clearing the cart');
+            }
+            res.render('StripeSuccess', { message: 'Payment successful, items marked as sold.' });
+        });
     } catch (error) {
         console.error('Error updating items as sold:', error);
         res.status(500).send('Error updating items as sold: ' + error.message);
     }
 });
+
 
 app.get('/StripeCancel', (req, res) => {
     res.render('StripeCancel');
