@@ -669,7 +669,8 @@ app.post('/submitListing', upload.fields([{ name: 'photo', maxCount: 10 }, { nam
         item_estimatedShippingCost: parseFloat(req.body.item_estimatedShippingCost) || 0.0,
         item_estimatedInsuranceCost: parseFloat(req.body.item_estimatedInsuranceCost) || 0.0,
         isFeatureItem: req.body.isFeatureItem === 'true',
-        item_category: Array.isArray(req.body.item_category) ? req.body.item_category : [req.body.item_category]
+        item_category: Array.isArray(req.body.item_category) ? req.body.item_category : [req.body.item_category],
+        status: 'available' // Default status when a listing is created
     };
 
     try {
@@ -715,6 +716,7 @@ app.post('/updateListing/:id', upload.none(), async (req, res) => {
         item_estimatedShippingCost: parseFloat(req.body.item_estimatedShippingCost) || 0.0,
         item_estimatedInsuranceCost: parseFloat(req.body.item_estimatedInsuranceCost) || 0.0,
         isFeatureItem: req.body.isFeatureItem ? req.body.isFeatureItem === 'true' : false,
+        status: req.body.status || 'available' // Allow status update    
     };
 
 
@@ -752,8 +754,23 @@ app.get('/currentListings', async (req, res) => {
 });
 
 
-app.get('/previousListings', (req, res) => {
-    res.render('previousListings');
+app.get('/previousListings', async (req, res) => {
+    try {
+        const productsCollection = database.db(mongodb_database).collection('listing_items');
+        const soldListings = await productsCollection.find({ status: 'sold' }).toArray();
+        const isLoggedIn = req.session.loggedIn;
+        const isAdmin = req.session.isAdmin || false;
+
+        res.render('previousListings', {
+            listings: soldListings,
+            isLoggedIn,
+            isAdmin,
+            categories: await getCategoriesNav()
+        });
+    } catch (error) {
+        console.error('Failed to fetch previous listings:', error);
+        res.status(500).send('Error fetching previous listings');
+    }
 });
 
 
