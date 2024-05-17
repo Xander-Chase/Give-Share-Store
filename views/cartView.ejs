@@ -191,7 +191,7 @@
                                     alert('Transaction completed by ' + details.payer.name.given_name);
                     
                                     // Mark items as sold in the database
-                                    const itemIds = <%- JSON.stringify(items.map(item => item._id.toString())) %>;
+                                    const itemIds = `<%- JSON.stringify(items.map(item => item._id.toString())) %>`;
                                     await fetch('/mark-items-sold', {
                                         method: 'POST',
                                         headers: {
