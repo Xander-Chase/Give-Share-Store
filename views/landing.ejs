@@ -1,6 +1,16 @@
 <%- include("metadata") %>
 <html lang="en" >
     <%- include("searchNavBar") %>
+    <head>
+        <style>
+            .no-border
+            {
+                border: none;
+                background: none;
+                padding-top: 50px;
+            }
+        </style>
+    </head>
     <body>
 
     <!-- Filters -->
@@ -116,6 +126,13 @@
                         </div>
                     </div>
                 <% }); %>
+                <div class="row d-flex justify-content-center">
+                    <div class="col-sm-1"><form action="/page=<%= previousPage %>" method="post"><button class="no-border" type="submit"><</button></form></div>
+                    <% paginationIndex.forEach(function(index) { %>
+                        <div class="col-sm-1"><form action="/page=<%= index %>" method="post"><button class="no-border" type="submit"><%= index %></button></form></div>
+                    <% }); %>
+                    <div class="col-sm-1"><form action="/page=<%= nextPage %>" method="post"><button class="no-border" type="submit">></button></form></div>
+                </div>
             </div>
         </div>
 
