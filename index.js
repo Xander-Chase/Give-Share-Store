@@ -411,7 +411,7 @@ app.get('/cart', async (req, res) => {
       items: cartItems, 
       paypalClientId: process.env.PAYPAL_CLIENT_ID, 
       categories: await getCategoriesNav(),
-      isAdmin
+      isAdmin: req.session.isAdmin || false
     });
 });
 
