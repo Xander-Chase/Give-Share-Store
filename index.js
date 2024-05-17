@@ -171,17 +171,18 @@ app.get('/', async (req, res) => {
 
         let pageIndexes = [];
         let previousIndex = req.session.pageIndex - 1;
-        let nextIndex = req.session.pageIndex + 1;
+        let nextIndex = Number(req.session.pageIndex) + 1;
         let numberOfPages = sortedPrices.length / 20;
         if (previousIndex < 1)
             previousIndex = 1;
+        // todo: test case, use 40+ current listings
         if (nextIndex>=numberOfPages)
             nextIndex--;
-        for (let i = 0; i <= (numberOfPages); i++)
+        for (let i = 0; i < (numberOfPages-1); i++)
         {
             pageIndexes.push(i+1);
         }
-        const skips = 20*(req.session.pageIndex-1);
+        const skips = 20*(((req.session.pageIndex-1) < 0 ) ? 0 : (req.session.pageIndex-1));
         // TODO: please make one of them into a variable.
         if (req.session.category != null)
         {
@@ -214,6 +215,7 @@ app.get('/', async (req, res) => {
                 .toArray();
 
 
+        req.session.pageIndex = 0;
 
         const subCategories = await categoryCollection.find({category_type: req.session.category}).project({_id: 0, sub_categories: 1}).toArray();
         let bodyFilters;
@@ -222,7 +224,7 @@ app.get('/', async (req, res) => {
         else
             bodyFilters = getBodyFilters(sortedPrices[0], sortedPrices[prices.length-1], maximumPrice, subCategories[0].sub_categories);
 
-        console.log(pageIndexes)
+        console.log(nextIndex)
         // Limit
         res.render("landing", {
             isLoggedIn,
