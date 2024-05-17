@@ -1,23 +1,23 @@
-require ('dotenv').config();                                // Import dotenv module to read ..env file
-require ('./utils');                                        // Import utils.js file to define include function
-const express = require('express');                         // Import express module to create server
-const session = require('express-session');                 // Import express-session module to manage session
-const MongoDBStore = require('connect-mongo');              // Import connect-mongo module to store session in MongoDB
-const Joi = require('joi');                                 // include the joi module
-const bcrypt = require('bcrypt');                           // include the bcrypt module
-const { ObjectId } = require('mongodb');                    // include the ObjectId module
-const { MongoClient} = require('mongodb');                  // include the MongoClient modules
-const AWS = require('aws-sdk');                             // include the AWS module
-const multer = require('multer');                           // include the multer module
-const multerS3 = require('multer-s3');                      // include the multer-s3 module
-const { S3Client } = require("@aws-sdk/client-s3");         // include the S3Client module
-const { Upload } = require("@aws-sdk/lib-storage");         // include the Upload module
-const Realm = require("realm");
-const { google } = require("googleapis");
-const fetch = import('node-fetch');                          // Import node-fetch module to fetch data from API
+require ('dotenv').config();                                    // Import dotenv module to read ..env file
+require ('./utils');                                            // Import utils.js file to define include function
+const express = require('express');                             // Import express module to create server
+const session = require('express-session');                     // Import express-session module to manage session
+const MongoDBStore = require('connect-mongo');                  // Import connect-mongo module to store session in MongoDB
+const Joi = require('joi');                                     // include the joi module
+const bcrypt = require('bcrypt');                               // include the bcrypt module
+const { ObjectId } = require('mongodb');                        // include the ObjectId module
+const { MongoClient} = require('mongodb');                      // include the MongoClient modules
+const AWS = require('aws-sdk');                                 // include the AWS module
+const multer = require('multer');                               // include the multer module
+const multerS3 = require('multer-s3');                          // include the multer-s3 module
+const { S3Client } = require("@aws-sdk/client-s3");             // include the S3Client module
+const { Upload } = require("@aws-sdk/lib-storage");             // include the Upload module
+const Realm = require("realm");                                 // Import Realm module to interact with MongoDB Realm
+const { google } = require("googleapis");                       // Import googleapis module to interact with Google APIs
+const fetch = import('node-fetch');                             // Import node-fetch module to fetch data from API
+const mailchimp = require('@mailchimp/mailchimp_marketing');    // Import mailchimp_marketing module to interact with Mailchimp API
 const formData = require('form-data');                      // Import form-data module to handle form data
 const Mailgun = require('mailgun.js');                      // Import mailgun.js module to send email
-
 
 const app = express();
 app.set('view engine', 'ejs');                              // Set view engine to ejs
@@ -42,6 +42,7 @@ const PayPalEnvironment = process.env.PAYPAL_ENVIRONMENT;   // Import PayPal Env
 const PayPalClientID = process.env.PAYPAL_CLIENT_ID;        // Import PayPal Client ID from ..env file
 const PayPalSecret = process.env.PAYPAL_CLIENT_SECRET;      // Import PayPal Secret from ..env file
 const PayPal_endpoint_url = PayPalEnvironment === 'sandbox' ? 'https://api-m.sandbox.paypal.com' : 'https://api-m.paypal.com'; // Import PayPal endpoint URL from ..env file
+
 
 // Configure and instantiate Google OAuth2.0 client
 /*const oauthConfig = {
@@ -131,13 +132,12 @@ app.get('/', async (req, res) => {
 
     let categoryTab = "";
     let subCategoryTab = "";
-    if (req.session.category != null ){
+    if (req.session.category != null )
         categoryTab = `> ${req.session.category}`;
-    }
+
     if (req.session.subcategory != null)
-    {
         subCategoryTab = `> ${req.session.subcategory}`;
-    }
+
     try {
 
         let filtersHeader = [`Category ${categoryTab} ${subCategoryTab}`, "Price", "Sorting"];
@@ -160,11 +160,25 @@ app.get('/', async (req, res) => {
                 return 0;
         });
 
-        currentListings = await productsCollection.find({ isFeatureItem: false,
-            item_title: {$regex: searchKey, $options: 'i'},
-            item_price: {$lt: Math.round(maximumPrice)}, item_category: req.session.subcategory || req.session.category }).toArray();
+        // TODO: please make one of them into a variable.
+        if (req.session.category == null)
+            currentListings = await productsCollection.find({ isFeatureItem: false,
+                item_title: {$regex: searchKey, $options: 'i'},
+                item_price: {$lt: Math.round(maximumPrice)} }).toArray();
+        else
+            if (req.session.subcategory == null)
+                currentListings = await productsCollection.find({ isFeatureItem: false,
+                    item_title: {$regex: searchKey, $options: 'i'},
+                    item_price: {$lt: Math.round(maximumPrice)}, item_category: req.session.category }).toArray();
+            else
+                currentListings = await productsCollection.find({ isFeatureItem: false,
+                    item_title: {$regex: searchKey, $options: 'i'},
+                    item_price: {$lt: Math.round(maximumPrice)}, item_category: req.session.subcategory || req.session.category }).toArray();
 
         const categoriesCollection = database.db(mongodb_database).collection('categories');
+
+        // Find the category with the type based on the req.session.category keyword
+        // then project meaning to only get the sub_categories field excluding the ID field
         const subCategories = await categoriesCollection.find({category_type: req.session.category}).project({_id: 0, sub_categories: 1}).toArray();
         let bodyFilters;
         if (subCategories.length < 1 || subCategories[0].sub_categories.length < 1)
@@ -258,6 +272,7 @@ app.post('/adminLogInSubmit', async (req, res) => {
     req.session.name = user.name;
     req.session.email = user.email;
     req.session.password = user.password;
+    req.session.userId = user._id;
     res.redirect("/");
 });
 
@@ -298,6 +313,7 @@ app.post('/userLogInSubmit', async (req, res) => {
     req.session.email = user.email;
     req.session.password = user.password;
     console.log("user isLoggedIn:" + req.session.loggedIn);
+    req.session.userId = user._id;
     res.redirect("/");
 });
 
@@ -306,6 +322,8 @@ function getBodyFilters(maxVal, minVal, currentPrice, subCategories)
     let categoriesBody =
         "<ul class=\"list-group list-group-flush\">";
 
+    // for each subCategories on that array, assign it as a list element on the sub-category filter on the left
+    // since some of them are spaces, we split the spaces and join them with '_'
     subCategories.forEach(function(subC) {
         categoriesBody+="<li class=\"list-group-item\"><form method='post' action='/subcategory=" + subC.split(" ").join("_") + "'><button " +
             "style='background: none; border: none'" +
@@ -366,6 +384,12 @@ app.post('/category=:type', async (req, res) => {
     res.redirect('/');
 })
 
+app.post('/category=', async (req, res) => {
+    req.session.category = null;
+    req.session.subcategory = null;
+    res.redirect('/');
+})
+
 app.post('/subcategory=:type', async (req, res) => {
     req.session.subcategory = req.params.type.split("_").join(" ");
 
@@ -373,8 +397,11 @@ app.post('/subcategory=:type', async (req, res) => {
 })
 app.post('/clearFilter', (req, res) =>
 {
+
     req.session.maxPrice = 0;
     req.session.keyword = null;
+    req.session.category = null;
+    req.session.subcategory = null;
     res.redirect('/');
 })
 
@@ -384,7 +411,8 @@ app.get('/cart', async (req, res) => {
       isLoggedIn: req.session.loggedIn, 
       items: cartItems, 
       paypalClientId: process.env.PAYPAL_CLIENT_ID, 
-      categories: await getCategoriesNav() 
+      categories: await getCategoriesNav(),
+      isAdmin: req.session.isAdmin || false
     });
 });
 
@@ -453,7 +481,7 @@ app.get('/product-info/:id', async (req, res) => {
         }
 
         const isLoggedIn = req.session.loggedIn;
-        res.render('product-info', { item: item, isLoggedIn : isLoggedIn, categories: await getCategoriesNav()});
+        res.render('product-info', { item: item, isLoggedIn : isLoggedIn, isAdmin, categories: await getCategoriesNav()});
     } catch (error) {
         console.error('Failed to fetch item:', error);
         res.status(500).send('Error fetching item details');
@@ -463,12 +491,12 @@ app.get('/product-info/:id', async (req, res) => {
 
 app.get('/about', async (req, res) => {
     const isLoggedIn = req.session.loggedIn; 
-    res.render("about", {isLoggedIn : isLoggedIn, categories: await getCategoriesNav()});
+    res.render("about", {isLoggedIn : isLoggedIn, isAdmin, categories: await getCategoriesNav()});
 });
 
 app.get('/contact-us', async (req, res) => {
     const isLoggedIn = req.session.loggedIn; 
-    res.render("contact", {isLoggedIn : isLoggedIn, categories: await getCategoriesNav()});
+    res.render("contact", {isLoggedIn : isLoggedIn, isAdmin, categories: await getCategoriesNav()});
 });
 
 app.get('/manage', async (req, res) => {
@@ -482,23 +510,72 @@ app.get('/manage', async (req, res) => {
     }
 });
 
-app.get('/manageUser', (req, res) => {
+app.get('/manageUser', async (req, res) => {
     if (req.session.loggedIn) {
         const isLoggedIn = req.session.loggedIn;
         const isAdmin = req.session.isAdmin;
-        res.render("user-management", {isLoggedIn, isAdmin});
+        res.render("user-management", {isLoggedIn, isAdmin, categories: await getCategoriesNav()});
     } 
     else {
         res.redirect('/userLogIn');
     }
 });
 
-app.get('/settings', (req, res) => {
+app.get('/pastOrders', async (req, res) => {
+    try {
+        const ordersCollection = database.db(mongodb_database).collection('orders');
+        const userOrders = await ordersCollection.find({ userId: req.session.userId }).toArray();
+        const isLoggedIn = req.session.loggedIn;
+        const isAdmin = req.session.isAdmin || false;
+
+        res.render('pastOrders', {
+            orders: userOrders,
+            isLoggedIn,
+            isAdmin,
+            categories: await getCategoriesNav()
+        });
+    } catch (error) {
+        console.error('Error fetching past orders:', error);
+        res.status(500).send('Error fetching past orders');
+    }
+});
+
+async function addTestOrder() {
+    try {
+        const ordersCollection = database.db(mongodb_database).collection('orders');
+        const testOrder = {
+            userId: 'testUserId',
+            date: new Date(),
+            totalAmount: 100.00,
+            items: [
+                {
+                    item_title: 'Test Item 1',
+                    item_price: 50.00,
+                    item_quantity: 1
+                },
+                {
+                    item_title: 'Test Item 2',
+                    item_price: 25.00,
+                    item_quantity: 2
+                }
+            ]
+        };
+        await ordersCollection.insertOne(testOrder);
+        console.log('Test order added successfully');
+    } catch (error) {
+        console.error('Error adding test order:', error);
+    }
+}
+
+addTestOrder();
+
+
+app.get('/settings', async (req, res) => {
     if (req.session.loggedIn) {
         const isLoggedIn = req.session.loggedIn;
         const user = req.session.name;
         const email = req.session.email;
-        res.render("settings", {isLoggedIn : isLoggedIn, user : user, email : email});
+        res.render("settings", {isLoggedIn : isLoggedIn, isAdmin, user : user, email : email, categories: await getCategoriesNav()});
     } 
     else {
         res.redirect('/adminLogIn');
@@ -518,26 +595,26 @@ app.post('/changePassword', async (req, res) => {
     const validationResult = schema.validate({ currentPassword, newPassword, confirmPassword });
     if (validationResult.error) {
         console.log(validationResult.error);
-        return res.render('settings', { isLoggedIn, user: req.session.name, email, error: validationResult.error.message });
+        return res.render('settings', { isLoggedIn, isAdmin, categories: await getCategoriesNav(), user: req.session.name, email, error: validationResult.error.message });
     }
 
     const user = await adminCollection.findOne({ email });
     if (!user) {
         console.log('User not found');
-        return res.render('settings', { isLoggedIn, user: req.session.name, email, error: 'User not found' });
+        return res.render('settings', { isLoggedIn, isAdmin, categories: await getCategoriesNav(), user: req.session.name, email, error: 'User not found' });
     }
 
     const passwordMatch = await bcrypt.compare(currentPassword, user.password);
     if (!passwordMatch) {
         console.log('Wrong current password');
-        return res.render('settings', { isLoggedIn, user: req.session.name, email, error: 'Incorrect current password' });
+        return res.render('settings', { isLoggedIn, isAdmin, categories: await getCategoriesNav(), user: req.session.name, email, error: 'Incorrect current password' });
     }
 
     const hashedNewPassword = await bcrypt.hash(newPassword, 10);
     await adminCollection.updateOne({ email }, { $set: { password: hashedNewPassword } });
     req.session.password = hashedNewPassword;
 
-    res.render('passwordUpdated', { isLoggedIn });
+    res.render('passwordUpdated', { isLoggedIn, isAdmin, categories: await getCategoriesNav()});
 });
 
 
@@ -619,7 +696,7 @@ app.get('/editListing/:id', async (req, res) => {
         if (!listing) {
             return res.status(404).send('Listing not found');
         }
-        res.render('editListing', { listing, isLoggedIn, categories: await getCategoriesNav()});
+        res.render('editListing', { listing, isLoggedIn, isAdmin, categories: await getCategoriesNav()});
     } catch (error) {
         console.error('Failed to fetch listing:', error);
         res.status(500).send('Error fetching listing details');
@@ -680,19 +757,32 @@ app.get('/previousListings', (req, res) => {
     res.render('previousListings');
 });
 
-app.get('/mailingList', async (req, res) => {
-    // Example data representing people on the mailing list
-    const mailingList = [
-        { name: "Alice Johnson", email: "alice.johnson@example.com" },
-        { name: "Bob Smith", email: "bob.smith@example.com" },
-        { name: "Carolyn B. Yates", email: "carolyn.yates@example.com" },
-        { name: "David Gilmore", email: "david.gilmore@example.com" }
-    ];
 
-    res.render('mailingList', {
-        people: mailingList
-    });
+app.get('/mailingList', async (req, res) => {
+    try {
+        mailchimp.setConfig({
+            apiKey: process.env.MAILCHIMP_API_KEY,
+            server: process.env.MAILCHIMP_SERVER_PREFIX
+        });
+
+        const response = await mailchimp.lists.getListMembersInfo(process.env.MAILCHIMP_LIST_ID);
+        const subscribers = response.members.map(member => ({
+            firstName: member.merge_fields.FNAME,
+            lastName: member.merge_fields.LNAME,
+            email: member.email_address
+        }));
+
+        res.render('mailingList', {
+            people: subscribers
+        });
+    } catch (error) {
+        console.error('Error fetching mailing list:', error);
+        res.status(500).send('Error fetching mailing list');
+    }
 });
+
+
+
 
 app.get('/adminUsers', async (req, res) => {
     try {
@@ -734,7 +824,7 @@ app.get('/editUser/:id', async (req, res) => {
             return;
         }
         const isLoggedIn = req.session.loggedIn;
-        res.render('editUser', { user, isLoggedIn : isLoggedIn, categories: await getCategoriesNav()});
+        res.render('editUser', { user, isLoggedIn : isLoggedIn, isAdmin, categories: await getCategoriesNav()});
     } catch (error) {
         console.error('Error retrieving user for editing:', error);
         res.status(500).send('Error retrieving user');
