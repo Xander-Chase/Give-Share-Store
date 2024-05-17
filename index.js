@@ -532,7 +532,7 @@ app.get('/product-info/:id', async (req, res) => {
         }
 
         const isLoggedIn = req.session.loggedIn;
-        res.render('product-info', { item: item, isLoggedIn : isLoggedIn, isAdmin, categories: await getCategoriesNav()});
+        res.render('product-info', { item: item, isLoggedIn : isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav()});
     } catch (error) {
         console.error('Failed to fetch item:', error);
         res.status(500).send('Error fetching item details');
@@ -542,19 +542,19 @@ app.get('/product-info/:id', async (req, res) => {
 
 app.get('/about', async (req, res) => {
     const isLoggedIn = req.session.loggedIn; 
-    res.render("about", {isLoggedIn : isLoggedIn, isAdmin, categories: await getCategoriesNav()});
+    res.render("about", {isLoggedIn : isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav()});
 });
 
 app.get('/contact-us', async (req, res) => {
     const isLoggedIn = req.session.loggedIn; 
-    res.render("contact", {isLoggedIn : isLoggedIn, isAdmin, categories: await getCategoriesNav()});
+    res.render("contact", {isLoggedIn : isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav()});
 });
 
 app.get('/manage', async (req, res) => {
     if (req.session.loggedIn) {
         const isLoggedIn = req.session.loggedIn;
         const isAdmin = req.session.isAdmin;
-        res.render("product-management", {isLoggedIn, isAdmin, categories: await getCategoriesNav()});
+        res.render("product-management", {isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav()});
     } 
     else {
         res.redirect('/adminLogIn');
@@ -565,7 +565,7 @@ app.get('/manageUser', async (req, res) => {
     if (req.session.loggedIn) {
         const isLoggedIn = req.session.loggedIn;
         const isAdmin = req.session.isAdmin;
-        res.render("user-management", {isLoggedIn, isAdmin, categories: await getCategoriesNav()});
+        res.render("user-management", {isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav()});
     } 
     else {
         res.redirect('/userLogIn');
@@ -626,7 +626,7 @@ app.get('/settings', async (req, res) => {
         const isLoggedIn = req.session.loggedIn;
         const user = req.session.name;
         const email = req.session.email;
-        res.render("settings", {isLoggedIn : isLoggedIn, isAdmin, user : user, email : email, categories: await getCategoriesNav()});
+        res.render("settings", {isLoggedIn : isLoggedIn, isAdmin: req.session.isAdmin, user : user, email : email, categories: await getCategoriesNav()});
     } 
     else {
         res.redirect('/adminLogIn');
@@ -646,26 +646,26 @@ app.post('/changePassword', async (req, res) => {
     const validationResult = schema.validate({ currentPassword, newPassword, confirmPassword });
     if (validationResult.error) {
         console.log(validationResult.error);
-        return res.render('settings', { isLoggedIn, isAdmin, categories: await getCategoriesNav(), user: req.session.name, email, error: validationResult.error.message });
+        return res.render('settings', { isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav(), user: req.session.name, email, error: validationResult.error.message });
     }
 
     const user = await adminCollection.findOne({ email });
     if (!user) {
         console.log('User not found');
-        return res.render('settings', { isLoggedIn, isAdmin, categories: await getCategoriesNav(), user: req.session.name, email, error: 'User not found' });
+        return res.render('settings', { isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav(), user: req.session.name, email, error: 'User not found' });
     }
 
     const passwordMatch = await bcrypt.compare(currentPassword, user.password);
     if (!passwordMatch) {
         console.log('Wrong current password');
-        return res.render('settings', { isLoggedIn, isAdmin, categories: await getCategoriesNav(), user: req.session.name, email, error: 'Incorrect current password' });
+        return res.render('settings', { isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav(), user: req.session.name, email, error: 'Incorrect current password' });
     }
 
     const hashedNewPassword = await bcrypt.hash(newPassword, 10);
     await adminCollection.updateOne({ email }, { $set: { password: hashedNewPassword } });
     req.session.password = hashedNewPassword;
 
-    res.render('passwordUpdated', { isLoggedIn, isAdmin, categories: await getCategoriesNav()});
+    res.render('passwordUpdated', { isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav()});
 });
 
 
@@ -758,7 +758,7 @@ app.get('/editListing/:id', async (req, res) => {
         if (!listing) {
             return res.status(404).send('Listing not found');
         }
-        res.render('editListing', { listing, isLoggedIn, isAdmin, categories: await getCategoriesNav()});
+        res.render('editListing', { listing, isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav()});
     } catch (error) {
         console.error('Failed to fetch listing:', error);
         res.status(500).send('Error fetching listing details');
@@ -902,7 +902,7 @@ app.get('/editUser/:id', async (req, res) => {
             return;
         }
         const isLoggedIn = req.session.loggedIn;
-        res.render('editUser', { user, isLoggedIn : isLoggedIn, isAdmin, categories: await getCategoriesNav()});
+        res.render('editUser', { user, isLoggedIn : isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav()});
       
     } catch (error) {
         console.error('Error retrieving user for editing:', error);

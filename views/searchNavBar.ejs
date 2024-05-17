@@ -1,6 +1,5 @@
 <style>
     .list1 {
-        padding: 10px;
         border-bottom: 1px solid #ccc;
     }
 
@@ -10,89 +9,124 @@
     }
 
     .list1 :hover {
-        padding: 10px;
         background-color: #007bff;
         color: white;
+    }
+
+    .bi {
+        width: 16px;
+        height: 16px;
+    }
+
+    .big-text {
+        font-size: 24pt;
+        font-weight: 600;
+    }
+
+    .medium-text {
+        font-size: 14pt;
+    }
+
+    .small-text {
+        font-size: 10pt;
+    }
+
+    @media (max-width: 576px) {
+        .bi {
+            width: 24px;
+            height: 24px;
+        }
+
+        .big-text {
+            font-size: 22pt;
+        }
+
+        .medium-text {
+            font-size: 16pt;
+        }
+
+        .small-text {
+            font-size: 12pt;
+        }
     }
 </style>
 <body>
     <header class="py-3 mb-3 border-bottom">
-        <div class="container-fluid d-grid gap-3 align-items-center"
-            style="grid-template-columns: 1.2fr 5fr 1fr;">
-            <div>
-                <a href="/"
-                    class="w-auto d-flex align-items-center mt-1 link-body-emphasis text-decoration-none">
-                    <div class="col-2">
-                        <svg class="bi me-2" width="40" height="32"><use
-                                xlink:href="#bootstrap"></use></svg>
-                    </div>
-                    <div class="col-8">
-                        <!-- Place an icon -->
-                        <h2>The Vintage Garage</h2>
-                        <small class="text-secondary">by The Give and Share Society</small>
-                    </div>
-                </a>
-            </div>
-
-            <div class="d-flex align-items-center">
-
-                <form id="searchBar" method="post" class="w-75 me-3"
-                    role="search" onsubmit="this.action = `/keyword=${document.getElementById('searchInput').value}`;">
-                    <input id="searchInput" type="search" class="form-control"
-                        placeholder="Search..." aria-label="Search" value="<% if (locals.keyword) {%><%= locals.keyword %><% }%>">
-                    <!-- value is the current search prompt-->
-                </form>
-            </div>
-
-            <div class="container row">
-                <!-- FIXME: CENTER THIS VERTICALLY! -->
-                <div class="col-sm-4">
-                    <a href="/about"
-                        class="d-block link-body-emphasis text-decoration-none">
-                        About Us
+        <div class="container-fluid gap-3 align-items-center">
+            <div class="row">
+                <div class="col-3">
+                    <a href="/"
+                        class="w-auto d-flex align-items-center mt-1 link-body-emphasis text-decoration-none">
+                        <div class="col-4">
+                            <img src="/img/landingPage/vintage_garage_logo.png" style="width: 9.5vw; height: auto;">
+                        </div>
+                        <div class="col-8">
+                            
+                            <span class="big-text">The Vintage Garage</span><br>
+                            <span class="text-secondary small-text">by The Give and Share Society</span>
+                        </div>
                     </a>
                 </div>
 
-                <!-- In searchNavBar.ejs -->
-                <div class="col-sm-1">
-                    <a href="/cart" class="d-block link-body-emphasis text-decoration-none">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-cart" viewBox="0 0 16 16">
-                            <path d="M0 1.5A.5.5 0 0 1 .5 1H2a.5.5 0 0 1 .485.379L2.89 3H14.5a.5.5 0 0 1 .491.592l-1.5 8A.5.5 0 0 1 13 12H4a.5.5 0 0 1-.491-.408L2.01 3.607 1.61 2H.5a.5.5 0 0 1-.5-.5M3.102 4l1.313 7h8.17l1.313-7zM5 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4m7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4m-7 1a1 1 0 1 1 0 2 1 1 0 0 1 0-2m7 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2" />
-                        </svg>
-                        <span class="badge bg-primary rounded-pill" id="cart-item-count"><%= cartItemCount %></span>
-                    </a>
+                <div class="col-6 d-flex align-items-center justify-content-center">
+
+                    <form id="searchBar" method="post" class="w-75 me-3"
+                        role="search" onsubmit="this.action = `/keyword=${document.getElementById('searchInput').value}`;">
+                        <input id="searchInput" type="search" class="form-control medium-text"
+                            placeholder="Search..." aria-label="Search" value="<% if (locals.keyword) {%><%= locals.keyword %><% }%>">
+                        <!-- value is the current search prompt-->
+                    </form>
                 </div>
 
-                <!--The next div should only be shown if the user is logged in, if they arent then it should be an admin sign in button-->
-                <div class="col-sm-1" id="userProfile">
-                    <% if (isLoggedIn) { %>
-                    <div class="flex-shrink-0 dropdown">
-                        <a href="#" class="d-block link-body-emphasis text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                            <img src="https://github.com/mdo.png" alt="mdo" width="32" height="32" class="rounded-circle">
-                        </a>
-                        <ul class="dropdown-menu text-small shadow">
-                            <% if (isAdmin) { %>
-                                <li><a class="dropdown-item" href="/manage">Dashboard</a></li>
-                                <li><a class="dropdown-item" href="/settings">Settings</a></li>
-                                <li><a class="dropdown-item" href="#">Help</a></li>
+                <div class="col-3 d-flex align-items-center container-fluid">
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <a href="/about"
+                                class="d-block link-body-emphasis text-decoration-none medium-text">
+                                About Us
+                            </a>
+                        </div>
+
+                        <!-- In searchNavBar.ejs -->
+                        <div class="col-sm-3">
+                            <a href="/cart" class="d-block link-body-emphasis text-decoration-none">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="bi bi-cart" viewBox="0 0 16 16">
+                                    <path d="M0 1.5A.5.5 0 0 1 .5 1H2a.5.5 0 0 1 .485.379L2.89 3H14.5a.5.5 0 0 1 .491.592l-1.5 8A.5.5 0 0 1 13 12H4a.5.5 0 0 1-.491-.408L2.01 3.607 1.61 2H.5a.5.5 0 0 1-.5-.5M3.102 4l1.313 7h8.17l1.313-7zM5 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4m7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4m-7 1a1 1 0 1 1 0 2 1 1 0 0 1 0-2m7 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2" />
+                                </svg>
+                                <span class="badge bg-primary rounded-pill" id="cart-item-count"><%= cartItemCount %></span>
+                            </a>
+                        </div>
+
+                        <!--The next div should only be shown if the user is logged in, if they arent then it should be an admin sign in button-->
+                        <div class="col-sm-3" id="userProfile">
+                            <% if (isLoggedIn) { %>
+                            <div class="flex-shrink-0 dropdown">
+                                <a href="#" class="d-block link-body-emphasis text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <img src="https://github.com/mdo.png" alt="mdo" class="rounded-circle" height="50" width="50">
+                                </a>
+                                <ul class="dropdown-menu text-small shadow">
+                                    <% if (isAdmin) { %>
+                                        <li><a class="dropdown-item" href="/manage">Dashboard</a></li>
+                                        <li><a class="dropdown-item" href="/settings">Settings</a></li>
+                                        <li><a class="dropdown-item" href="#">Help</a></li>
+                                    <% } else { %>
+                                        <li><a class="dropdown-item" href="/manageUser">Dashboard</a></li>
+                                    <% } %>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="/signout">Sign out</a></li>
+                                </ul>
+                            </div>
                             <% } else { %>
-                                <li><a class="dropdown-item" href="/manageUser">Dashboard</a></li>
+                            <a href="/loginPortal" style="text-decoration: none; color: black">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="bi bi-person-circle" viewBox="0 0 16 16">
+                                    <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0"/>
+                                    <path fill-rule="evenodd" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1"/>
+                                </svg>
+                            </a>
                             <% } %>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="/signout">Sign out</a></li>
-                        </ul>
+                        </div>
                     </div>
-                    <% } else { %>
-                    <a href="/loginPortal" style="text-decoration: none; color: black">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-circle" viewBox="0 0 16 16">
-                            <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0"/>
-                            <path fill-rule="evenodd" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1"/>
-                        </svg>
-                    </a>
-                    <% } %>
                 </div>
-                
-
             </div>
         </div>
         <div class="container">
