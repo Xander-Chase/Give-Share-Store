@@ -3,7 +3,22 @@
 <html lang="en">
     <head>
         <style>
+            @media (max-width: 450px){
+                .col.about-us-col{
+                    font-size: 200%;
+                }
+            }
 
+            .col.about-us-col, .col.donations-col, .col.items-we-accept-col, .col.what-is-needed-col{
+                border-style: solid;
+                border-color: aquamarine;
+                border-radius: 4px;
+                padding: 4px;
+            }
+
+            h1,h3{
+                text-decoration: underline;
+            }
         </style>
     </head>
     <body>
@@ -11,7 +26,7 @@
         <div class="container-fluid text-center">
             <div class="row">
                 <div class="col"></div>
-                <div class="col">
+                <div class="col about-us-col">
                     <h1>About Us</h1>
                     <h3>We'll find a new home for your good condition, reusable items!</h3>
                     <p>
@@ -33,12 +48,12 @@
             <div class="row"><br></div>
             <div class="row">
                 <div class="col-sm-1"></div>
-                <div class="col">
+                <div class="col donations-col">
                     <h3>DONATIONS GO TO</h3>
                     Food banks, women's shelters, transition houses, drop in centres, local thrift shops, pet spay & neuter, emergency needs & more.  Your donations will also be made available to those in need through our referral program.
                 </div>
                 <div class="col-sm-1">|<br>|<br>|<br>|<br>|<br>|<br>|<br>|<br>|<br>|<br>|<br>|<br>|<br>|<br>|</div>
-                <div class="col">
+                <div class="col items-we-accept-col">
                     <h3>ITEMS WE ACCEPT</h3>
                     Furniture, Clothing, Household items, Kitchenware, Bedding, Linens, Towels,  China, Dishes, Cookware, Small appliances, Tools,  Books, Baby items,  Food items (if unopened and within date)<br>
 
@@ -49,7 +64,7 @@
                     If you are unsure, just ask! It's the thought that counts.
                 </div>
                 <div class="col-sm-1">|<br>|<br>|<br>|<br>|<br>|<br>|<br>|<br>|<br>|<br>|<br>|<br>|<br>|<br>|</div>
-                <div class="col">
+                <div class="col what-is-needed-col">
                     <h3>WHAT IS NEEDED TO HELP</h3>
                     We accept most items that would help to make a house a home...as long as they are in good, clean and near new condition.<br>
 
@@ -57,11 +72,7 @@
                 </div>
                 <div class="col-sm-1"></div>
             </div>
-            <div class="row">
-                <div class="col"></div>
-                <div class="col"><p>Interested? <a href="contact-us">Contact Us!</a></p></div>
-                <div class="col"></div>
-            </div>
         </div>
     </body>
+    <%- include("footer") %>
 </html>
