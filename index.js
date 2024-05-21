@@ -124,7 +124,7 @@ app.get('/', async (req, res) => {
     const isAdmin = req.session.isAdmin || false;
 
     let searchKey = "";
-    let maximumPrice = 100000000;
+    let maximumPrice = 999999999;
     if (req.session.keyword != null)
         searchKey = req.session.keyword;
 
@@ -411,10 +411,14 @@ async function getCategoriesNav()
 }
 app.post('/keyword=', (req, res) => {
     req.session.keyword = null;
+    ResetCategoryFilter(req);
+    req.session.maxPrice = 0;
     res.redirect('/');
 })
 app.post('/keyword=:key',  (req, res) => {
     req.session.keyword = req.params.key;
+    ResetCategoryFilter(req);
+    req.session.maxPrice = 0;
     res.redirect('/');
 });
 
@@ -426,15 +430,21 @@ app.post('/price=:newMax', (req, res) => {
 app.post('/category=:type',  (req, res) => {
     req.session.category = req.params.type;
     req.session.subcategory = null;
+    req.session.keyword = null;
     res.redirect('/');
 })
 
 app.post('/category=',  (req, res) => {
-    req.session.category = null;
-    req.session.subcategory = null;
+    ResetCategoryFilter(req);
+    req.session.keyword = null;
     res.redirect('/');
 })
 
+function ResetCategoryFilter(req)
+{
+    req.session.category = null;
+    req.session.subcategory = null;
+}
 app.post('/subcategory=:type',  (req, res) => {
     req.session.subcategory = req.params.type.split("_").join(" ");
 
