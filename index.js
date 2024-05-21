@@ -123,40 +123,34 @@ app.get('/', async (req, res) => {
     const isLoggedIn = req.session.loggedIn;
     const isAdmin = req.session.isAdmin || false;
 
-    let searchKey = "";
-    let maximumPrice = 100000000;
-    if (req.session.keyword != null)
-        searchKey = req.session.keyword;
+    let searchKey = (req.session.keyword == null) ? "" : req.session.keyword;
+    let maximumPrice = (req.session.maxPrice > 0) ? req.session.maxPrice : 100000000;
+    let categoryTab = (req.session.category == null) ? "" : `> ${req.session.category}`;
+    let subCategoryTab = (req.session.subcategory == null) ? "" : `> ${req.session.subcategory}`;
+    let orderCode = (req.session.sortBy === "descending") ? -1 : 1;
+    let categoryKeyword = (req.session.category == null) ? "" : req.session.category;
+    let subCategoryKeyword = (req.session.subcategory == null) ? "" : req.session.subcategory;
+    let filtersHeader = [`Category ${categoryTab} ${subCategoryTab}`, "Sorting", "Price"];
+    let filterAnchors = ["Category", "Sorting", "Price"];
+    let prices = [];
 
-    if (req.session.maxPrice > 0)
-        maximumPrice = req.session.maxPrice;
-
-    let categoryTab = "";
-    let subCategoryTab = "";
-    if (req.session.category != null )
-        categoryTab = `> ${req.session.category}`;
-
-    if (req.session.subcategory != null)
-        subCategoryTab = `> ${req.session.subcategory}`;
-
-    let orderCode = 1;
-    if (req.session.sortBy === "descending")
-        orderCode = -1;
 
     try {
-
-        let filtersHeader = [`Category ${categoryTab} ${subCategoryTab}`, "Sorting", "Price"];
-        let filterAnchors = ["Category", "Sorting", "Price"];
         const productsCollection = database.db(mongodb_database).collection('listing_items');
-        let prices = [];
 
         // Price Setting Up.
         let currentListings = await productsCollection.find({ isFeatureItem: false,
-            item_title: {$regex: searchKey, $options: 'i'}}).toArray();
-        currentListings.forEach(function(item)
+            item_title: {$regex: searchKey, $options: 'i'},
+            item_category: {$regex: categoryKeyword},
+            item_sub_category: {$regex: subCategoryKeyword}
+        }).sort({item_price: orderCode});
+
+        let currentListingsArray = await currentListings.toArray();
+        currentListingsArray.forEach(function(item)
         {
             prices.push(item.item_price)
         });
+        currentListings.close();
 
         // Way different from aggregate because this is a separate list where it sets it to ascending order. While the other one goes to
         // either ascending or descending.
@@ -169,21 +163,32 @@ app.get('/', async (req, res) => {
                 return 0;
         });
 
-        // TODO: please make one of them into a variable.
-        if (req.session.category == null)
-            currentListings = await productsCollection.find({ isFeatureItem: false,
-                item_title: {$regex: searchKey, $options: 'i'},
-                item_price: {$lt: Math.round(maximumPrice)} }).sort({item_price: orderCode}).toArray();
-        else
-            if (req.session.subcategory == null)
-                currentListings = await productsCollection.find({ isFeatureItem: false,
-                    item_title: {$regex: searchKey, $options: 'i'},
-                    item_price: {$lt: Math.round(maximumPrice)}, item_category: req.session.category }).sort({item_price: orderCode}).toArray();
-            else
-                currentListings = await productsCollection.find({ isFeatureItem: false,
-                    item_title: {$regex: searchKey, $options: 'i'},
-                    item_price: {$lt: Math.round(maximumPrice)}, item_category: req.session.subcategory || req.session.category }).sort({item_price: orderCode}).toArray();
-      
+        let pageIndexes = [];
+        let previousIndex = req.session.pageIndex - 1;
+        let nextIndex = previousIndex + 2;
+        let numberOfPages = sortedPrices.length / 20;
+        if (previousIndex < 1)
+            previousIndex = 1;
+
+        if (nextIndex>=numberOfPages)
+            nextIndex--;
+
+        for (let i = 0; i < (numberOfPages-1); i++)
+            pageIndexes.push(i+1);
+
+        const skips = 20*(((req.session.pageIndex-1) < 0 ) ? 0 : (req.session.pageIndex-1));
+
+        currentListingsArray =  await productsCollection.find({ isFeatureItem: false,
+            item_title: {$regex: searchKey, $options: 'i'},
+            item_price: {$lt: Math.round(maximumPrice)},
+            item_category: {$regex: categoryKeyword},
+            item_sub_category: {$regex: subCategoryKeyword}
+        }).sort({item_price: orderCode}).skip(skips)
+            .limit(20)
+            .toArray();
+
+        req.session.pageIndex = 0;
+
         const subCategories = await categoryCollection.find({category_type: req.session.category}).project({_id: 0, sub_categories: 1}).toArray();
         let bodyFilters;
         if (subCategories.length < 1 || subCategories[0].sub_categories.length < 1)
@@ -191,14 +196,18 @@ app.get('/', async (req, res) => {
         else
             bodyFilters = getBodyFilters(sortedPrices[0], sortedPrices[prices.length-1], maximumPrice, subCategories[0].sub_categories);
 
+        // Limit
         res.render("landing", {
             isLoggedIn,
-            currentListings,
+            currentListings: currentListingsArray,
             filterHeaders: filtersHeader,
             filtersAnchor: filterAnchors,
             filterStuff: bodyFilters,
             categories: await getCategoriesNav(),
-            isAdmin: isAdmin
+            isAdmin: isAdmin,
+            paginationIndex: pageIndexes,
+            previousPage: previousIndex,
+            nextPage: nextIndex
         });
     } catch (error) {
         console.error('Failed to fetch current listings:', error);
@@ -206,6 +215,10 @@ app.get('/', async (req, res) => {
     }
 });
 
+app.post('/page=:index', async (req, res) => {
+    req.session.pageIndex = req.params.index;
+    res.redirect('/');
+})
 
 async function hashExistingPasswords() {
     try {
@@ -324,6 +337,19 @@ app.post('/userLogInSubmit', async (req, res) => {
 
 function getBodyFilters(maxVal, minVal, currentPrice, subCategories)
 {
+    if (maxVal == null || minVal == null)
+    {
+        maxVal = 0;
+        minVal = 0;
+        currentPrice = 0;
+    }
+
+    let minCalculation = (Math.floor(minVal / 5) * 5);
+    let maxCalculation = (Math.ceil(maxVal / 5) * 5);
+
+    if (currentPrice > maxVal)
+        currentPrice = maxCalculation / 2;
+
     let categoriesBody =
         "<ul class=\"list-group list-group-flush\">";
 
@@ -344,7 +370,7 @@ function getBodyFilters(maxVal, minVal, currentPrice, subCategories)
         "<div class=\"row col-sm\">\n" +
         "        <div class=\"col text-start\">\n" +
         "            <label for=\"priceRange\" class=\"form-label\">" +
-        "               <strong>$" + (Math.floor(minVal / 5) * 5) + "</strong>" +
+        "               <strong>$" + minCalculation + "</strong>" +
         "           </label>\n" +
         "        </div>\n" +
         "        <div class=\"col text-middle\">\n" +
@@ -352,10 +378,10 @@ function getBodyFilters(maxVal, minVal, currentPrice, subCategories)
         "        </div>\n" +
         "        <div class=\"col text-end\">\n" +
         "            <label for=\"priceRange\" class=\"form-label\">" +
-        "               <strong>$" + (Math.ceil(maxVal / 5) * 5) + "</strong>" +
+        "               <strong>$" + maxCalculation + "</strong>" +
         "           </label>\n" +
         "        </div>\n" +
-        "        <input id=\"selectedPrice\" type=\"range\" class=\"form-range\" min=" + (Math.floor(minVal / 5) * 5) + " max=" + (Math.ceil(maxVal / 5) * 5) + " step=5 id=\"priceRange\" oninput=\"" +
+        "        <input id=\"selectedPrice\" type=\"range\" class=\"form-range\" min=" + minCalculation + " max=" + maxCalculation + " step=5 id=\"priceRange\" oninput=\"" +
         "{document.getElementById('userRange').innerHTML = `$${this.value}`;}\">\n" +
         "</div>"
     ];
@@ -369,10 +395,14 @@ async function getCategoriesNav()
 }
 app.post('/keyword=', (req, res) => {
     req.session.keyword = null;
+    ResetCategoryFilter(req);
+    req.session.maxPrice = 0;
     res.redirect('/');
 })
 app.post('/keyword=:key',  (req, res) => {
     req.session.keyword = req.params.key;
+    ResetCategoryFilter(req);
+    req.session.maxPrice = 0;
     res.redirect('/');
 });
 
@@ -384,15 +414,21 @@ app.post('/price=:newMax', (req, res) => {
 app.post('/category=:type',  (req, res) => {
     req.session.category = req.params.type;
     req.session.subcategory = null;
+    req.session.keyword = null;
     res.redirect('/');
 })
 
 app.post('/category=',  (req, res) => {
-    req.session.category = null;
-    req.session.subcategory = null;
+    ResetCategoryFilter(req);
+    req.session.keyword = null;
     res.redirect('/');
 })
 
+function ResetCategoryFilter(req)
+{
+    req.session.category = null;
+    req.session.subcategory = null;
+}
 app.post('/subcategory=:type',  (req, res) => {
     req.session.subcategory = req.params.type.split("_").join(" ");
 
