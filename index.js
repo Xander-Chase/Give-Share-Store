@@ -134,6 +134,7 @@ app.get('/', async (req, res) => {
     let filterAnchors = ["Category", "Sorting", "Price"];
     let prices = [];
 
+
     try {
         const productsCollection = database.db(mongodb_database).collection('listing_items');
 
@@ -394,10 +395,14 @@ async function getCategoriesNav()
 }
 app.post('/keyword=', (req, res) => {
     req.session.keyword = null;
+    ResetCategoryFilter(req);
+    req.session.maxPrice = 0;
     res.redirect('/');
 })
 app.post('/keyword=:key',  (req, res) => {
     req.session.keyword = req.params.key;
+    ResetCategoryFilter(req);
+    req.session.maxPrice = 0;
     res.redirect('/');
 });
 
@@ -409,15 +414,21 @@ app.post('/price=:newMax', (req, res) => {
 app.post('/category=:type',  (req, res) => {
     req.session.category = req.params.type;
     req.session.subcategory = null;
+    req.session.keyword = null;
     res.redirect('/');
 })
 
 app.post('/category=',  (req, res) => {
-    req.session.category = null;
-    req.session.subcategory = null;
+    ResetCategoryFilter(req);
+    req.session.keyword = null;
     res.redirect('/');
 })
 
+function ResetCategoryFilter(req)
+{
+    req.session.category = null;
+    req.session.subcategory = null;
+}
 app.post('/subcategory=:type',  (req, res) => {
     req.session.subcategory = req.params.type.split("_").join(" ");
 
