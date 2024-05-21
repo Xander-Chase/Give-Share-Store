@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Previous Listings</title>
     <link rel="stylesheet" href="/css/styles.css">
+    <style>
+        .product-img {
+            max-height: 30vh;
+            overflow: hidden;
+        }
+    </style>
 </head>
 <body>
     <div class="container mt-5">
@@ -15,7 +21,9 @@
                 <div class="col">
                     <div class="card shadow-sm">
                         <% if(listing.product_img_URL && listing.product_img_URL.length > 0) { %>
-                            <img src="<%= listing.product_img_URL[0] %>" class="bd-placeholder-img card-img-top" alt="...">
+                            <div class="d-flex product-img align-items-center justify-content-center">
+                                <img src="<%= listing.product_img_URL[0] %>" class="bd-placeholder-img card-img-top" alt="..." style="border: solid; border-width: 2px; border-color: lightgray; max-width: 25vw;">
+                            </div>
                         <% } else { %>
                             <svg class="bd-placeholder-img card-img-top" width="100%" height="225" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Placeholder: Thumbnail" preserveAspectRatio="xMidYMid slice" focusable="false">
                                 <title>Placeholder</title>
