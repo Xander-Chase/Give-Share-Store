@@ -692,6 +692,19 @@ const upload = multer({
     })
 });
 
+const featureVideoUpload = multer({
+    storage: multerS3({
+        s3: s3,
+        bucket: 'the-vintage-garage-test',
+        metadata: function (req, file, cb) {
+            cb(null, {fieldName: file.fieldname});
+        },
+        key: function (req, file, cb) {
+            const folder = 'videos/';
+            cb(null, folder + Date.now().toString() + '-' + file.originalname);
+        }
+    })
+});
 
 // ------------------ multer END ------------------
 
@@ -794,7 +807,49 @@ app.post('/updateListing/:id', upload.none(), async (req, res) => {
     }
 });
 
+// Route to render feature video management page
+app.get('/featureVideo', async (req, res) => {
+    const featureVideoCollection = database.db(mongodb_database).collection('featureVideo');
+    const featureVideo = await featureVideoCollection.findOne({});
+    res.render('featureVideo', { featureVideo: featureVideo });
+});
 
+// Route to handle feature video upload
+app.post('/submitFeatureVideo', featureVideoUpload.single('video'), async (req, res) => {
+    if (!req.file) {
+        return res.status(400).send('No video file uploaded.');
+    }
+
+    const videoURL = req.file.location;
+
+    const featureVideoCollection = database.db(mongodb_database).collection('featureVideo');
+    await featureVideoCollection.updateOne({}, { $set: { url: videoURL } }, { upsert: true });
+
+    res.redirect('/manage');
+});
+
+// Route to handle feature video removal
+app.post('/removeFeatureVideo', async (req, res) => {
+    const featureVideoCollection = database.db(mongodb_database).collection('featureVideo');
+    const featureVideo = await featureVideoCollection.findOne({});
+    if (featureVideo && featureVideo.url) {
+        const key = featureVideo.url.split('.com/')[1];
+        const deleteParams = {
+            Bucket: 'the-vintage-garage-test',
+            Key: key
+        };
+        try {
+            await s3.send(new DeleteObjectCommand(deleteParams));
+            await featureVideoCollection.deleteOne({});
+            res.redirect('/featureVideo');
+        } catch (error) {
+            console.error('Error removing feature video:', error);
+            res.status(500).send('Error removing feature video');
+        }
+    } else {
+        res.redirect('/manage');
+    }
+});
 
 app.get('/currentListings', async (req, res) => {
     try {
