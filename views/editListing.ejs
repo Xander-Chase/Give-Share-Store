@@ -14,20 +14,44 @@
 
 <body>
     <div class="container mt-5">
-        <h2>Edit: </h2>
+        <h2>Edit: <%= listing.item_title %></h2>
         <p> Fields marked with <span class="mandatory">*</span> are mandatory.</p>
         <form action="/updateListing/<%= listing._id %>" method="post" enctype="multipart/form-data" class="mt-4">
+            <div class="mb-3">
+                <label>Current Images:</label>
+                <div class="d-flex flex-wrap">
+                    <% listing.product_img_URL.forEach(function(url, index) { %>
+                        <div class="pic m-2">
+                            <img src="<%= url %>" alt="Product Image <%= index + 1 %>" height="100px" width="150px">
+                            <input type="checkbox" name="remove_img_URL" value="<%= url %>"> Remove
+                        </div>
+                    <% }); %>
+                </div>
+            </div>
 
-            <div class="pic">
-                <% if(listing.product_img_URL && listing.product_img_URL.length > 0) { %>
-                    <img src="<%= listing.product_img_URL[0] %>" class="bd-placeholder-img card-img-top" alt="..." height="100px" width="150px">
-                <% } else { %>
-                    <svg class="bd-placeholder-img card-img-top" width="100%" height="225" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Placeholder: Thumbnail" preserveAspectRatio="xMidYMid slice" focusable="false">
-                        <title>Placeholder</title>
-                        <rect width="100%" height="100%" fill="#55595c" />
-                        <text x="50%" y="50%" fill="#eceeef" dy=".3em">Thumbnail</text>
-                    </svg>
-                <% } %>
+            <div class="mb-3">
+                <label>Current Videos:</label>
+                <div class="d-flex flex-wrap">
+                    <% listing.product_video_URL.forEach(function(url, index) { %>
+                        <div class="m-2">
+                            <video width="150" height="100" controls>
+                                <source src="<%= url %>" type="video/mp4">
+                                Your browser does not support the video tag.
+                            </video>
+                            <input type="checkbox" name="remove_video_URL" value="<%= url %>"> Remove
+                        </div>
+                    <% }); %>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="newImages" class="form-label">Add New Images</label>
+                <input type="file" class="form-control" id="newImages" name="photo" multiple accept="image/*">
+            </div>
+
+            <div class="mb-3">
+                <label for="newVideos" class="form-label">Add New Videos</label>
+                <input type="file" class="form-control" id="newVideos" name="video" multiple accept="video/*">
             </div>
 
             <!-- Item Title Input -->
