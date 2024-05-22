@@ -2,6 +2,37 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <style>
+    .contact-email {
+      margin: 0px;
+      padding: 0px;
+    }
+    p {
+      margin: 0px;
+    }
+    .button {
+      display: inline-block;
+      padding: 5px 10px;
+      font-size: 14px;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      outline: none;
+      color: #fff;
+      background-color: #455ad6;
+      border: none;
+      border-radius: 5px;
+      box-shadow: 0 4px #999;
+    }
+    .button:hover {
+      background-color: #45a049;
+    }
+    .button:active {
+      background-color: #3e8e41;
+      box-shadow: 0 2px #666;
+      transform: translateY(2px);
+    }
+  </style>
   <title>Thanks for your order!</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
@@ -10,8 +41,9 @@
     <p>
       We appreciate your business! 
       If you have any questions, please send an email to 
-      <a href="mailto:WeGiveShare@gmail.com">WeGiveShare@gmail.com</a>.
     </p>
+    <p><a href="mailto:WeGiveShare@gmail.com" class="contact-email">WeGiveShare@gmail.com</a>.</p>
+    <p><a href="/" class="button">Continue Shopping</a></p>
   </section>
 </body>
 </html>

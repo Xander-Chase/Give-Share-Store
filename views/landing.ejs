@@ -27,9 +27,24 @@
                 font-size: 12pt;
             }
 
+            .landing-pad-bottom {
+                padding-bottom: 3vh;
+            }
+
+            .video {
+                width: 854px;
+                height: 480px;
+            }
+
+            .pagination-btn {
+                padding-left: 1vw;
+                padding-right: 1vw;
+            }
+
             @media (max-width: 576px) {
                 .card {
-                    height: 20vh;
+                    height: 30vh;
+                    width: 99vw;
                 }
 
                 .filter-header {
@@ -38,6 +53,13 @@
 
                 .accordion-body {
                     font-size: 16pt;
+                }
+            }
+
+            @media (max-width: 854px) {
+                .video {
+                    width: 480px;
+                    height: 360px;
                 }
             }
         </style>
@@ -55,23 +77,38 @@
                 </div>
 
                 <div class="carousel-inner">
-                    <% let sampleSlogan = ["Explore", "Browse Collection", "Shop Now"]; %>
+                    <% let sampleTitle = ["CotL Plushie", "Cat Hoodie", "Shoe"]; %>
                     <% let sampleBanners = [
                         "/img/landingPage/banner/giveandshareBanner.png",
                         "https://media.istockphoto.com/id/1227531351/photo/summer-banner-sunny-sand-with-palm-leaves-in-tropical-beach.jpg?s=612x612&w=0&k=20&c=PM5uFqeefOvstaSrFUGPOArZR9QfMTCHlAMr4yRoFDk=",
                         "https://jdmyblog.s3.amazonaws.com/wp-content/uploads/2022/06/TOP-BANNER-5.jpg"
                     ]; %>
+                    <% let sampleItemImg = [
+                        "https://the-vintage-garage-test.s3.ca-central-1.amazonaws.com/images/1715987628477-lamb.png",
+                        "https://the-vintage-garage-test.s3.ca-central-1.amazonaws.com/images/1715922426557-kittyhoodie.png",
+                        "https://the-vintage-garage-test.s3.ca-central-1.amazonaws.com/images/1715374227686-black%20adidas.jpg"
+                    ]; %>
+                    <% let sampleQTY = [
+                        "1",
+                        "2",
+                        "4"
+                    ]; %>
+                    <% let samplePrices = [
+                        "19.99",
+                        "27.59",
+                        "40.99"
+                    ]; %>
                     <% let sampleDescriptions = [
-                        "The Vintage Garage!",
-                        "It's that time of the Month, we have our freshly and chilly Summer collection! Great for your picnic and travels!",
-                        "Check out the new jordan collection in The Vintage Garage!"
+                        "This plushie is the best plushie because it's from a video game I haven't played!",
+                        "Good hoodie, cat is cute",
+                        "Check out this amazing shoe on The Vintage Garage!"
                     ]; %>
                     <% for (let i = 0; i < 3; i++) { %>
                         <% let status = ""; %>
                         <% if (i < 1) { %>
                             <% status = "active" %>
                         <% } %>
-                        <%- include("templates/carouselBanner", {activeStatus: status, description: sampleDescriptions[i], slogan: sampleSlogan[i], source: sampleBanners[i]}) %>
+                        <%- include("templates/carouselBanner", {activeStatus: status, product_description: sampleDescriptions[i], product_title: sampleTitle[i], source: sampleBanners[i], product_img: sampleItemImg[i], product_qty: sampleQTY[i], product_price: samplePrices[i]}) %>
                     <% } %>
                 </div>
 
@@ -129,44 +166,60 @@
                             </form>
                         </div>
                     </div>
-
-                    <!-- FIXME: Front End team, fix this pagination position. Play around until it goes under the current listings. -->
-                    <div class="row d-flex justify-content-center">
-                        <div class="col-sm-1"><form action="/page=<%= previousPage %>" method="post"><button class="no-border" type="submit"><</button></form></div>
-                        <% paginationIndex.forEach(function(index) { %>
-                            <div class="col-sm-1"><form action="/page=<%= index %>" method="post"><button class="no-border" type="submit"><%= index %></button></form></div>
-                        <% }); %>
-                        <div class="col-sm-1"><form action="/page=<%= nextPage %>" method="post"><button class="no-border" type="submit">></button></form></div>
-                    </div>
+                </div>
             </div>
 
-            </div>
-            <% currentListings.forEach(function(item) { %>
-                <div class="col-lg-3">
-                    <div class="card shadow-sm">
-                        <div class="d-flex product-img align-items-center justify-content-center">
-                            <img class="bd-placeholder-img card-img-top"
-                                    src="<%= item.product_img_URL[0] %>"
-                                    alt="<%= item.item_title %>"
-                                    style="border: solid; border-width: 2px; border-color: lightgray; max-width: 20vw;" />
-                        </div>
-                        <div class="card-body">
-                            <h3 class="">
-                                <%= item.item_title %>
-                            </h3>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="btn-group">
-                                    <a href="/product-info/<%= item._id %>" class="btn btn-sm btn-outline-secondary">View</a>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addToCart('<%= item._id %>')">Add to Cart</button>
+            <div class="col-9">
+                <div class="container-fluid">
+                    <div class="row">
+                        <% currentListings.forEach(function(item) { %>
+                            <div class="col-lg-4 landing-pad-bottom">
+                                <div class="card shadow-sm">
+                                    <div class="d-flex product-img align-items-center justify-content-center">
+                                        <img class="bd-placeholder-img card-img-top"
+                                                src="<%= item.product_img_URL[0] %>"
+                                                alt="<%= item.item_title %>"
+                                                style="border: solid; border-width: 2px; border-color: lightgray; max-width: 20vw;" />
+                                    </div>
+                                    <div class="card-body">
+                                        <h3 class="">
+                                            <%= item.item_title %>
+                                        </h3>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="btn-group">
+                                                <a href="/product-info/<%= item._id %>" class="btn btn-sm btn-outline-secondary">View</a>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addToCart('<%= item._id %>')">Add to Cart</button>
+                                            </div>
+                                            <strong class="text-body-primary">
+                                                CAN <%= item.item_price %>
+                                            </strong>
+                                        </div>
+                                    </div>
                                 </div>
-                                <strong class="text-body-primary">
-                                    CAN <%= item.item_price %>
-                                </strong>
                             </div>
-                        </div>
+                        <% }); %>
                     </div>
                 </div>
-            <% }); %>
+            </div>
+        </div>
+
+        <div class="row landing-pad-bottom">
+            <div class="col d-flex justify-content-center">
+                <div class="pagination-btn"><form action="/page=<%= previousPage %>" method="post"><button class="no-border" type="submit"><</button></form></div>
+                <% paginationIndex.forEach(function(index) { %>
+                <div class="pagination-btn"><form action="/page=<%= index %>" method="post"><button class="no-border" type="submit"><%= index %></button></form></div>
+                <% }); %>
+                <div class="pagination-btn"><form action="/page=<%= nextPage %>" method="post"><button class="no-border" type="submit">></button></form></div>
+            </div>
+        </div>
+
+        <div class="row landing-pad-bottom">
+            <div class="col d-flex justify-content-center">
+                <video class="video" controls>
+                    <source src="/heavy_falls.mp4" type="video/mp4">
+                    Your browser does not support the video tag :(
+                </video>
+            </div>
         </div>
 
     </div>
