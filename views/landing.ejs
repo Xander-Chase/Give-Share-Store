@@ -213,14 +213,16 @@
             </div>
         </div>
 
-        <div class="row landing-pad-bottom">
-            <div class="col d-flex justify-content-center">
-                <video class="video" controls>
-                    <source src="/heavy_falls.mp4" type="video/mp4">
-                    Your browser does not support the video tag :(
-                </video>
+        <% if (featureVideo && featureVideo.url) { %>
+            <div class="row landing-pad-bottom">
+                <div class="col d-flex justify-content-center">
+                    <video class="video" controls>
+                        <source src="<%= featureVideo.url %>" type="video/mp4">
+                        Your browser does not support the video tag :(
+                    </video>
+                </div>
             </div>
-        </div>
+        <% } %>
 
     </div>
     </body>

@@ -10,7 +10,7 @@ const { MongoClient} = require('mongodb');                      // include the M
 const AWS = require('aws-sdk');                                 // include the AWS module
 const multer = require('multer');                               // include the multer module
 const multerS3 = require('multer-s3');                          // include the multer-s3 module
-const { S3Client } = require("@aws-sdk/client-s3");             // include the S3Client module
+const { S3Client, DeleteObjectCommand } = require("@aws-sdk/client-s3");             // include the S3Client module
 const { Upload } = require("@aws-sdk/lib-storage");             // include the Upload module
 const Realm = require("realm");                                 // Import Realm module to interact with MongoDB Realm
 const { google } = require("googleapis");                       // Import googleapis module to interact with Google APIs
@@ -119,6 +119,7 @@ app.get('/', async (req, res) => {
     try {
         // Get current listing collection
         const productsCollection = database.db(mongodb_database).collection('listing_items');
+        const featureVideoCollection = database.db(mongodb_database).collection('featureVideo');
 
         // Called here to dynamically get the price through the category type
         let currentListings = await productsCollection.find({ isFeatureItem: false,
@@ -183,6 +184,9 @@ app.get('/', async (req, res) => {
         else
             bodyFilters = getBodyFilters(sortedPrices[0], sortedPrices[prices.length-1], maximumPrice, subCategories[0].sub_categories);
 
+
+        const featureVideo = await featureVideoCollection.findOne({});
+
         res.render("landing", {
             isLoggedIn,
             currentListings: currentListingsArray,
@@ -193,11 +197,12 @@ app.get('/', async (req, res) => {
             isAdmin: isAdmin,
             paginationIndex: pageIndexes,
             previousPage: previousIndex,
-            nextPage: nextIndex
+            nextPage: nextIndex,
+            featureVideo: featureVideo
         });
     } catch (error) {
         console.error('Failed to fetch current listings:', error);
-        res.render("landing", {isLoggedIn: isLoggedIn, isAdmin: isAdmin, currentListings: []});
+        res.render("landing", {isLoggedIn: isLoggedIn, isAdmin: isAdmin, currentListings: [], featureVideo: null });
     }
 });
 
@@ -626,6 +631,19 @@ const upload = multer({
     })
 });
 
+const featureVideoUpload = multer({
+    storage: multerS3({
+        s3: s3,
+        bucket: 'the-vintage-garage-test',
+        metadata: function (req, file, cb) {
+            cb(null, {fieldName: file.fieldname});
+        },
+        key: function (req, file, cb) {
+            const folder = 'videos/';
+            cb(null, folder + Date.now().toString() + '-' + file.originalname);
+        }
+    })
+});
 
 // ------------------ multer END ------------------
 
@@ -694,27 +712,72 @@ app.get('/editListing/:id', async (req, res) => {
 });
 
 
-app.post('/updateListing/:id', upload.none(), async (req, res) => {
+// Function to delete a file from S3
+async function deleteFromS3(url) {
+    const bucketName = 'the-vintage-garage-test';
+    const key = url.split('.com/')[1];
+
+    const deleteParams = {
+        Bucket: bucketName,
+        Key: key
+    };
+
+    try {
+        const data = await s3.send(new DeleteObjectCommand(deleteParams));
+        console.log(`File deleted successfully from S3: ${url}`);
+    } catch (err) {
+        console.error(`Error deleting file from S3: ${url}`, err);
+    }
+}
+
+app.post('/updateListing/:id', upload.fields([{ name: 'photo', maxCount: 10 }, { name: 'video', maxCount: 1 }]), async (req, res) => {
     const itemId = new ObjectId(req.params.id);
     console.log("Form submission data:", req.body);
 
-    const updateData = {
-        item_title: req.body.item_title,
-        item_price: parseFloat(req.body.item_price) || 0.00,
-        item_quantity: parseInt(req.body.item_quantity) || 0,
-        item_detailed_description: req.body.item_detailed_description || '',
-        item_estimatedShippingCost: parseFloat(req.body.item_estimatedShippingCost) || 0.0,
-        item_estimatedInsuranceCost: parseFloat(req.body.item_estimatedInsuranceCost) || 0.0,
-        isFeatureItem: req.body.isFeatureItem ? req.body.isFeatureItem === 'true' : false,
-        status: req.body.status || 'available' // Allow status update    
-    };
+    const photos = req.files['photo'] ? req.files['photo'].map(file => file.location) : [];
+    const videos = req.files['video'] ? req.files['video'].map(file => file.location) : [];
 
+    const removeImages = Array.isArray(req.body.remove_img_URL) ? req.body.remove_img_URL : [req.body.remove_img_URL].filter(Boolean);
+    const removeVideos = Array.isArray(req.body.remove_video_URL) ? req.body.remove_video_URL : [req.body.remove_video_URL].filter(Boolean);
 
     try {
+        const listing = await database.db(mongodb_database).collection('listing_items').findOne({ _id: itemId });
+
+        // Remove images from S3 and update listing
+        if (removeImages.length > 0) {
+            for (const url of removeImages) {
+                await deleteFromS3(url);
+            }
+        }
+
+        // Remove videos from S3 and update listing
+        if (removeVideos.length > 0) {
+            for (const url of removeVideos) {
+                await deleteFromS3(url);
+            }
+        }
+
+        const updatedImages = listing.product_img_URL.filter(url => !removeImages.includes(url)).concat(photos);
+        const updatedVideos = listing.product_video_URL.filter(url => !removeVideos.includes(url)).concat(videos);
+
+        const updateData = {
+            item_title: req.body.item_title,
+            item_price: parseFloat(req.body.item_price) || 0.00,
+            item_quantity: parseInt(req.body.item_quantity) || 0,
+            item_detailed_description: req.body.item_detailed_description || '',
+            item_estimatedShippingCost: parseFloat(req.body.item_estimatedShippingCost) || 0.0,
+            item_estimatedInsuranceCost: parseFloat(req.body.item_estimatedInsuranceCost) || 0.0,
+            isFeatureItem: req.body.isFeatureItem ? req.body.isFeatureItem === 'true' : false,
+            product_img_URL: updatedImages,
+            product_video_URL: updatedVideos,
+            status: req.body.status || 'available' // Allow status update
+        };
+
         const result = await database.db(mongodb_database).collection('listing_items').updateOne(
             { _id: itemId },
             { $set: updateData }
         );
+
         if (result.modifiedCount === 0) {
             console.log("No changes were made.");
             res.send("No changes were made.");
@@ -728,7 +791,49 @@ app.post('/updateListing/:id', upload.none(), async (req, res) => {
     }
 });
 
+// Route to render feature video management page
+app.get('/featureVideo', async (req, res) => {
+    const featureVideoCollection = database.db(mongodb_database).collection('featureVideo');
+    const featureVideo = await featureVideoCollection.findOne({});
+    res.render('featureVideo', { featureVideo: featureVideo });
+});
 
+// Route to handle feature video upload
+app.post('/submitFeatureVideo', featureVideoUpload.single('video'), async (req, res) => {
+    if (!req.file) {
+        return res.status(400).send('No video file uploaded.');
+    }
+
+    const videoURL = req.file.location;
+
+    const featureVideoCollection = database.db(mongodb_database).collection('featureVideo');
+    await featureVideoCollection.updateOne({}, { $set: { url: videoURL } }, { upsert: true });
+
+    res.redirect('/manage');
+});
+
+// Route to handle feature video removal
+app.post('/removeFeatureVideo', async (req, res) => {
+    const featureVideoCollection = database.db(mongodb_database).collection('featureVideo');
+    const featureVideo = await featureVideoCollection.findOne({});
+    if (featureVideo && featureVideo.url) {
+        const key = featureVideo.url.split('.com/')[1];
+        const deleteParams = {
+            Bucket: 'the-vintage-garage-test',
+            Key: key
+        };
+        try {
+            await s3.send(new DeleteObjectCommand(deleteParams));
+            await featureVideoCollection.deleteOne({});
+            res.redirect('/manage');
+        } catch (error) {
+            console.error('Error removing feature video:', error);
+            res.status(500).send('Error removing feature video');
+        }
+    } else {
+        res.redirect('/manage');
+    }
+});
 
 app.get('/currentListings', async (req, res) => {
     try {

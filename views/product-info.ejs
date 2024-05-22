@@ -3,7 +3,11 @@
 <%- include("searchNavBar") %>
 <div class="container mt-5">
     <% if(item.product_img_URL && item.product_img_URL.length > 0) { %>
-        <img src="<%= item.product_img_URL[0] %>" alt="Product Image" height="200px" width="200px">
+        <% item.product_img_URL.forEach(function(url, index) { %>
+            <div class="pic m-2">
+                <img src="<%= url %>" alt="Product Image <%= index + 1 %>" height="100px" width="150px">
+            </div>
+        <% }); %>
     <% } %>
     <% if(item.product_video_URL && item.product_video_URL.length > 0) { %>
         <video width="320" height="240" controls>
