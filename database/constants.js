@@ -1,13 +1,16 @@
-const {database} = include('databaseConnection');
-const {MONGODB_DATABASE}= require('../.env')
+require('dotenv').config();
+var {database} = include('databaseConnection');
 
-const adminCollection = database.db(MONGODB_DATABASE).collection('admins');
-const userCollection = database.db(MONGODB_DATABASE).collection('users');
-const categoryCollection = database.db(MONGODB_DATABASE).collection('categories');
+const mongo_db = process.env.MONGODB_DATABASE;
+
+const adminCollection = database.db(mongo_db).collection('admins');
+const userCollection = database.db(mongo_db).collection('users');
+const categoryCollection = database.db(mongo_db).collection('categories');
 
 module.exports =
     {
         adminCollection,
         userCollection,
-        categoryCollection
+        categoryCollection,
+        database
     }

@@ -1,5 +1,6 @@
-const {database} = include('databaseConnection');
-const {MONGODB_DATABASE}= require('../.env')
+const {categoryCollection} = require('../database/constants')
+
+
 
 function getBodyFilters(maxVal, minVal, currentPrice, subCategories)
 {
@@ -55,8 +56,7 @@ function getBodyFilters(maxVal, minVal, currentPrice, subCategories)
 
 async function getCategoriesNav()
 {
-    const categoriesCollection = database.db(MONGODB_DATABASE).collection('categories');
-    return await categoriesCollection.find({}).toArray();
+    return await categoryCollection.find({}).toArray();
 
 }
 

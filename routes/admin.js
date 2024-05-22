@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const Joi = require("joi");
 const bcrypt = require("bcrypt");
@@ -5,9 +6,12 @@ const {ObjectId} = require("mongodb");
 const mailchimp = require("@mailchimp/mailchimp_marketing");
 const router = express.Router();
 
-const {MONGODB_DATABASE, PAYPAL_ENVIRONMENT, MAILCHIMP_API_KEY, MAILCHIMP_SERVER_PREFIX, MAILCHIMP_LIST_ID}= require('../.env');
+const mongo_database = process.env.MONGODB_DATABASE;
+const mailchimp_api_key = process.env.MAILCHIMP_API_KEY;
+const mailchimp_server_prefix = process.env.MAILCHIMP_SERVER_PREFIX;
+const mailchimp_list_id = process.env.MAILCHIMP_LIST_ID;
 const {adminCollection, userCollection, categoryCollection} = require('../database/constants')
-const {database} = include('../databaseConnection');
+var {database} = require('../databaseConnection');
 const {getCategoriesNav} = require('../controller/htmlContent');
 const {upload, deleteFromS3, featureVideoUpload, s3} = require("../controller/awsController");
 const {DeleteObjectCommand} = require("@aws-sdk/client-s3");
@@ -72,45 +76,19 @@ router.get('/manage', async (req, res) => {
     }
 });
 
-// TODO: Done
-router.get('/manageUser', async (req, res) => {
-    if (req.session.loggedIn) {
-        const isLoggedIn = req.session.loggedIn;
-        res.render("user-management", {isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav()});
-    }
-    else {
-        res.redirect('/userLogIn');
-    }
-});
-
-router.get('/pastOrders', async (req, res) => {
-    try {
-        const ordersCollection = database.db(MONGODB_DATABASE).collection('orders');
-        const userOrders = await ordersCollection.find({ userId: req.session.userId }).toArray();
-        const isLoggedIn = req.session.loggedIn;
-        res.render('pastOrders', {
-            orders: userOrders,
-            isLoggedIn,
-            isAdmin: req.session.isAdmin,
-            categories: await getCategoriesNav()
-        });
-    } catch (error) {
-        console.error('Error fetching past orders:', error);
-        res.status(500).send('Error fetching past orders');
-    }
-});
-
+// TODO: DONE
 router.get('/addListing', async (req, res) => {
 
     res.render('addListing', {categories: await categoryCollection.find().toArray()});
 });
 
+// TODO: DONE
 // Route to handle form submission
 router.post('/submitListing', upload.fields([{ name: 'photo', maxCount: 10 }, { name: 'video', maxCount: 1 }]), async (req, res) => {
     const photos = req.files['photo'] ? req.files['photo'].map(file => file.location) : [];
     const videos = req.files['video'] ? req.files['video'].map(file => file.location) : [];
 
-    const listingItemsCollection = database.db(MONGODB_DATABASE).collection('listing_items');
+    const listingItemsCollection = database.db(mongo_database).collection('listing_items');
     const document = {
         product_img_URL: photos,
         product_video_URL: videos,
@@ -134,13 +112,14 @@ router.post('/submitListing', upload.fields([{ name: 'photo', maxCount: 10 }, { 
 
     try {
         await listingItemsCollection.insertOne(document);
-        res.redirect('/manage');
+        res.redirect('/admin/manage');
     } catch (error) {
         console.error('Error submitting new listing:', error);
         res.status(500).send('Failed to add new listing');
     }
 });
 
+// TODO: DONE
 router.get('/editListing/:id', async (req, res) => {
     const itemId = req.params.id;
     const isLoggedIn = req.session.loggedIn;
@@ -151,7 +130,7 @@ router.get('/editListing/:id', async (req, res) => {
     }
 
     try {
-        const listing = await database.db(MONGODB_DATABASE).collection('listing_items').findOne({_id: new ObjectId(itemId)});
+        const listing = await database.db(mongo_database).collection('listing_items').findOne({_id: new ObjectId(itemId)});
         if (!listing) {
             return res.status(404).send('Listing not found');
         }
@@ -162,6 +141,7 @@ router.get('/editListing/:id', async (req, res) => {
     }
 });
 
+// TODO: DONE
 router.post('/updateListing/:id', upload.fields([{ name: 'photo', maxCount: 10 }, { name: 'video', maxCount: 1 }]), async (req, res) => {
     const itemId = new ObjectId(req.params.id);
     console.log("Form submission data:", req.body);
@@ -173,7 +153,7 @@ router.post('/updateListing/:id', upload.fields([{ name: 'photo', maxCount: 10 }
     const removeVideos = Array.isArray(req.body.remove_video_URL) ? req.body.remove_video_URL : [req.body.remove_video_URL].filter(Boolean);
 
     try {
-        const listing = await database.db(MONGODB_DATABASE).collection('listing_items').findOne({ _id: itemId });
+        const listing = await database.db(mongo_database).collection('listing_items').findOne({ _id: itemId });
 
         // Remove images from S3 and update listing
         if (removeImages.length > 0) {
@@ -205,7 +185,7 @@ router.post('/updateListing/:id', upload.fields([{ name: 'photo', maxCount: 10 }
             status: req.body.status || 'available' // Allow status update
         };
 
-        const result = await database.db(MONGODB_DATABASE).collection('listing_items').updateOne(
+        const result = await database.db(mongo_database).collection('listing_items').updateOne(
             { _id: itemId },
             { $set: updateData }
         );
@@ -215,7 +195,7 @@ router.post('/updateListing/:id', upload.fields([{ name: 'photo', maxCount: 10 }
             res.send("No changes were made.");
         } else {
             console.log("Updated listing successfully");
-            res.redirect('/manage');
+            res.redirect('/admin/manage');
         }
     } catch (error) {
         console.error('Failed to update listing:', error);
@@ -223,6 +203,7 @@ router.post('/updateListing/:id', upload.fields([{ name: 'photo', maxCount: 10 }
     }
 });
 
+// TODO: DONE
 // Route to handle feature video upload
 router.post('/submitFeatureVideo', featureVideoUpload.single('video'), async (req, res) => {
     if (!req.file) {
@@ -231,15 +212,16 @@ router.post('/submitFeatureVideo', featureVideoUpload.single('video'), async (re
 
     const videoURL = req.file.location;
 
-    const featureVideoCollection = database.db(MONGODB_DATABASE).collection('featureVideo');
+    const featureVideoCollection = database.db(mongo_database).collection('featureVideo');
     await featureVideoCollection.updateOne({}, { $set: { url: videoURL } }, { upsert: true });
 
-    res.redirect('/manage');
+    res.redirect('/admin/manage');
 });
 
+// TODO: DONE
 // Route to handle feature video removal
 router.post('/removeFeatureVideo', async (req, res) => {
-    const featureVideoCollection = database.db(MONGODB_DATABASE).collection('featureVideo');
+    const featureVideoCollection = database.db(mongo_database).collection('featureVideo');
     const featureVideo = await featureVideoCollection.findOne({});
     if (featureVideo && featureVideo.url) {
         const key = featureVideo.url.split('.com/')[1];
@@ -250,19 +232,20 @@ router.post('/removeFeatureVideo', async (req, res) => {
         try {
             await s3.send(new DeleteObjectCommand(deleteParams));
             await featureVideoCollection.deleteOne({});
-            res.redirect('/manage');
+            res.redirect('/admin/manage');
         } catch (error) {
             console.error('Error removing feature video:', error);
             res.status(500).send('Error removing feature video');
         }
     } else {
-        res.redirect('/manage');
+        res.redirect('/admin/manage');
     }
 });
 
+// TODO: DONE
 router.get('/currentListings', async (req, res) => {
     try {
-        const productsCollection = database.db(MONGODB_DATABASE).collection('listing_items');
+        const productsCollection = database.db(mongo_database).collection('listing_items');
         const currentListings = await productsCollection.find({ isFeatureItem: false }).toArray();
         res.render('currentListings', { listings: currentListings });
     } catch (error) {
@@ -273,9 +256,10 @@ router.get('/currentListings', async (req, res) => {
     }
 });
 
+// TODO: DONE
 router.get('/previousListings', async (req, res) => {
     try {
-        const productsCollection = database.db(MONGODB_DATABASE).collection('listing_items');
+        const productsCollection = database.db(mongo_database).collection('listing_items');
         const soldListings = await productsCollection.find({ status: 'sold' }).toArray();
         const isLoggedIn = req.session.loggedIn;
         const isAdmin = req.session.isAdmin || false;
@@ -292,14 +276,15 @@ router.get('/previousListings', async (req, res) => {
     }
 });
 
+// TODO: DONE
 router.get('/mailingList', async (req, res) => {
     try {
         mailchimp.setConfig({
-            apiKey: MAILCHIMP_API_KEY,
-            server: MAILCHIMP_SERVER_PREFIX
+            apiKey: mailchimp_api_key,
+            server: mailchimp_server_prefix
         });
 
-        const response = await mailchimp.lists.getListMembersInfo(MAILCHIMP_LIST_ID);
+        const response = await mailchimp.lists.getListMembersInfo(mailchimp_list_id);
         const subscribers = response.members.map(member => ({
             firstName: member.merge_fields.FNAME,
             lastName: member.merge_fields.LNAME,
@@ -315,6 +300,7 @@ router.get('/mailingList', async (req, res) => {
     }
 });
 
+// TODO: DONE
 router.get('/adminUsers', async (req, res) => {
     try {
         const admins = await adminCollection.find().toArray();
@@ -325,6 +311,7 @@ router.get('/adminUsers', async (req, res) => {
     }
 });
 
+// TODO: DONE
 router.post('/addUser', async (req, res) => {
     const { name, email, password, userType } = req.body;
     try {
@@ -332,7 +319,7 @@ router.post('/addUser', async (req, res) => {
         if (userType === 'admin') {
             await adminCollection.insertOne({ name, email, password: hashedPassword });
             req.session.loggedIn = true;
-            res.redirect('/manage');
+            res.redirect('/admin/manage');
         } else if (userType === 'user') {
             await userCollection.insertOne({ name, email, password: hashedPassword });
             req.session.loggedIn = true;
@@ -346,6 +333,7 @@ router.post('/addUser', async (req, res) => {
     }
 });
 
+// TODO: DONE
 router.get('/editUser/:id', async (req, res) => {
     try {
         const user = await adminCollection.findOne({ _id: new ObjectId(req.params.id) });
@@ -362,6 +350,7 @@ router.get('/editUser/:id', async (req, res) => {
     }
 });
 
+// TODO: DONE
 router.post('/updateUser/:id', async (req, res) => {
     try {
         const { name, email } = req.body;
@@ -369,13 +358,14 @@ router.post('/updateUser/:id', async (req, res) => {
             { _id: new ObjectId(req.params.id) },
             { $set: { name, email }}
         );
-        res.redirect('/adminUsers');
+        res.redirect('/admin/adminUsers');
     } catch (error) {
         console.error('Error updating user:', error);
         res.status(500).send('Failed to update user');
     }
 });
 
+// TODO: DONE
 router.post('/deleteUser/:id', async (req, res) => {
     try {
         const result = await adminCollection.deleteOne({ _id: new ObjectId(req.params.id) });
@@ -390,9 +380,10 @@ router.post('/deleteUser/:id', async (req, res) => {
     }
 });
 
+// TODO: DONE
 router.get('/featuredItems', async (req, res) => {
     try {
-        const productsCollection = database.db(MONGODB_DATABASE).collection('listing_items');
+        const productsCollection = database.db(mongo_database).collection('listing_items');
         const featuredItems = await productsCollection.find({ isFeatureItem: true }).toArray();
         res.render('featuredItems', { listings: featuredItems });
     } catch (error) {
@@ -402,6 +393,7 @@ router.get('/featuredItems', async (req, res) => {
     }
 });
 
+// TODO: DONE
 router.get('/categoryManagement', async (req, res) => {
     const categoriesArray = await categoryCollection.find().toArray();
     res.render('categoryManagement', {
@@ -409,6 +401,7 @@ router.get('/categoryManagement', async (req, res) => {
     });
 })
 
+// TODO: DONE
 router.get('/editCategory/:id', async (req, res) =>
 {
     try
@@ -423,6 +416,7 @@ router.get('/editCategory/:id', async (req, res) =>
     }
 })
 
+// TODO: DONE
 router.post('/updateCategory/:id', async (req, res) => {
     try {
         const { name, sub_categories } = req.body;
@@ -434,13 +428,14 @@ router.post('/updateCategory/:id', async (req, res) => {
                     sub_categories: sub_categories.split(", ")
                 }}
         );
-        res.redirect('/manage');
+        res.redirect('/admin/manage');
     } catch (error) {
         console.error('Error updating category:', error);
         res.status(500).send('Failed to update category');
     }
 })
 
+// TODO: DONE
 router.post('/deleteCategory/:id', async (req, res) => {
     try {
         const result = await categoryCollection.deleteOne({ _id: new ObjectId(req.params.id) });
@@ -455,11 +450,12 @@ router.post('/deleteCategory/:id', async (req, res) => {
     }
 })
 
+// TODO: DONE
 router.post('/addCategory', async (req, res) => {
     const { category_name, sub_categories} = req.body;
     try {
         await categoryCollection.insertOne({ category_type: category_name, sub_categories: sub_categories.split(", ")});
-        res.redirect('/manage');
+        res.redirect('/admin/manage');
 
     } catch (error) {
         console.error('Error adding new category:', error);
@@ -467,6 +463,8 @@ router.post('/addCategory', async (req, res) => {
     }
 });
 
+
+// TODO: DONE
 router.post('/load-subcategory', async (req, res) => {
 
     const type = req.body.categoryType.replace(/"/g, '');
@@ -485,4 +483,5 @@ router.post('/load-subcategory', async (req, res) => {
         res.json({ success: false, message: 'Error removing item from cart' });
     }
 })
+
 module.exports = router;

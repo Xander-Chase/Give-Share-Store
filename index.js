@@ -202,7 +202,7 @@ app.get('/', async (req, res) => {
         });
     } catch (error) {
         console.error('Failed to fetch current listings:', error);
-        res.render("landing", {isLoggedIn: isLoggedIn, isAdmin: isAdmin, currentListings: [], featureVideo: null });
+        res.render("landing", {isLoggedIn: isLoggedIn, categories: [], isAdmin: isAdmin, currentListings: [], featureVideo: null });
     }
 });
 
@@ -378,6 +378,32 @@ app.get('/contact-us', async (req, res) => {
     res.render("contact", {isLoggedIn : isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav()});
 });
 
+app.get('/manageUser', async (req, res) => {
+    if (req.session.loggedIn) {
+        const isLoggedIn = req.session.loggedIn;
+        res.render("user-management", {isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav()});
+    }
+    else {
+        res.redirect('/userLogIn');
+    }
+});
+
+app.get('/pastOrders', async (req, res) => {
+    try {
+        const ordersCollection = database.db(MONGODB_DATABASE).collection('orders');
+        const userOrders = await ordersCollection.find({ userId: req.session.userId }).toArray();
+        const isLoggedIn = req.session.loggedIn;
+        res.render('pastOrders', {
+            orders: userOrders,
+            isLoggedIn,
+            isAdmin: req.session.isAdmin,
+            categories: await getCategoriesNav()
+        });
+    } catch (error) {
+        console.error('Error fetching past orders:', error);
+        res.status(500).send('Error fetching past orders');
+    }
+});
 async function addTestOrder() {
     try {
         const ordersCollection = database.db(mongodb_database).collection('orders');
