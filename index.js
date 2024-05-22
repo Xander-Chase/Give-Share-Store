@@ -86,7 +86,7 @@ app.use(session({
     cookie: { maxAge: 60 * 60 * 1000 * 10 }
 }));
 
-routes.use((req, res, next) => {
+app.use((req, res, next) => {
     req.session = req.session || {};
 
     if (!req.session.cart) {
@@ -97,11 +97,13 @@ routes.use((req, res, next) => {
     next();
 });
 
+app.use('/filter', searchRoute);
 
 app.get('/', async (req, res) => {
+
+    // Set Up variables
     const isLoggedIn = req.session.loggedIn;
     const isAdmin = req.session.isAdmin || false;
-
     let searchKey = (req.session.keyword == null) ? "" : req.session.keyword;
     let maximumPrice = (req.session.maxPrice > 0) ? req.session.maxPrice : 100000000;
     let categoryTab = (req.session.category == null) ? "" : `> ${req.session.category}`;
@@ -115,24 +117,27 @@ app.get('/', async (req, res) => {
 
 
     try {
+        // Get current listing collection
         const productsCollection = database.db(mongodb_database).collection('listing_items');
 
-        // Price Setting Up.
+        // Called here to dynamically get the price through the category type
         let currentListings = await productsCollection.find({ isFeatureItem: false,
             item_title: {$regex: searchKey, $options: 'i'},
             item_category: {$regex: categoryKeyword},
             item_sub_category: {$regex: subCategoryKeyword}
         }).sort({item_price: orderCode});
 
+        // turn into array and push price field into the prices array
         let currentListingsArray = await currentListings.toArray();
         currentListingsArray.forEach(function(item)
         {
             prices.push(item.item_price)
         });
+
+        // close resources
         currentListings.close();
 
-        // Way different from aggregate because this is a separate list where it sets it to ascending order. While the other one goes to
-        // either ascending or descending.
+        // sort prices to make it easy on finding min and max
         const sortedPrices = prices.sort(function(a, b) {
             if (a < b)
                 return 1;
@@ -142,6 +147,7 @@ app.get('/', async (req, res) => {
                 return 0;
         });
 
+        // pagination set up
         let pageIndexes = [];
         let previousIndex = req.session.pageIndex - 1;
         let nextIndex = previousIndex + 2;
@@ -157,6 +163,7 @@ app.get('/', async (req, res) => {
 
         const skips = 20*(((req.session.pageIndex-1) < 0 ) ? 0 : (req.session.pageIndex-1));
 
+        // call another find to finally get the current 20 items in a page
         currentListingsArray =  await productsCollection.find({ isFeatureItem: false,
             item_title: {$regex: searchKey, $options: 'i'},
             item_price: {$lt: Math.round(maximumPrice)},
@@ -166,6 +173,7 @@ app.get('/', async (req, res) => {
             .limit(20)
             .toArray();
 
+        // initially set to 0
         req.session.pageIndex = 0;
 
         const subCategories = await categoryCollection.find({category_type: req.session.category}).project({_id: 0, sub_categories: 1}).toArray();
@@ -175,7 +183,6 @@ app.get('/', async (req, res) => {
         else
             bodyFilters = getBodyFilters(sortedPrices[0], sortedPrices[prices.length-1], maximumPrice, subCategories[0].sub_categories);
 
-        // Limit
         res.render("landing", {
             isLoggedIn,
             currentListings: currentListingsArray,
@@ -335,7 +342,7 @@ function getBodyFilters(maxVal, minVal, currentPrice, subCategories)
     // for each subCategories on that array, assign it as a list element on the sub-category filter on the left
     // since some of them are spaces, we split the spaces and join them with '_'
     subCategories.forEach(function(subC) {
-        categoriesBody+="<li class=\"list-group-item\"><form method='post' action='/subcategory=" + subC.split(" ").join("_") + "'><button " +
+        categoriesBody+="<li class=\"list-group-item\"><form method='post' action='/filter/subcategory=" + subC.split(" ").join("_") + "'><button " +
             "style='background: none; border: none'" +
             " type='submit'>" + subC + "</button></form></li>"
     })
@@ -344,8 +351,8 @@ function getBodyFilters(maxVal, minVal, currentPrice, subCategories)
 
         categoriesBody,
         "<ul class='list-group list-group-flush'>" +
-        " <li class='list-group-item'><form method='post' action='/sortby=ascending'><button style='background: none; border: none' type='submit'>Sort by Lowest Price</button></form></li>" +
-        " <li class='list-group-item'><form method='post' action='/sortby=descending'><button style='background: none; border: none' type='submit'>Sort by Highest Price</button></form></li>",
+        " <li class='list-group-item'><form method='post' action='/filter/sortby=ascending'><button style='background: none; border: none' type='submit'>Sort by Lowest Price</button></form></li>" +
+        " <li class='list-group-item'><form method='post' action='/filter/sortby=descending'><button style='background: none; border: none' type='submit'>Sort by Highest Price</button></form></li>",
         "<div class=\"row col-sm\">\n" +
         "        <div class=\"col text-start\">\n" +
         "            <label for=\"priceRange\" class=\"form-label\">" +
@@ -374,7 +381,7 @@ async function getCategoriesNav()
 }
 
 
-app.use('/filter', searchRoute);
+
 
 
 app.get('/cart', async (req, res) => {

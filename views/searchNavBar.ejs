@@ -134,7 +134,7 @@
                 <ul class="nav nav-pills">
                     <li class="list1 nav-item" id="dashboard">
                         <form method="POST" class="nav-link"
-                              action="/category=">
+                              action="/filter/category=">
                             <button type="submit" style="border: none; background: none"
                                     aria-current="page">
                                 Dashboard
@@ -144,7 +144,7 @@
                     <% categories.forEach(function(category) { %>
                     <li class="list1 nav-item" id="<%= category.category_type %>">
                         <form method="POST" class="nav-link"
-                              action="/category=<%= category.category_type%>">
+                              action="/filter/category=<%= category.category_type%>">
                             <button type="submit" style="border: none; background: none"
                             aria-current="page">
                                 <%= category.category_type%>
