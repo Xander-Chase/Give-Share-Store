@@ -1,8 +1,13 @@
 <%- include("metadata") %>
-<html lang="en" >
+<html lang="en">
     <%- include("searchNavBar") %>
     <head>
         <style>
+
+            #myCarousel {
+                background-color: #84A49A;
+            }
+
             .no-border
             {
                 border: none;
@@ -65,88 +70,78 @@
         </style>
     </head>
     <body>
-    <div class="container-fluid gap-1 align-items-center">
+        <div class="container-fluid gap-1 align-items-center">
 
-        <!-- Slide Banner -->
-        <div class="row">
-            <div id="myCarousel" class="carousel slide mb-6 pointer-event" data-bs-ride="carousel">
-                <div class="carousel-indicators">
-                    <button type="button" data-bs-target="#myCarousel" data-bs-slide-to="0" class="" aria-label="Slide 1"></button>
-                    <button type="button" data-bs-target="#myCarousel" data-bs-slide-to="1" aria-label="Slide 2" class=""></button>
-                    <button type="button" data-bs-target="#myCarousel" data-bs-slide-to="2" aria-label="Slide 3" class="active" aria-current="true"></button>
-                </div>
-
-                <div class="carousel-inner">
-                    <% let sampleTitle = ["CotL Plushie", "Cat Hoodie", "Shoe"]; %>
-                    <% let sampleBanners = [
-                        "/img/landingPage/banner/giveandshareBanner.png",
-                        "https://media.istockphoto.com/id/1227531351/photo/summer-banner-sunny-sand-with-palm-leaves-in-tropical-beach.jpg?s=612x612&w=0&k=20&c=PM5uFqeefOvstaSrFUGPOArZR9QfMTCHlAMr4yRoFDk=",
-                        "https://jdmyblog.s3.amazonaws.com/wp-content/uploads/2022/06/TOP-BANNER-5.jpg"
-                    ]; %>
-                    <% let sampleItemImg = [
-                        "https://the-vintage-garage-test.s3.ca-central-1.amazonaws.com/images/1715987628477-lamb.png",
-                        "https://the-vintage-garage-test.s3.ca-central-1.amazonaws.com/images/1715922426557-kittyhoodie.png",
-                        "https://the-vintage-garage-test.s3.ca-central-1.amazonaws.com/images/1715374227686-black%20adidas.jpg"
-                    ]; %>
-                    <% let sampleQTY = [
-                        "1",
-                        "2",
-                        "4"
-                    ]; %>
-                    <% let samplePrices = [
-                        "19.99",
-                        "27.59",
-                        "40.99"
-                    ]; %>
-                    <% let sampleDescriptions = [
-                        "This plushie is the best plushie because it's from a video game I haven't played!",
-                        "Good hoodie, cat is cute",
-                        "Check out this amazing shoe on The Vintage Garage!"
-                    ]; %>
-                    <% for (let i = 0; i < 3; i++) { %>
-                        <% let status = ""; %>
-                        <% if (i < 1) { %>
-                            <% status = "active" %>
-                        <% } %>
-                        <%- include("templates/carouselBanner", {activeStatus: status, product_description: sampleDescriptions[i], product_title: sampleTitle[i], source: sampleBanners[i], product_img: sampleItemImg[i], product_qty: sampleQTY[i], product_price: samplePrices[i]}) %>
-                    <% } %>
-                </div>
-
-                <button class="carousel-control-prev" type="button" data-bs-target="#myCarousel" data-bs-slide="prev">
-                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                    <span class="visually-hidden">Previous</span>
-                </button>
-                <button class="carousel-control-next" type="button" data-bs-target="#myCarousel" data-bs-slide="next">
-                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                    <span class="visually-hidden">Next</span>
-                </button>
-            </div>
+<!-- Slide Banner -->
+<div class="row">
+    <div id="myCarousel" class="carousel slide mb-6 pointer-event" data-bs-ride="carousel">
+        <div class="carousel-indicators">
+            <% featuredItems.forEach((item, index) => { %>
+                <button type="button" data-bs-target="#myCarousel" data-bs-slide-to="<%= index %>" class="<%= index === 0 ? 'active' : '' %>" aria-label="Slide <%= index + 1 %>"></button>
+            <% }); %>
         </div>
 
-        <div class="row">
-            <div class="col text-center">
-                <h1>Welcome to The Vintage Garage!</h1>
-                <h2>Current Listings</h2>
-            </div>
+        <div class="carousel-inner">
+            <% featuredItems.forEach((item, index) => { %>
+                <%- include("templates/carouselBanner", { 
+                    activeStatus: index === 0 ? 'active' : '', 
+                    product_description: item.item_detailed_description, 
+                    product_title: item.item_title, 
+                    source: item.banner_image, // Assuming 'banner_image' is the field for background images of carousel
+                    product_img: item.product_img_URL[0], 
+                    product_qty: item.item_quantity, 
+                    product_price: item.item_price 
+                }) %>
+            <% }); %>
         </div>
-        
-        <div class="row"><br><br></div>
-        
-        <div class="row">
 
-            <!-- Filters -->
-            <div class="col-lg-3">
-                <div class="container">
-                    <div class="col"> <!-- TODO: Use EJS Template -->
-                        <% for (i = 0; i < filterHeaders.length; i++) { %>
+        <button class="carousel-control-prev" type="button" data-bs-target="#myCarousel" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Previous</span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#myCarousel" data-bs-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Next</span>
+        </button>
+    </div>
+</div>
+
+            <div class="row">
+                <div class="col text-center">
+                    <h1>Welcome to The Vintage Garage!</h1>
+                    <h2>Current Listings</h2>
+                </div>
+            </div>
+
+            <div class="row"><br><br></div>
+
+            <div class="row">
+
+                <!-- Filters -->
+                <div class="col-lg-3">
+                    <div class="container">
+                        <div class="col"> <!-- TODO: Use EJS Template -->
+                            <% for (i = 0; i < filterHeaders.length; i++) { %>
                             <div class="col accordion w-100">
                                 <div class="accordion-item">
-                                    <span class="accordion-header" id="heading<%= filtersAnchor[i] %>">
-                                        <button class="accordion-button bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#<%= filtersAnchor[i] %>" aria-expanded="true" aria-controls="<%= filtersAnchor[i] %>">
-                                            <strong class="filter-header"><%= filterHeaders[i] %></strong> <!-- TODO: Variable -->
+                                    <span class="accordion-header"
+                                        id="heading<%= filtersAnchor[i] %>">
+                                        <button
+                                            class="accordion-button bg-light"
+                                            type="button"
+                                            data-bs-toggle="collapse"
+                                            data-bs-target="#<%= filtersAnchor[i] %>"
+                                            aria-expanded="true"
+                                            aria-controls="<%= filtersAnchor[i] %>">
+                                            <strong class="filter-header"><%=
+                                                filterHeaders[i] %></strong>
+                                            <!-- TODO: Variable -->
                                         </button>
                                     </span>
-                                    <div id="<%= filtersAnchor[i] %>" class="accordion-collapse collapse show" aria-labelledby="heading<%= filtersAnchor[i] %>" data-bs-parent="#accordionExample">
+                                    <div id="<%= filtersAnchor[i] %>"
+                                        class="accordion-collapse collapse show"
+                                        aria-labelledby="heading<%= filtersAnchor[i] %>"
+                                        data-bs-parent="#accordionExample">
                                         <div class="accordion-body">
                                             <!-- TODO: Session Cookies because based on the collection search, only show the existing categories or just use node again -->
                                             <!-- TODO: Variable-->
@@ -155,40 +150,52 @@
                                     </div>
                                 </div>
                             </div>
-                        <% } %>
-                        <br>
-                        <div class="d-flex justify-content-center gap-3">
-                            <form method="post" onsubmit="this.action = `/filter/price=${document.getElementById('selectedPrice').value}`;">
-                                <button type="submit" class="btn btn-primary">Confirm</button>
-                            </form>
-                            <form method="post" onsubmit="this.action = '/filter/clear';">
-                                <button type="submit" class="btn btn-danger">Clear</button>
-                            </form>
+                            <% } %>
+                            <br>
+                            <div class="d-flex justify-content-center gap-3">
+                                <form method="post"
+                                    onsubmit="this.action = `/filter/price=${document.getElementById('selectedPrice').value}`;">
+                                    <button type="submit"
+                                        class="btn btn-primary">Confirm</button>
+                                </form>
+                                <form method="post"
+                                    onsubmit="this.action = '/filter/clear';">
+                                    <button type="submit"
+                                        class="btn btn-danger">Clear</button>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="col-9">
-                <div class="container-fluid">
-                    <div class="row">
-                        <% currentListings.forEach(function(item) { %>
+                <div class="col-9">
+                    <div class="container-fluid">
+                        <div class="row">
+                            <% currentListings.forEach(function(item) { %>
                             <div class="col-lg-4 landing-pad-bottom">
                                 <div class="card shadow-sm">
-                                    <div class="d-flex product-img align-items-center justify-content-center">
-                                        <img class="bd-placeholder-img card-img-top"
-                                                src="<%= item.product_img_URL[0] %>"
-                                                alt="<%= item.item_title %>"
-                                                style="border: solid; border-width: 2px; border-color: lightgray; max-width: 20vw;" />
+                                    <div
+                                        class="d-flex product-img align-items-center justify-content-center">
+                                        <img
+                                            class="bd-placeholder-img card-img-top"
+                                            src="<%= item.product_img_URL[0] %>"
+                                            alt="<%= item.item_title %>"
+                                            style="border: solid; border-width: 2px; border-color: lightgray; max-width: 20vw;" />
                                     </div>
                                     <div class="card-body">
-                                        <h3 class="">
+                                        <h3 class>
                                             <%= item.item_title %>
                                         </h3>
-                                        <div class="d-flex justify-content-between align-items-center">
+                                        <div
+                                            class="d-flex justify-content-between align-items-center">
                                             <div class="btn-group">
-                                                <a href="/product-info/<%= item._id %>" class="btn btn-sm btn-outline-secondary">View</a>
-                                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addToCart('<%= item._id %>')">Add to Cart</button>
+                                                <a
+                                                    href="/product-info/<%= item._id %>"
+                                                    class="btn btn-sm btn-outline-secondary">View</a>
+                                                <button type="button"
+                                                    class="btn btn-sm btn-outline-secondary"
+                                                    onclick="addToCart('<%= item._id %>')">Add
+                                                    to Cart</button>
                                             </div>
                                             <strong class="text-body-primary">
                                                 CAN <%= item.item_price %>
@@ -197,23 +204,32 @@
                                     </div>
                                 </div>
                             </div>
-                        <% }); %>
+                            <% }); %>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div class="row landing-pad-bottom">
-            <div class="col d-flex justify-content-center">
-                <div class="pagination-btn"><form action="/page=<%= previousPage %>" method="post"><button class="no-border" type="submit"><</button></form></div>
-                <% paginationIndex.forEach(function(index) { %>
-                <div class="pagination-btn"><form action="/page=<%= index %>" method="post"><button class="no-border" type="submit"><%= index %></button></form></div>
-                <% }); %>
-                <div class="pagination-btn"><form action="/page=<%= nextPage %>" method="post"><button class="no-border" type="submit">></button></form></div>
+            <div class="row landing-pad-bottom">
+                <div class="col d-flex justify-content-center">
+                    <div class="pagination-btn"><form
+                            action="/page=<%= previousPage %>"
+                            method="post"><button class="no-border"
+                                type="submit"><</button></form></div>
+                    <% paginationIndex.forEach(function(index) { %>
+                    <div class="pagination-btn"><form
+                            action="/page=<%= index %>" method="post"><button
+                                class="no-border" type="submit"><%= index
+                                %></button></form></div>
+                    <% }); %>
+                    <div class="pagination-btn"><form
+                            action="/page=<%= nextPage %>" method="post"><button
+                                class="no-border"
+                                type="submit">></button></form></div>
+                </div>
             </div>
-        </div>
 
-        <% if (featureVideo && featureVideo.url) { %>
+            <% if (featureVideo && featureVideo.url) { %>
             <div class="row landing-pad-bottom">
                 <div class="col d-flex justify-content-center">
                     <video class="video" controls>
@@ -222,9 +238,9 @@
                     </video>
                 </div>
             </div>
-        <% } %>
+            <% } %>
 
-    </div>
+        </div>
     </body>
     <%- include("footer") %>
     <script>
