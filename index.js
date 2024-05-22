@@ -137,6 +137,7 @@ app.get('/', async (req, res) => {
 
     try {
         const productsCollection = database.db(mongodb_database).collection('listing_items');
+        const featureVideoCollection = database.db(mongodb_database).collection('featureVideo');
 
         // Price Setting Up.
         let currentListings = await productsCollection.find({ isFeatureItem: false,
@@ -196,6 +197,7 @@ app.get('/', async (req, res) => {
         else
             bodyFilters = getBodyFilters(sortedPrices[0], sortedPrices[prices.length-1], maximumPrice, subCategories[0].sub_categories);
 
+        const featureVideo = await featureVideoCollection.findOne({});
         // Limit
         res.render("landing", {
             isLoggedIn,
@@ -207,11 +209,12 @@ app.get('/', async (req, res) => {
             isAdmin: isAdmin,
             paginationIndex: pageIndexes,
             previousPage: previousIndex,
-            nextPage: nextIndex
+            nextPage: nextIndex,
+            featureVideo: featureVideo
         });
     } catch (error) {
         console.error('Failed to fetch current listings:', error);
-        res.render("landing", {isLoggedIn: isLoggedIn, isAdmin: isAdmin, currentListings: []});
+        res.render("landing", {isLoggedIn: isLoggedIn, isAdmin: isAdmin, currentListings: [], featureVideo: null });
     }
 });
 
@@ -886,7 +889,7 @@ app.post('/removeFeatureVideo', async (req, res) => {
         try {
             await s3.send(new DeleteObjectCommand(deleteParams));
             await featureVideoCollection.deleteOne({});
-            res.redirect('/featureVideo');
+            res.redirect('/manage');
         } catch (error) {
             console.error('Error removing feature video:', error);
             res.status(500).send('Error removing feature video');
