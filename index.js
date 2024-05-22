@@ -19,6 +19,9 @@ const mailchimp = require('@mailchimp/mailchimp_marketing');    // Import mailch
 
 
 const app = express();
+
+const routes = require('./routes');
+
 app.set('view engine', 'ejs');                              // Set view engine to ejs
 
 app.use(express.urlencoded({ extended: true }));            // parse urlencoded request bodies
@@ -26,6 +29,11 @@ app.use(express.static('public'));                          // serve static imag
 app.use(express.static('css'));                             // serve static css files
 app.use(express.static('js'));                              // serve static js files
 app.use(express.json());                                    // parse json request bodies
+
+
+const searchRoute = require('./routes/filter');
+
+
 
 const port = process.env.PORT || 5000;                      // Set port to 5000 if not defined in ..env file
 
@@ -41,39 +49,6 @@ const PayPalEnvironment = process.env.PAYPAL_ENVIRONMENT;   // Import PayPal Env
 const PayPalClientID = process.env.PAYPAL_CLIENT_ID;        // Import PayPal Client ID from ..env file
 const PayPalSecret = process.env.PAYPAL_CLIENT_SECRET;      // Import PayPal Secret from ..env file
 const PayPal_endpoint_url = PayPalEnvironment === 'sandbox' ? 'https://api-m.sandbox.paypal.com' : 'https://api-m.paypal.com'; // Import PayPal endpoint URL from ..env file
-
-
-// Configure and instantiate Google OAuth2.0 client
-/*const oauthConfig = {
-    client_id: google_client_id,
-    project_id: google_project_id,
-    auth_uri: "https://accounts.google.com/o/oauth2/auth",
-    token_uri: "https://oauth2.googleapis.com/token",
-    auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
-    client_secret: google_client_secret,
-    redirect_uris: [`${BASE_URL}/auth/google/callback`],
-    JWTsecret: "secret",
-    scopes: [
-        "https://www.googleapis.com/auth/userinfo.email",
-        "https://www.googleapis.com/auth/userinfo.profile",
-        "openid",
-        // any other scopes you might require. View all here - https://developers.google.com/identity/protocols/oauth2/scopes
-    ],
-};
-
-const OAuth2 = google.auth.OAuth2;
-const oauth2Client = new OAuth2(
-    oauthConfig.client_id,
-    oauthConfig.client_secret,
-    oauthConfig.redirect_uris[0]
-);
-
-// Instantiate Realm app
-const realmApp = new Realm.App({
-    id: REALM_APP_ID,
-});*/
-
-
 
 // importing the database object from databaseConnection.js file
 var { database } = include('databaseConnection');
@@ -101,6 +76,7 @@ async function fetchAllItems()
     return await productsColl.find().toArray(); // Fetch all items;
 }
 
+
 // creating a session
 app.use(session({
     secret: node_session_secret,
@@ -110,7 +86,9 @@ app.use(session({
     cookie: { maxAge: 60 * 60 * 1000 * 10 }
 }));
 
-app.use((req, res, next) => {
+routes.use((req, res, next) => {
+    req.session = req.session || {};
+
     if (!req.session.cart) {
         req.session.cart = [];
     }
@@ -118,6 +96,7 @@ app.use((req, res, next) => {
     res.locals.subCategories = [];
     next();
 });
+
 
 app.get('/', async (req, res) => {
     const isLoggedIn = req.session.loggedIn;
@@ -393,62 +372,10 @@ async function getCategoriesNav()
     return await categoriesCollection.find({}).toArray();
 
 }
-app.post('/keyword=', (req, res) => {
-    req.session.keyword = null;
-    ResetCategoryFilter(req);
-    req.session.maxPrice = 0;
-    res.redirect('/');
-})
-app.post('/keyword=:key',  (req, res) => {
-    req.session.keyword = req.params.key;
-    ResetCategoryFilter(req);
-    req.session.maxPrice = 0;
-    res.redirect('/');
-});
 
-app.post('/price=:newMax', (req, res) => {
-    req.session.maxPrice = req.params.newMax;
-    res.redirect('/');
-})
 
-app.post('/category=:type',  (req, res) => {
-    req.session.category = req.params.type;
-    req.session.subcategory = null;
-    req.session.keyword = null;
-    res.redirect('/');
-})
+app.use('/filter', searchRoute);
 
-app.post('/category=',  (req, res) => {
-    ResetCategoryFilter(req);
-    req.session.keyword = null;
-    res.redirect('/');
-})
-
-function ResetCategoryFilter(req)
-{
-    req.session.category = null;
-    req.session.subcategory = null;
-}
-app.post('/subcategory=:type',  (req, res) => {
-    req.session.subcategory = req.params.type.split("_").join(" ");
-
-    res.redirect('/');
-})
-
-app.post('/sortby=:option', async (req, res) => {
-    req.session.sortBy = req.params.option;
-    res.redirect('/');
-})
-app.post('/clearFilter', (req, res) =>
-{
-
-    req.session.maxPrice = 0;
-    req.session.keyword = null;
-    req.session.category = null;
-    req.session.subcategory = null;
-    req.session.sortBy = 'ascending';
-    res.redirect('/');
-})
 
 app.get('/cart', async (req, res) => {
     const cartItems = req.session.cart || [];
