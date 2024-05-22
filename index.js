@@ -16,6 +16,7 @@ const Realm = require("realm");                                 // Import Realm 
 const { google } = require("googleapis");                       // Import googleapis module to interact with Google APIs
 const fetch = import('node-fetch');                             // Import node-fetch module to fetch data from API
 const mailchimp = require('@mailchimp/mailchimp_marketing');    // Import mailchimp_marketing module to interact with Mailchimp API
+const {RecaptchaEnterpriseServiceClient} = require('@google-cloud/recaptcha-enterprise'); // Import recaptcha-enterprise module to interact with Google Recaptcha Enterprise API
 
 
 const app = express();
@@ -41,6 +42,8 @@ const PayPalEnvironment = process.env.PAYPAL_ENVIRONMENT;   // Import PayPal Env
 const PayPalClientID = process.env.PAYPAL_CLIENT_ID;        // Import PayPal Client ID from ..env file
 const PayPalSecret = process.env.PAYPAL_CLIENT_SECRET;      // Import PayPal Secret from ..env file
 const PayPal_endpoint_url = PayPalEnvironment === 'sandbox' ? 'https://api-m.sandbox.paypal.com' : 'https://api-m.paypal.com'; // Import PayPal endpoint URL from ..env file
+const projectID = process.env.CAPTCHA_PROJECT_ID            // Import Captcha Project ID from ..env file
+const recaptchaKey = process.env.CAPTCHA_SECRET_KEY         // Import Captcha Secret Key from ..env file
 
 
 // Configure and instantiate Google OAuth2.0 client
@@ -1319,16 +1322,63 @@ app.get('/StripeCancel', (req, res) => {
 
 // ----------------- Stripe Payment END -----------------
 
-async function markItemsAsSold(itemIds) {
-    const productsCollection = database.db(mongodb_database).collection('listing_items');
-    const objectIds = itemIds.map(id => ObjectId.createFromHexString(id));
-    try {
-        await productsCollection.updateMany(
-            { '_id': { $in: objectIds } },
-            { $set: { 'isSold': true } }
-        );
-        console.log('Items marked as sold');
-    } catch (error) {
-        console.error('Error marking items as sold:', error);
+// ----------------- reCAPTCHA START -----------------
+
+/**
+  * Create an assessment to analyze the risk of a UI action.
+  *
+  * projectID: Your Google Cloud Project ID.
+  * recaptchaSiteKey: The reCAPTCHA key associated with the site/app
+  * token: The generated token obtained from the client.
+  * recaptchaAction: Action name corresponding to the token.
+  */
+async function createAssessment({
+    // TODO: Replace the token and reCAPTCHA action variables before running the sample.
+    projectID,
+    recaptchaKey,
+    token = "action-token",
+    recaptchaAction = "action-name",
+  }) {
+    // Create the reCAPTCHA client.
+    // TODO: Cache the client generation code (recommended) or call client.close() before exiting the method.
+    const client = new RecaptchaEnterpriseServiceClient();
+    const projectPath = client.projectPath(projectID);
+  
+    // Build the assessment request.
+    const request = ({
+      assessment: {
+        event: {
+          token: token,
+          siteKey: recaptchaKey,
+        },
+      },
+      parent: projectPath,
+    });
+  
+    const [ response ] = await client.createAssessment(request);
+  
+    // Check if the token is valid.
+    if (!response.tokenProperties.valid) {
+      console.log(`The CreateAssessment call failed because the token was: ${response.tokenProperties.invalidReason}`);
+      return null;
     }
-}
+  
+    // Check if the expected action was executed.
+    // The `action` property is set by user client in the grecaptcha.enterprise.execute() method.
+    if (response.tokenProperties.action === recaptchaAction) {
+      // Get the risk score and the reason(s).
+      // For more information on interpreting the assessment, see:
+      // https://cloud.google.com/recaptcha-enterprise/docs/interpret-assessment
+      console.log(`The reCAPTCHA score is: ${response.riskAnalysis.score}`);
+      response.riskAnalysis.reasons.forEach((reason) => {
+        console.log(reason);
+      });
+  
+      return response.riskAnalysis.score;
+    } else {
+      console.log("The action attribute in your reCAPTCHA tag does not match the action you are expecting to score");
+      return null;
+    }
+  }
+
+// ----------------- reCAPTCHA END -----------------
