@@ -58,4 +58,6 @@ router.post('/clear', (req, res) =>
     req.session.sortBy = 'ascending';
     res.redirect('/');
 })
+
+
 module.exports = router;

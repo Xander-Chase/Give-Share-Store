@@ -16,12 +16,10 @@ const Realm = require("realm");                                 // Import Realm 
 const { google } = require("googleapis");                       // Import googleapis module to interact with Google APIs
 const fetch = import('node-fetch');                             // Import node-fetch module to fetch data from API
 const mailchimp = require('@mailchimp/mailchimp_marketing');    // Import mailchimp_marketing module to interact with Mailchimp API
-
-
 const app = express();
-
 const routes = require('./routes');
 
+const {getBodyFilters, getCategoriesNav} = require('./controller/htmlContent');
 app.set('view engine', 'ejs');                              // Set view engine to ejs
 
 app.use(express.urlencoded({ extended: true }));            // parse urlencoded request bodies
@@ -32,6 +30,7 @@ app.use(express.json());                                    // parse json reques
 
 
 const searchRoute = require('./routes/filter');
+const adminRoute = require('./routes/admin');
 
 
 
@@ -98,6 +97,7 @@ app.use((req, res, next) => {
 });
 
 app.use('/filter', searchRoute);
+app.use('/admin', adminRoute);
 
 app.get('/', async (req, res) => {
 
@@ -233,9 +233,6 @@ app.get("/loginPortal", (req, res) => {
     res.render('loginPortal');
 })
 
-app.get('/adminLogIn', (req, res) => {
-    res.render("adminLogIn");
-});
 
 app.get('/userLogIn', (req, res) => {
     res.render("userLogIn");
@@ -243,46 +240,6 @@ app.get('/userLogIn', (req, res) => {
 
 app.get('/userNewLogIn', (req, res) => {
     res.render("userNewLogIn");
-});
-
-app.post('/adminLogInSubmit', async (req, res) => {
-
-    const email = req.body.email;
-    const password = req.body.password;
-
-    const schema = Joi.object({
-        email: Joi.string().required(),
-        password: Joi.string().max(20).required()
-    });
-
-    const validationResult = schema.validate({ email, password });
-    if (validationResult.error != null) {
-        console.log(validationResult.error);
-        res.render("adminLogIn", {error: "Error: "+validationResult.error.message});
-        return;
-    }
-
-    const user = await adminCollection.findOne({ email: email });
-    if (user === null) {
-        console.log("User not found");
-        res.render("adminLogIn", {error: "Error: User not found"});
-        return;
-    }
-
-    const passwordMatch = await bcrypt.compare(password, user.password);
-    if (!passwordMatch) {
-        console.log("Invalid password");
-        res.render("adminLogIn", {error: "Error: Invalid password"});
-        return;
-    }
-
-    req.session.loggedIn = true;
-    req.session.isAdmin = true;
-    req.session.name = user.name;
-    req.session.email = user.email;
-    req.session.password = user.password;
-    req.session.userId = user._id;
-    res.redirect("/");
 });
 
 app.post('/userLogInSubmit', async (req, res) => {
@@ -325,68 +282,6 @@ app.post('/userLogInSubmit', async (req, res) => {
     req.session.userId = user._id;
     res.redirect("/");
 });
-
-function getBodyFilters(maxVal, minVal, currentPrice, subCategories)
-{
-    if (maxVal == null || minVal == null)
-    {
-        maxVal = 0;
-        minVal = 0;
-        currentPrice = 0;
-    }
-
-    let minCalculation = (Math.floor(minVal / 5) * 5);
-    let maxCalculation = (Math.ceil(maxVal / 5) * 5);
-
-    if (currentPrice > maxVal)
-        currentPrice = maxCalculation / 2;
-
-    let categoriesBody =
-        "<ul class=\"list-group list-group-flush\">";
-
-    // for each subCategories on that array, assign it as a list element on the sub-category filter on the left
-    // since some of them are spaces, we split the spaces and join them with '_'
-    subCategories.forEach(function(subC) {
-        categoriesBody+="<li class=\"list-group-item\"><form method='post' action='/filter/subcategory=" + subC.split(" ").join("_") + "'><button " +
-            "style='background: none; border: none'" +
-            " type='submit'>" + subC + "</button></form></li>"
-    })
-    categoriesBody+="</ul>";
-    return [
-
-        categoriesBody,
-        "<ul class='list-group list-group-flush'>" +
-        " <li class='list-group-item'><form method='post' action='/filter/sortby=ascending'><button style='background: none; border: none' type='submit'>Sort by Lowest Price</button></form></li>" +
-        " <li class='list-group-item'><form method='post' action='/filter/sortby=descending'><button style='background: none; border: none' type='submit'>Sort by Highest Price</button></form></li>",
-        "<div class=\"row col-sm\">\n" +
-        "        <div class=\"col text-start\">\n" +
-        "            <label for=\"priceRange\" class=\"form-label\">" +
-        "               <strong>$" + minCalculation + "</strong>" +
-        "           </label>\n" +
-        "        </div>\n" +
-        "        <div class=\"col text-middle\">\n" +
-        "            <label id=\"userRange\" for=\"priceRange\" class=\"form-label\">$" + currentPrice + "</label>\n" +
-        "        </div>\n" +
-        "        <div class=\"col text-end\">\n" +
-        "            <label for=\"priceRange\" class=\"form-label\">" +
-        "               <strong>$" + maxCalculation + "</strong>" +
-        "           </label>\n" +
-        "        </div>\n" +
-        "        <input id=\"selectedPrice\" type=\"range\" class=\"form-range\" min=" + minCalculation + " max=" + maxCalculation + " step=5 id=\"priceRange\" oninput=\"" +
-        "{document.getElementById('userRange').innerHTML = `$${this.value}`;}\">\n" +
-        "</div>"
-    ];
-}
-
-async function getCategoriesNav()
-{
-    const categoriesCollection = database.db(mongodb_database).collection('categories');
-    return await categoriesCollection.find({}).toArray();
-
-}
-
-
-
 
 
 app.get('/cart', async (req, res) => {
@@ -483,47 +378,6 @@ app.get('/contact-us', async (req, res) => {
     res.render("contact", {isLoggedIn : isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav()});
 });
 
-app.get('/manage', async (req, res) => {
-    if (req.session.loggedIn) {
-        const isLoggedIn = req.session.loggedIn;
-        const isAdmin = req.session.isAdmin;
-        res.render("product-management", {isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav()});
-    } 
-    else {
-        res.redirect('/adminLogIn');
-    }
-});
-
-app.get('/manageUser', async (req, res) => {
-    if (req.session.loggedIn) {
-        const isLoggedIn = req.session.loggedIn;
-        const isAdmin = req.session.isAdmin;
-        res.render("user-management", {isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav()});
-    } 
-    else {
-        res.redirect('/userLogIn');
-    }
-});
-
-app.get('/pastOrders', async (req, res) => {
-    try {
-        const ordersCollection = database.db(mongodb_database).collection('orders');
-        const userOrders = await ordersCollection.find({ userId: req.session.userId }).toArray();
-        const isLoggedIn = req.session.loggedIn;
-        const isAdmin = req.session.isAdmin || false;
-
-        res.render('pastOrders', {
-            orders: userOrders,
-            isLoggedIn,
-            isAdmin,
-            categories: await getCategoriesNav()
-        });
-    } catch (error) {
-        console.error('Error fetching past orders:', error);
-        res.status(500).send('Error fetching past orders');
-    }
-});
-
 async function addTestOrder() {
     try {
         const ordersCollection = database.db(mongodb_database).collection('orders');
@@ -602,194 +456,7 @@ app.post('/changePassword', async (req, res) => {
 });
 
 
-// ------------------ AWS S3 START ------------------
 
-// Configures AWS to use .env credentials and region
-const s3 = new S3Client({
-    region: process.env.AWS_REGION,
-    credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
-    }
-});
-
-// ------------------ AWS S3 END ------------------
-
-// ------------------ multer START ------------------
-
-const upload = multer({
-    storage: multerS3({
-        s3: s3,
-        bucket: 'the-vintage-garage-test',
-        metadata: function (req, file, cb) {
-            cb(null, {fieldName: file.fieldname});
-        },
-        key: function (req, file, cb) {
-            const folder = file.mimetype.startsWith('image/') ? 'images/' : 'videos/';
-            cb(null, folder + Date.now().toString() + '-' + file.originalname);
-        }
-    })
-});
-
-const featureVideoUpload = multer({
-    storage: multerS3({
-        s3: s3,
-        bucket: 'the-vintage-garage-test',
-        metadata: function (req, file, cb) {
-            cb(null, {fieldName: file.fieldname});
-        },
-        key: function (req, file, cb) {
-            const folder = 'videos/';
-            cb(null, folder + Date.now().toString() + '-' + file.originalname);
-        }
-    })
-});
-
-// ------------------ multer END ------------------
-
-app.get('/addListing', async (req, res) => {
-
-    res.render('addListing', {categories: await categoryCollection.find().toArray()});
-});
-
-// Route to handle form submission
-app.post('/submitListing', upload.fields([{ name: 'photo', maxCount: 10 }, { name: 'video', maxCount: 1 }]), async (req, res) => {
-    const photos = req.files['photo'] ? req.files['photo'].map(file => file.location) : [];
-    const videos = req.files['video'] ? req.files['video'].map(file => file.location) : [];
-
-    const listingItemsCollection = database.db(mongodb_database).collection('listing_items');
-    const document = {
-        product_img_URL: photos,
-        product_video_URL: videos,
-        item_title: req.body.item_title,
-        item_price: parseFloat(req.body.item_price) || 0.00,
-        item_quantity: parseInt(req.body.item_quantity) || 0,
-        item_detailed_description: req.body.item_detailed_description || '',
-        item_estimatedShippingCost: parseFloat(req.body.item_estimatedShippingCost) || 0.0,
-        item_estimatedInsuranceCost: parseFloat(req.body.item_estimatedInsuranceCost) || 0.0,
-        isFeatureItem: req.body.isFeatureItem === 'true',
-        item_category: Array.isArray(req.body.item_category) ? req.body.item_category.map(function(item)
-        {
-            return item.replace(/"/g, '');
-        }) : [req.body.item_category.replace(/"/g, '')],
-        item_sub_category: Array.isArray(req.body.item_sub_category) ? req.body.item_sub_category.map(function(item)
-        {
-            return item.replace(/"/g, '');
-        }) : [req.body.item_sub_category.replace(/"/g, '')],
-        status: 'available' // Default status when a listing is created
-    };
-
-    try {
-        await listingItemsCollection.insertOne(document);
-        res.redirect('/manage');
-    } catch (error) {
-        console.error('Error submitting new listing:', error);
-        res.status(500).send('Failed to add new listing');
-    }
-});
-
-app.get('/editListing/:id', async (req, res) => {
-    const itemId = req.params.id;
-    const isLoggedIn = req.session.loggedIn;
-    const isAdmin = req.session.isAdmin || false;
-
-    console.log("Received ID for editing:", itemId);
-
-    if (!ObjectId.isValid(itemId)) {
-        return res.status(400).send('Invalid ID format');
-    }
-
-    try {
-        const listing = await database.db(mongodb_database).collection('listing_items').findOne({_id: new ObjectId(itemId)});
-        if (!listing) {
-            return res.status(404).send('Listing not found');
-        }
-        res.render('editListing', { listing, isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav()});
-    } catch (error) {
-        console.error('Failed to fetch listing:', error);
-        res.status(500).send('Error fetching listing details');
-    }
-});
-
-
-// Function to delete a file from S3
-async function deleteFromS3(url) {
-    const bucketName = 'the-vintage-garage-test';
-    const key = url.split('.com/')[1];
-
-    const deleteParams = {
-        Bucket: bucketName,
-        Key: key
-    };
-
-    try {
-        const data = await s3.send(new DeleteObjectCommand(deleteParams));
-        console.log(`File deleted successfully from S3: ${url}`);
-    } catch (err) {
-        console.error(`Error deleting file from S3: ${url}`, err);
-    }
-}
-
-app.post('/updateListing/:id', upload.fields([{ name: 'photo', maxCount: 10 }, { name: 'video', maxCount: 1 }]), async (req, res) => {
-    const itemId = new ObjectId(req.params.id);
-    console.log("Form submission data:", req.body);
-
-    const photos = req.files['photo'] ? req.files['photo'].map(file => file.location) : [];
-    const videos = req.files['video'] ? req.files['video'].map(file => file.location) : [];
-
-    const removeImages = Array.isArray(req.body.remove_img_URL) ? req.body.remove_img_URL : [req.body.remove_img_URL].filter(Boolean);
-    const removeVideos = Array.isArray(req.body.remove_video_URL) ? req.body.remove_video_URL : [req.body.remove_video_URL].filter(Boolean);
-
-    try {
-        const listing = await database.db(mongodb_database).collection('listing_items').findOne({ _id: itemId });
-
-        // Remove images from S3 and update listing
-        if (removeImages.length > 0) {
-            for (const url of removeImages) {
-                await deleteFromS3(url);
-            }
-        }
-
-        // Remove videos from S3 and update listing
-        if (removeVideos.length > 0) {
-            for (const url of removeVideos) {
-                await deleteFromS3(url);
-            }
-        }
-
-        const updatedImages = listing.product_img_URL.filter(url => !removeImages.includes(url)).concat(photos);
-        const updatedVideos = listing.product_video_URL.filter(url => !removeVideos.includes(url)).concat(videos);
-
-        const updateData = {
-            item_title: req.body.item_title,
-            item_price: parseFloat(req.body.item_price) || 0.00,
-            item_quantity: parseInt(req.body.item_quantity) || 0,
-            item_detailed_description: req.body.item_detailed_description || '',
-            item_estimatedShippingCost: parseFloat(req.body.item_estimatedShippingCost) || 0.0,
-            item_estimatedInsuranceCost: parseFloat(req.body.item_estimatedInsuranceCost) || 0.0,
-            isFeatureItem: req.body.isFeatureItem ? req.body.isFeatureItem === 'true' : false,
-            product_img_URL: updatedImages,
-            product_video_URL: updatedVideos,
-            status: req.body.status || 'available' // Allow status update
-        };
-
-        const result = await database.db(mongodb_database).collection('listing_items').updateOne(
-            { _id: itemId },
-            { $set: updateData }
-        );
-
-        if (result.modifiedCount === 0) {
-            console.log("No changes were made.");
-            res.send("No changes were made.");
-        } else {
-            console.log("Updated listing successfully");
-            res.redirect('/manage');
-        }
-    } catch (error) {
-        console.error('Failed to update listing:', error);
-        res.status(500).send('Error updating listing');
-    }
-});
 
 // Route to render feature video management page
 app.get('/featureVideo', async (req, res) => {
@@ -798,294 +465,6 @@ app.get('/featureVideo', async (req, res) => {
     res.render('featureVideo', { featureVideo: featureVideo });
 });
 
-// Route to handle feature video upload
-app.post('/submitFeatureVideo', featureVideoUpload.single('video'), async (req, res) => {
-    if (!req.file) {
-        return res.status(400).send('No video file uploaded.');
-    }
-
-    const videoURL = req.file.location;
-
-    const featureVideoCollection = database.db(mongodb_database).collection('featureVideo');
-    await featureVideoCollection.updateOne({}, { $set: { url: videoURL } }, { upsert: true });
-
-    res.redirect('/manage');
-});
-
-// Route to handle feature video removal
-app.post('/removeFeatureVideo', async (req, res) => {
-    const featureVideoCollection = database.db(mongodb_database).collection('featureVideo');
-    const featureVideo = await featureVideoCollection.findOne({});
-    if (featureVideo && featureVideo.url) {
-        const key = featureVideo.url.split('.com/')[1];
-        const deleteParams = {
-            Bucket: 'the-vintage-garage-test',
-            Key: key
-        };
-        try {
-            await s3.send(new DeleteObjectCommand(deleteParams));
-            await featureVideoCollection.deleteOne({});
-            res.redirect('/manage');
-        } catch (error) {
-            console.error('Error removing feature video:', error);
-            res.status(500).send('Error removing feature video');
-        }
-    } else {
-        res.redirect('/manage');
-    }
-});
-
-app.get('/currentListings', async (req, res) => {
-    try {
-        const productsCollection = database.db(mongodb_database).collection('listing_items');
-        const currentListings = await productsCollection.find({ isFeatureItem: false }).toArray();
-        res.render('currentListings', { listings: currentListings });
-    } catch (error) {
-        console.error('Failed to fetch current listings:', error);
-        res.status(500).send('Error fetching current listings');
-        // handling error case - passing empty array
-        res.render('currentListings', { listings: [] }); // rendering the page even in case of error with an empty array
-    }
-});
-
-
-app.get('/previousListings', async (req, res) => {
-    try {
-        const productsCollection = database.db(mongodb_database).collection('listing_items');
-        const soldListings = await productsCollection.find({ status: 'sold' }).toArray();
-        const isLoggedIn = req.session.loggedIn;
-        const isAdmin = req.session.isAdmin || false;
-
-        res.render('previousListings', {
-            listings: soldListings,
-            isLoggedIn,
-            isAdmin,
-            categories: await getCategoriesNav()
-        });
-    } catch (error) {
-        console.error('Failed to fetch previous listings:', error);
-        res.status(500).send('Error fetching previous listings');
-    }
-});
-
-
-app.get('/mailingList', async (req, res) => {
-    try {
-        mailchimp.setConfig({
-            apiKey: process.env.MAILCHIMP_API_KEY,
-            server: process.env.MAILCHIMP_SERVER_PREFIX
-        });
-
-        const response = await mailchimp.lists.getListMembersInfo(process.env.MAILCHIMP_LIST_ID);
-        const subscribers = response.members.map(member => ({
-            firstName: member.merge_fields.FNAME,
-            lastName: member.merge_fields.LNAME,
-            email: member.email_address
-        }));
-
-        res.render('mailingList', {
-            people: subscribers
-        });
-    } catch (error) {
-        console.error('Error fetching mailing list:', error);
-        res.status(500).send('Error fetching mailing list');
-    }
-});
-
-
-
-
-app.get('/adminUsers', async (req, res) => {
-    try {
-        const admins = await adminCollection.find().toArray();
-        res.render('adminUsers', { users: admins });
-    } catch (error) {
-        console.error('Error fetching admin users:', error);
-        res.status(500).send('Error fetching admin users');
-    }
-});
-
-app.post('/addUser', async (req, res) => {
-    const { name, email, password, userType } = req.body;
-    try {
-        const hashedPassword = await bcrypt.hash(password, 10);
-        if (userType === 'admin') {
-            await adminCollection.insertOne({ name, email, password: hashedPassword });
-            req.session.loggedIn = true;
-            res.redirect('/manage');
-        } else if (userType === 'user') {
-            await userCollection.insertOne({ name, email, password: hashedPassword });
-            req.session.loggedIn = true;
-            res.redirect('/manageUser');
-        } else {
-            res.status(400).send('Invalid user type');
-        }
-    } catch (error) {
-        console.error('Error adding new user:', error);
-        res.status(500).send('Failed to add new user');
-    }
-});
-
-
-app.get('/editUser/:id', async (req, res) => {
-    try {
-        const user = await adminCollection.findOne({ _id: new ObjectId(req.params.id) });
-        if (!user) {
-            res.status(404).send('User not found');
-            return;
-        }
-        const isLoggedIn = req.session.loggedIn;
-        res.render('editUser', { user, isLoggedIn : isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav()});
-      
-    } catch (error) {
-        console.error('Error retrieving user for editing:', error);
-        res.status(500).send('Error retrieving user');
-    }
-});
-
-app.post('/updateUser/:id', async (req, res) => {
-    try {
-        const { name, email } = req.body;
-        await adminCollection.updateOne(
-            { _id: new ObjectId(req.params.id) },
-            { $set: { name, email }}
-        );
-        res.redirect('/adminUsers');
-    } catch (error) {
-        console.error('Error updating user:', error);
-        res.status(500).send('Failed to update user');
-    }
-});
-
-app.post('/deleteUser/:id', async (req, res) => {
-    try {
-        const result = await adminCollection.deleteOne({ _id: new ObjectId(req.params.id) });
-        if(result.deletedCount === 1) {
-            res.status(200).send('User deleted successfully');
-        } else {
-            res.status(404).send('User not found');
-        }
-    } catch (error) {
-        console.error('Failed to delete user:', error);
-        res.status(500).send('Failed to delete user');
-    }
-});
-
-
-
-app.get('/featuredItems', async (req, res) => {
-    try {
-        const productsCollection = database.db(mongodb_database).collection('listing_items');
-        const featuredItems = await productsCollection.find({ isFeatureItem: true }).toArray();
-        res.render('featuredItems', { listings: featuredItems });
-    } catch (error) {
-        console.error('Failed to fetch featured items:', error);
-        res.status(500).send('Error fetching featured items');
-        res.render('featuredItems', { listings: [] });
-    }
-});
-
-app.get('/categoryManagement', async (req, res) => {
-    const categoriesArray = await categoryCollection.find().toArray();
-    res.render('categoryManagement', {
-        categories: categoriesArray
-    });
-})
-
-app.get('/editCategory/:id', async (req, res) =>
-{
-    try
-    {
-        const category = await categoryCollection.findOne({ _id: new ObjectId(req.params.id) });
-        res.render('editCategory', { category, isAdmin: req.session.isAdmin, isLoggedIn : req.session.loggedIn, categories: await getCategoriesNav()});
-    }
-    catch (error)
-    {
-        console.error('Error retrieving category for editing:', error);
-        res.status(500).send('Error retrieving category');
-    }
-})
-
-app.post('/updateCategory/:id', async (req, res) => {
-    try {
-        const { name, sub_categories } = req.body;
-        console.log(`${name} and ${sub_categories}`)
-        await categoryCollection.updateOne(
-            { _id: new ObjectId(req.params.id) },
-            { $set: {
-                category_type: name,
-                sub_categories: sub_categories.split(", ")
-            }}
-        );
-        res.redirect('/manage');
-    } catch (error) {
-        console.error('Error updating category:', error);
-        res.status(500).send('Failed to update category');
-    }
-})
-
-app.post('/deleteCategory/:id', async (req, res) => {
-    try {
-        const result = await categoryCollection.deleteOne({ _id: new ObjectId(req.params.id) });
-        if(result.deletedCount === 1) {
-            res.status(200).send('Category deleted successfully');
-        } else {
-            res.status(404).send('Category not found');
-        }
-    } catch (error) {
-        console.error('Failed to delete user:', error);
-        res.status(500).send('Failed to delete user');
-    }
-})
-
-app.post('/addCategory', async (req, res) => {
-    const { category_name, sub_categories} = req.body;
-    try {
-        await categoryCollection.insertOne({ category_type: category_name, sub_categories: sub_categories.split(", ")});
-        res.redirect('/manage');
-
-    } catch (error) {
-        console.error('Error adding new category:', error);
-        res.status(500).send('Failed to add new user');
-    }
-});
-
-app.post('/load-subcategory', async (req, res) => {
-
-    const type = req.body.categoryType.replace(/"/g, '');
-    const {sub_categories} = await categoryCollection.findOne({category_type: type});
-    try{
-        req.session.save(err => {
-            if (err) {
-                console.error('Error saving session:', err);
-                return res.json({ success: false, message: 'Error saving session' });
-            }
-            res.json({ success: true, subCategories: sub_categories });
-        });
-    }catch (error)
-    {
-        console.error('Failed to remove item from cart:', error);
-        res.json({ success: false, message: 'Error removing item from cart' });
-    }
-
-    /*try {
-        if (!req.session.cart) {
-            return res.json({ success: false, message: 'Cart is empty' });
-        }
-
-        req.session.cart = req.session.cart.filter(item => item._id.toString() !== itemId);
-        req.session.save(err => {
-            if (err) {
-                console.error('Error saving session:', err);
-                return res.json({ success: false, message: 'Error saving session' });
-            }
-            res.json({ success: true, cartItemCount: req.session.cart.length });
-        });
-    } catch (error) {
-        console.error('Failed to remove item from cart:', error);
-        res.json({ success: false, message: 'Error removing item from cart' });
-    }*/
-})
 // connect to the database and hash passwords if necessary, then start the server
 database.connect().then(async () => {
     console.log('MongoDB connected successfully');
