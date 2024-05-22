@@ -19,6 +19,9 @@ const mailchimp = require('@mailchimp/mailchimp_marketing');    // Import mailch
 
 
 const app = express();
+
+const routes = require('./routes');
+
 app.set('view engine', 'ejs');                              // Set view engine to ejs
 
 app.use(express.urlencoded({ extended: true }));            // parse urlencoded request bodies
@@ -26,6 +29,11 @@ app.use(express.static('public'));                          // serve static imag
 app.use(express.static('css'));                             // serve static css files
 app.use(express.static('js'));                              // serve static js files
 app.use(express.json());                                    // parse json request bodies
+
+
+const searchRoute = require('./routes/filter');
+
+
 
 const port = process.env.PORT || 5000;                      // Set port to 5000 if not defined in ..env file
 
@@ -41,39 +49,6 @@ const PayPalEnvironment = process.env.PAYPAL_ENVIRONMENT;   // Import PayPal Env
 const PayPalClientID = process.env.PAYPAL_CLIENT_ID;        // Import PayPal Client ID from ..env file
 const PayPalSecret = process.env.PAYPAL_CLIENT_SECRET;      // Import PayPal Secret from ..env file
 const PayPal_endpoint_url = PayPalEnvironment === 'sandbox' ? 'https://api-m.sandbox.paypal.com' : 'https://api-m.paypal.com'; // Import PayPal endpoint URL from ..env file
-
-
-// Configure and instantiate Google OAuth2.0 client
-/*const oauthConfig = {
-    client_id: google_client_id,
-    project_id: google_project_id,
-    auth_uri: "https://accounts.google.com/o/oauth2/auth",
-    token_uri: "https://oauth2.googleapis.com/token",
-    auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
-    client_secret: google_client_secret,
-    redirect_uris: [`${BASE_URL}/auth/google/callback`],
-    JWTsecret: "secret",
-    scopes: [
-        "https://www.googleapis.com/auth/userinfo.email",
-        "https://www.googleapis.com/auth/userinfo.profile",
-        "openid",
-        // any other scopes you might require. View all here - https://developers.google.com/identity/protocols/oauth2/scopes
-    ],
-};
-
-const OAuth2 = google.auth.OAuth2;
-const oauth2Client = new OAuth2(
-    oauthConfig.client_id,
-    oauthConfig.client_secret,
-    oauthConfig.redirect_uris[0]
-);
-
-// Instantiate Realm app
-const realmApp = new Realm.App({
-    id: REALM_APP_ID,
-});*/
-
-
 
 // importing the database object from databaseConnection.js file
 var { database } = include('databaseConnection');
@@ -101,6 +76,7 @@ async function fetchAllItems()
     return await productsColl.find().toArray(); // Fetch all items;
 }
 
+
 // creating a session
 app.use(session({
     secret: node_session_secret,
@@ -111,6 +87,8 @@ app.use(session({
 }));
 
 app.use((req, res, next) => {
+    req.session = req.session || {};
+
     if (!req.session.cart) {
         req.session.cart = [];
     }
@@ -119,10 +97,13 @@ app.use((req, res, next) => {
     next();
 });
 
+app.use('/filter', searchRoute);
+
 app.get('/', async (req, res) => {
+
+    // Set Up variables
     const isLoggedIn = req.session.loggedIn;
     const isAdmin = req.session.isAdmin || false;
-
     let searchKey = (req.session.keyword == null) ? "" : req.session.keyword;
     let maximumPrice = (req.session.maxPrice > 0) ? req.session.maxPrice : 100000000;
     let categoryTab = (req.session.category == null) ? "" : `> ${req.session.category}`;
@@ -136,25 +117,28 @@ app.get('/', async (req, res) => {
 
 
     try {
+        // Get current listing collection
         const productsCollection = database.db(mongodb_database).collection('listing_items');
         const featureVideoCollection = database.db(mongodb_database).collection('featureVideo');
 
-        // Price Setting Up.
+        // Called here to dynamically get the price through the category type
         let currentListings = await productsCollection.find({ isFeatureItem: false,
             item_title: {$regex: searchKey, $options: 'i'},
             item_category: {$regex: categoryKeyword},
             item_sub_category: {$regex: subCategoryKeyword}
         }).sort({item_price: orderCode});
 
+        // turn into array and push price field into the prices array
         let currentListingsArray = await currentListings.toArray();
         currentListingsArray.forEach(function(item)
         {
             prices.push(item.item_price)
         });
+
+        // close resources
         currentListings.close();
 
-        // Way different from aggregate because this is a separate list where it sets it to ascending order. While the other one goes to
-        // either ascending or descending.
+        // sort prices to make it easy on finding min and max
         const sortedPrices = prices.sort(function(a, b) {
             if (a < b)
                 return 1;
@@ -164,6 +148,7 @@ app.get('/', async (req, res) => {
                 return 0;
         });
 
+        // pagination set up
         let pageIndexes = [];
         let previousIndex = req.session.pageIndex - 1;
         let nextIndex = previousIndex + 2;
@@ -179,6 +164,7 @@ app.get('/', async (req, res) => {
 
         const skips = 20*(((req.session.pageIndex-1) < 0 ) ? 0 : (req.session.pageIndex-1));
 
+        // call another find to finally get the current 20 items in a page
         currentListingsArray =  await productsCollection.find({ isFeatureItem: false,
             item_title: {$regex: searchKey, $options: 'i'},
             item_price: {$lt: Math.round(maximumPrice)},
@@ -188,6 +174,7 @@ app.get('/', async (req, res) => {
             .limit(20)
             .toArray();
 
+        // initially set to 0
         req.session.pageIndex = 0;
 
         const subCategories = await categoryCollection.find({category_type: req.session.category}).project({_id: 0, sub_categories: 1}).toArray();
@@ -197,8 +184,9 @@ app.get('/', async (req, res) => {
         else
             bodyFilters = getBodyFilters(sortedPrices[0], sortedPrices[prices.length-1], maximumPrice, subCategories[0].sub_categories);
 
+
         const featureVideo = await featureVideoCollection.findOne({});
-        // Limit
+
         res.render("landing", {
             isLoggedIn,
             currentListings: currentListingsArray,
@@ -359,7 +347,7 @@ function getBodyFilters(maxVal, minVal, currentPrice, subCategories)
     // for each subCategories on that array, assign it as a list element on the sub-category filter on the left
     // since some of them are spaces, we split the spaces and join them with '_'
     subCategories.forEach(function(subC) {
-        categoriesBody+="<li class=\"list-group-item\"><form method='post' action='/subcategory=" + subC.split(" ").join("_") + "'><button " +
+        categoriesBody+="<li class=\"list-group-item\"><form method='post' action='/filter/subcategory=" + subC.split(" ").join("_") + "'><button " +
             "style='background: none; border: none'" +
             " type='submit'>" + subC + "</button></form></li>"
     })
@@ -368,8 +356,8 @@ function getBodyFilters(maxVal, minVal, currentPrice, subCategories)
 
         categoriesBody,
         "<ul class='list-group list-group-flush'>" +
-        " <li class='list-group-item'><form method='post' action='/sortby=ascending'><button style='background: none; border: none' type='submit'>Sort by Lowest Price</button></form></li>" +
-        " <li class='list-group-item'><form method='post' action='/sortby=descending'><button style='background: none; border: none' type='submit'>Sort by Highest Price</button></form></li>",
+        " <li class='list-group-item'><form method='post' action='/filter/sortby=ascending'><button style='background: none; border: none' type='submit'>Sort by Lowest Price</button></form></li>" +
+        " <li class='list-group-item'><form method='post' action='/filter/sortby=descending'><button style='background: none; border: none' type='submit'>Sort by Highest Price</button></form></li>",
         "<div class=\"row col-sm\">\n" +
         "        <div class=\"col text-start\">\n" +
         "            <label for=\"priceRange\" class=\"form-label\">" +
@@ -396,62 +384,10 @@ async function getCategoriesNav()
     return await categoriesCollection.find({}).toArray();
 
 }
-app.post('/keyword=', (req, res) => {
-    req.session.keyword = null;
-    ResetCategoryFilter(req);
-    req.session.maxPrice = 0;
-    res.redirect('/');
-})
-app.post('/keyword=:key',  (req, res) => {
-    req.session.keyword = req.params.key;
-    ResetCategoryFilter(req);
-    req.session.maxPrice = 0;
-    res.redirect('/');
-});
 
-app.post('/price=:newMax', (req, res) => {
-    req.session.maxPrice = req.params.newMax;
-    res.redirect('/');
-})
 
-app.post('/category=:type',  (req, res) => {
-    req.session.category = req.params.type;
-    req.session.subcategory = null;
-    req.session.keyword = null;
-    res.redirect('/');
-})
 
-app.post('/category=',  (req, res) => {
-    ResetCategoryFilter(req);
-    req.session.keyword = null;
-    res.redirect('/');
-})
 
-function ResetCategoryFilter(req)
-{
-    req.session.category = null;
-    req.session.subcategory = null;
-}
-app.post('/subcategory=:type',  (req, res) => {
-    req.session.subcategory = req.params.type.split("_").join(" ");
-
-    res.redirect('/');
-})
-
-app.post('/sortby=:option', async (req, res) => {
-    req.session.sortBy = req.params.option;
-    res.redirect('/');
-})
-app.post('/clearFilter', (req, res) =>
-{
-
-    req.session.maxPrice = 0;
-    req.session.keyword = null;
-    req.session.category = null;
-    req.session.subcategory = null;
-    req.session.sortBy = 'ascending';
-    res.redirect('/');
-})
 
 app.get('/cart', async (req, res) => {
     const cartItems = req.session.cart || [];
