@@ -17,7 +17,9 @@ const { google } = require("googleapis");                       // Import google
 const fetch = import('node-fetch');                             // Import node-fetch module to fetch data from API
 const mailchimp = require('@mailchimp/mailchimp_marketing');    // Import mailchimp_marketing module to interact with Mailchimp API
 const {RecaptchaEnterpriseServiceClient} = require('@google-cloud/recaptcha-enterprise'); // Import recaptcha-enterprise module to interact with Google Recaptcha Enterprise API
-const bodyParser = require('body-parser');
+const bodyParser = require('body-parser');                      // Import body-parser module to parse request body
+const { sendContactUsEmail, sendReferralEmail, sendOrderConfirmationEmail, sendOrderNotificationEmail } = require('./routes/mailer'); // Import mailer.js file to send emails
+
 
 
 const app = express();
@@ -505,7 +507,7 @@ app.post('/create-paypal-order', async (req, res) => {
         const fetch = await import('node-fetch').then(module => module.default);
         const accessToken = await getAccessToken();
 
-        const { intent, purchase_units, insuranceTotal, shippingTotal, taxTotal, finalTotal } = req.body;
+        const { intent, insuranceTotal, shippingTotal, taxTotal, finalTotal, subtotal, email, address, city, state, zip, itemIds } = req.body;
 
         const orderData = {
             intent: intent.toUpperCase(),
@@ -514,10 +516,10 @@ app.post('/create-paypal-order', async (req, res) => {
                     currency_code: "CAD",
                     value: finalTotal.toFixed(2),
                     breakdown: {
-                        item_total: { value: (finalTotal - insuranceTotal - shippingTotal - taxTotal).toFixed(2), currency_code: "CAD" },
-                        shipping: { value: shippingTotal.toFixed(2), currency_code: "CAD" },
-                        insurance: { value: insuranceTotal.toFixed(2), currency_code: "CAD" },
-                        tax_total: { value: taxTotal.toFixed(2), currency_code: "CAD" }
+                        item_total: { value: (subtotal || 0).toFixed(2), currency_code: "CAD" },
+                        shipping: { value: (shippingTotal || 0).toFixed(2), currency_code: "CAD" },
+                        insurance: { value: (insuranceTotal || 0).toFixed(2), currency_code: "CAD" },
+                        tax_total: { value: (taxTotal || 0).toFixed(2), currency_code: "CAD" }
                     }
                 }
             }]
@@ -541,18 +543,41 @@ app.post('/create-paypal-order', async (req, res) => {
 });
 
 app.post('/mark-items-sold', async (req, res) => {
-    const itemIds = req.query.itemIds ? req.query.itemIds.split(',') : [];
+    const { itemIds, email, address, city, state, zip, subtotal, shippingTotal, insuranceTotal, taxTotal, finalTotal } = req.body;
 
     try {
-        if (itemIds.length > 0) {
+        if (itemIds && Array.isArray(itemIds) && itemIds.length > 0) {
             const productsCollection = database.db(mongodb_database).collection('listing_items');
+            const items = await productsCollection.find({ _id: { $in: itemIds.map(id => new ObjectId(id)) } }).toArray();
+
             await productsCollection.updateMany(
                 { _id: { $in: itemIds.map(id => new ObjectId(id)) } },
                 { $set: { isSold: true } }
             );
+
+            const itemDetails = items.map(item => `${item.item_title} - $${item.item_price}`).join('\n');
+            const ownerEmail = "ajgabl18@gmail.com";
+
+            const orderDetails = `
+                Items:
+                ${itemDetails}
+
+                Shipping: $${shippingTotal.toFixed(2)}
+                Insurance: $${insuranceTotal.toFixed(2)}
+                Taxes: $${taxTotal.toFixed(2)}
+                Total: $${finalTotal.toFixed(2)}
+
+            `;
+
+            const customerDetails = `
+                Purchaser Email: ${email}
+                Address: ${address}, ${city}, ${state}, ${zip}
+            `;
+
+            sendOrderConfirmationEmail(email, orderDetails);
+            sendOrderNotificationEmail(ownerEmail, orderDetails, customerDetails);
         }
 
-        // Clear the cart
         req.session.cart = [];
         req.session.save(err => {
             if (err) {
@@ -576,25 +601,19 @@ const stripe = require('stripe')('sk_test_51OZSVHAcq23T9yD7gpE3kQS73T5AnO6UEaecX
 
 app.post('/create-checkout-session', async (req, res) => {
     try {
-        // Extract product IDs from the POST data
-        const itemIds = req.body.productIds;
-        const insuranceTotal = parseFloat(req.body.insuranceTotal) || 0;
-        const shippingTotal = parseFloat(req.body.shippingTotal) || 0;
-        const taxTotal = parseFloat(req.body.taxTotal) || 0;
+        const { productIds, insuranceTotal, shippingTotal, taxTotal, finalTotal, subtotal, email, address, city, state, zip } = req.body;
 
-        const YOUR_DOMAIN = 'http://localhost:5000'; // Replace with clients domain
+        const YOUR_DOMAIN = 'http://localhost:5000'; // Replace with client's domain when finalized
 
-        if (!itemIds || !Array.isArray(itemIds)) {
+        if (!productIds || !Array.isArray(productIds)) {
             throw new Error('Product IDs not received or not in array format');
         }
 
-        // Fetch product details from MongoDB
         const productsCollection = database.db(mongodb_database).collection('listing_items');
         const items = await productsCollection.find({
-            '_id': { $in: itemIds.map(id => ObjectId.createFromHexString(id)) } // Convert string IDs to ObjectId instances
+            '_id': { $in: productIds.map(id => ObjectId.createFromHexString(id)) }
         }).toArray();
 
-        // Prepare line items for the Stripe session
         const line_items = items.map(item => ({
             price_data: {
                 currency: 'cad',
@@ -602,12 +621,11 @@ app.post('/create-checkout-session', async (req, res) => {
                     name: item.item_title,
                     images: [item.product_img_URL[0]]
                 },
-                unit_amount: Math.round(item.item_price * 100), // Convert price to cents
+                unit_amount: Math.round(item.item_price * 100), 
             },
             quantity: 1,
         }));
 
-        // Include shipping, insurance, and tax as separate line items
         if (shippingTotal > 0) {
             line_items.push({
                 price_data: {
@@ -615,7 +633,7 @@ app.post('/create-checkout-session', async (req, res) => {
                     product_data: {
                         name: 'Shipping'
                     },
-                    unit_amount: Math.round(shippingTotal * 100), // Convert price to cents
+                    unit_amount: Math.round(shippingTotal * 100), 
                 },
                 quantity: 1,
             });
@@ -628,7 +646,7 @@ app.post('/create-checkout-session', async (req, res) => {
                     product_data: {
                         name: 'Insurance'
                     },
-                    unit_amount: Math.round(insuranceTotal * 100), // Convert price to cents
+                    unit_amount: Math.round(insuranceTotal * 100), 
                 },
                 quantity: 1,
             });
@@ -641,22 +659,21 @@ app.post('/create-checkout-session', async (req, res) => {
                     product_data: {
                         name: 'Tax'
                     },
-                    unit_amount: Math.round(taxTotal * 100), // Convert price to cents
+                    unit_amount: Math.round(taxTotal * 100), 
                 },
                 quantity: 1,
             });
         }
 
-        // Create Stripe checkout session
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
             line_items,
             mode: 'payment',
-            success_url: `${YOUR_DOMAIN}/StripeSuccess?itemIds=${itemIds.join(',')}`,
+            success_url: `${YOUR_DOMAIN}/StripeSuccess?itemIds=${productIds.join(',')}&email=${email}&address=${address}&city=${city}&state=${state}&zip=${zip}&subtotal=${subtotal}&shippingTotal=${shippingTotal}&insuranceTotal=${insuranceTotal}&taxTotal=${taxTotal}&finalTotal=${finalTotal}`,
             cancel_url: `${YOUR_DOMAIN}/StripeCancel`,
+            customer_email: email 
         });
 
-        // Redirect the client to the Stripe checkout
         res.redirect(303, session.url);
     } catch (error) {
         console.error('Failed to create checkout session:', error);
@@ -666,17 +683,50 @@ app.post('/create-checkout-session', async (req, res) => {
 
 app.get('/StripeSuccess', async (req, res) => {
     const itemIds = req.query.itemIds ? req.query.itemIds.split(',') : [];
+    const email = req.query.email;
+    const address = req.query.address || '';
+    const city = req.query.city || '';
+    const state = req.query.state || '';
+    const zip = req.query.zip || '';
+    const subtotal = parseFloat(req.query.subtotal);
+    const shippingTotal = parseFloat(req.query.shippingTotal);
+    const insuranceTotal = parseFloat(req.query.insuranceTotal);
+    const taxTotal = parseFloat(req.query.taxTotal);
+    const finalTotal = parseFloat(req.query.finalTotal);
 
     try {
         if (itemIds.length > 0) {
             const productsCollection = database.db(mongodb_database).collection('listing_items');
+            const items = await productsCollection.find({ _id: { $in: itemIds.map(id => new ObjectId(id)) } }).toArray();
+
             await productsCollection.updateMany(
                 { _id: { $in: itemIds.map(id => new ObjectId(id)) } },
                 { $set: { isSold: true } }
             );
+
+            const itemDetails = items.map(item => `${item.item_title} - $${item.item_price}`).join('\n');
+            const ownerEmail = "ajgabl18@gmail.com";
+
+            const orderDetails = `
+                Items:
+                ${itemDetails}
+
+                Shipping: $${shippingTotal.toFixed(2)}
+                Insurance: $${insuranceTotal.toFixed(2)}
+                Taxes: $${taxTotal.toFixed(2)}
+                Total: $${finalTotal.toFixed(2)}
+
+            `;
+
+            const customerDetails = `
+                Purchaser Email: ${email}
+                Address: ${address}, ${city}, ${state}, ${zip}
+            `;
+
+            sendOrderConfirmationEmail(email, orderDetails);
+            sendOrderNotificationEmail(ownerEmail, orderDetails, customerDetails);
         }
 
-        // Clear the cart
         req.session.cart = [];
         req.session.save(err => {
             if (err) {
@@ -697,6 +747,55 @@ app.get('/StripeCancel', (req, res) => {
 });
 
 // ----------------- Stripe Payment END -----------------
+
+// ----------------- Email Sending START -----------------
+
+
+app.post('/sendContactUsEmail', async (req, res) => {
+    const { name, email, message, token } = req.body;
+
+    console.log('Received contact form data:', { name, email, message, token });
+
+    const score = await createAssessment({ token, recaptchaAction: 'submit' });
+
+    if (score === null || score < 0.5) {
+        return res.status(400).json({ success: false, message: 'Failed reCAPTCHA verification' });
+    }
+
+    sendContactUsEmail({ name, email, message })
+        .then(info => {
+            console.log('Email sent:', info);
+            res.json({ success: true });
+        })
+        .catch(error => {
+            console.error('Error sending email:', error);
+            res.json({ success: false, message: error.message });
+        });
+});
+
+app.post('/sendReferralEmail', async (req, res) => {
+    const { organisation, email, message, token } = req.body;
+
+    console.log('Received referral form data:', { organisation, email, message, token });
+
+    const score = await createAssessment({ token, recaptchaAction: 'submit' });
+
+    if (score === null || score < 0.5) {
+        return res.status(400).json({ success: false, message: 'Failed reCAPTCHA verification' });
+    }
+
+    sendReferralEmail({ organisation, email, message })
+        .then(info => {
+            console.log('Referral email sent:', info);
+            res.json({ success: true });
+        })
+        .catch(error => {
+            console.error('Error sending referral email:', error);
+            res.json({ success: false, message: error.message });
+        });
+});
+
+// ----------------- Email Sending END -----------------
 
 // ----------------- reCAPTCHA START -----------------
 
