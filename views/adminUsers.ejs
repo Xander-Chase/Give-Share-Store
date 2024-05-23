@@ -21,14 +21,14 @@
                     <td><%= user.name %></td>
                     <td><%= user.email %></td>
                     <td>
-                        <a href="/editUser/<%= user._id %>" class="btn btn-sm btn-primary">Edit</a>
+                        <a href="/admin/editUser/<%= user._id %>" class="btn btn-sm btn-primary">Edit</a>
                     </td>
                 </tr>
             <% }); %>
         </tbody>
     </table>
     <h3>Add New Admin</h3>
-    <form action="/addUser" method="post">
+    <form action="/admin/addUser" method="post">
         <input type="hidden" name="userType" value="admin">
         <div class="mb-3">
             <label for="name" class="form-label">Name</label>

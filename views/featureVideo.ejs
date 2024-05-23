@@ -10,7 +10,7 @@
 <body>
     <div class="container mt-5">
         <h2>Manage Feature Video</h2>
-        <form action="/submitFeatureVideo" method="post" enctype="multipart/form-data" class="mt-4">
+        <form action="/admin/submitFeatureVideo" method="post" enctype="multipart/form-data" class="mt-4">
             <div class="mb-3">
                 <label for="video" class="form-label">Feature Video</label>
                 <input type="file" class="form-control" id="video" name="video" <%= featureVideo && featureVideo.url ? 'disabled' : '' %> >
@@ -28,7 +28,7 @@
                     <source src="<%= featureVideo.url %>" type="video/mp4">
                     Your browser does not support the video tag.
                 </video>
-                <form action="/removeFeatureVideo" method="post" class="mt-2">
+                <form action="/admin/removeFeatureVideo" method="post" class="mt-2">
                     <button type="submit" class="btn btn-danger">Remove Video</button>
                 </form>
             </div>

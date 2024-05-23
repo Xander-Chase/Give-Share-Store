@@ -52,18 +52,23 @@
         }
     </style>
 </head>
-<div class="carousel-item <%= activeStatus %>" style="width: 100%; height: 40rem; background-image: url('<%= source %>'); background-repeat: no-repeat; background-size: cover">
+<div class="carousel-item <%= activeStatus %>"
+    style="width: 100%; height: 40rem; background-image: url('<%= source %>'); background-repeat: no-repeat; background-size: cover">
 
     <div class="container banner-item">
         <div class="row">
-            <div class="d-flex col-6 align-items-center justify-content-center banner-column">
-                <div class="img-container d-flex align-items-center justify-content-center">
-                    <img src="<%= product_img %>" alt="product image" class="featured-product-img">
+            <div
+                class="d-flex col-6 align-items-center justify-content-center banner-column">
+                <div
+                    class="img-container d-flex align-items-center justify-content-center">
+                    <img src="<%= product_img %>" alt="product image"
+                        class="featured-product-img">
                 </div>
             </div>
             <div class="col-6 banner-column">
                 <p class="text-main">
-                    <span class="product-title"><%= product_title %></span><br><br>
+                    <span class="product-title"><%= product_title
+                        %></span><br><br>
                     $<%= product_price %><br>
                     QTY: <%= product_qty %><br>
                     <%= product_description %>

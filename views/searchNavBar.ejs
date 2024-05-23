@@ -71,7 +71,7 @@
                 <div class="col-6 d-flex align-items-center justify-content-center">
 
                     <form id="searchBar" method="post" class="w-75 me-3"
-                        role="search" onsubmit="this.action = `/keyword=${document.getElementById('searchInput').value}`;">
+                        role="search" onsubmit="this.action = `/filter/keyword=${document.getElementById('searchInput').value}`;">
                         <input id="searchInput" type="search" class="form-control medium-text"
                             placeholder="Search..." aria-label="Search" value="<% if (locals.keyword) {%><%= locals.keyword %><% }%>">
                         <!-- value is the current search prompt-->
@@ -106,11 +106,11 @@
                                 </a>
                                 <ul class="dropdown-menu text-small shadow">
                                     <% if (isAdmin) { %>
-                                        <li><a class="dropdown-item" href="/manage">Dashboard</a></li>
+                                        <li><a class="dropdown-item" href="/admin/manage">Dashboard</a></li>
                                         <li><a class="dropdown-item" href="/settings">Settings</a></li>
                                         <li><a class="dropdown-item" href="#">Help</a></li>
                                     <% } else { %>
-                                        <li><a class="dropdown-item" href="/manageUser">Dashboard</a></li>
+                                        <li><a class="dropdown-item" href="/admin/manageUser">Dashboard</a></li>
                                     <% } %>
                                     <li><hr class="dropdown-divider"></li>
                                     <li><a class="dropdown-item" href="/signout">Sign out</a></li>
@@ -134,7 +134,7 @@
                 <ul class="nav nav-pills">
                     <li class="list1 nav-item" id="dashboard">
                         <form method="POST" class="nav-link"
-                              action="/category=">
+                              action="/filter/category=">
                             <button type="submit" style="border: none; background: none"
                                     aria-current="page">
                                 Dashboard
@@ -144,7 +144,7 @@
                     <% categories.forEach(function(category) { %>
                     <li class="list1 nav-item" id="<%= category.category_type %>">
                         <form method="POST" class="nav-link"
-                              action="/category=<%= category.category_type%>">
+                              action="/filter/category=<%= category.category_type%>">
                             <button type="submit" style="border: none; background: none"
                             aria-current="page">
                                 <%= category.category_type%>
