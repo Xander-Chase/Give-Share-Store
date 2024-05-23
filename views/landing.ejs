@@ -245,7 +245,7 @@
     <%- include("footer") %>
     <script>
         function addToCart(itemId) {
-            fetch('/add-to-cart', {
+            fetch('/cart/add-to-cart', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

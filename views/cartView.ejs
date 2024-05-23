@@ -212,7 +212,7 @@
 <!-- <%- include("footer") %> -->
 <script>
     function removeFromCart(itemId) {
-        fetch('/remove-from-cart', {
+        fetch('/cart/remove-from-cart', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -221,7 +221,7 @@
         }).then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    location.reload(); 
+                    location.reload();
                 } else {
                     alert(data.message);
                 }
