@@ -69,12 +69,6 @@ var mongoStore = MongoDBStore.create({
 
 // **************************** Functions ****************************
 // Necessary functions to ensure non-repeating code.
-
-async function () {
-    const productsColl = database.db(mongodb_database).collection('listing_items');
-    return await productsColl.find().toArray(); // Fetch all items;
-}
-
 // Format amounts with commas
 function formatAmount(amount) {
     return amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
