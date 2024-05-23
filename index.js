@@ -74,6 +74,16 @@ async function fetchAllItems() {
     return await productsColl.find().toArray(); // Fetch all items;
 }
 
+// Format amounts with commas
+function formatAmount(amount) {
+    return amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// Make the helper function available in EJS templates
+app.use((req, res, next) => {
+    res.locals.formatAmount = formatAmount; // Make formatAmount available in templates
+    next();
+});
 
 // creating a session
 app.use(session({
