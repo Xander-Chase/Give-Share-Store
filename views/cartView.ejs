@@ -134,7 +134,7 @@
                             <strong id="total">$<%= total.toFixed(2) %></strong>
                         </li>
                     </ul>
-                    <form class="card p2" action="/create-checkout-session" method="POST">
+                    <form class="card p2" action="/create-checkout-session" method="POST" id="stripe-form">
                         <% items.forEach(function(item) { %>
                             <input type="hidden" name="productIds" value="<%= item._id.toString() %>">
                         <% }); %>
@@ -142,12 +142,17 @@
                         <input type="hidden" name="shippingTotal" id="shippingTotalInput" value="0">
                         <input type="hidden" name="taxTotal" id="taxTotalInput" value="0">
                         <input type="hidden" name="finalTotal" id="finalTotalInput" value="0">
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email address</label>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                        </div>
                         <button type="submit" id="checkout-button" class="btn btn-primary">Proceed to Checkout</button>
                     </form>
                     
                     <div id="paypal-button-container"></div>
                     <script src="https://www.paypal.com/sdk/js?client-id=<%= paypalClientId %>&currency=CAD"></script>
                     <script>
+                        // PayPal Buttons
                         paypal.Buttons({
                             fundingSource: paypal.FUNDING.PAYPAL,
                             createOrder: async function() {
@@ -156,6 +161,7 @@
                                 const taxTotal = parseFloat(document.getElementById('taxTotalInput').value);
                                 const finalTotal = parseFloat(document.getElementById('finalTotalInput').value);
                                 const subtotal = parseFloat(document.getElementById('subtotal').textContent.replace('$', ''));
+                                const email = document.getElementById('email').value; 
                     
                                 const response = await fetch("/create-paypal-order", {
                                     method: "POST",
@@ -168,6 +174,7 @@
                                         shippingTotal,
                                         taxTotal,
                                         finalTotal,
+                                        email,
                                         purchase_units: [{
                                             amount: {
                                                 currency_code: "CAD",
@@ -188,23 +195,22 @@
                             onApprove: async function(data, actions) {
                                 return actions.order.capture().then(async function(details) {
                                     alert('Transaction completed by ' + details.payer.name.given_name);
+                                    const email = details.payer.email_address;
                     
-                                    // Mark items as sold in the database
                                     const itemIds = `<%- JSON.stringify(items.map(item => item._id.toString())) %>`;
                                     await fetch('/mark-items-sold', {
                                         method: 'POST',
                                         headers: {
                                             'Content-Type': 'application/json',
                                         },
-                                        body: JSON.stringify({ itemIds })
+                                        body: JSON.stringify({ itemIds, email })
                                     });
                     
-                                    // TODO Redirect and perform other actions after successful payment
                                     window.location.href = '/';
                                 });
                             }
                         }).render('#paypal-button-container');
-                    </script>                                                             
+                    </script>                                                                               
             </div>
         </div>
     </div>
