@@ -16,6 +16,10 @@ const Realm = require("realm");                                 // Import Realm 
 const { google } = require("googleapis");                       // Import googleapis module to interact with Google APIs
 const fetch = import('node-fetch');                             // Import node-fetch module to fetch data from API
 const mailchimp = require('@mailchimp/mailchimp_marketing');    // Import mailchimp_marketing module to interact with Mailchimp API
+const {RecaptchaEnterpriseServiceClient} = require('@google-cloud/recaptcha-enterprise'); // Import recaptcha-enterprise module to interact with Google Recaptcha Enterprise API
+const bodyParser = require('body-parser');
+
+
 const app = express();
 const routes = require('./routes');
 
@@ -27,6 +31,8 @@ app.use(express.static('public'));                          // serve static imag
 app.use(express.static('css'));                             // serve static css files
 app.use(express.static('js'));                              // serve static js files
 app.use(express.json());                                    // parse json request bodies
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
 
 
 const searchRoute = require('./routes/filter');
@@ -49,6 +55,9 @@ const PayPalEnvironment = process.env.PAYPAL_ENVIRONMENT;   // Import PayPal Env
 const PayPalClientID = process.env.PAYPAL_CLIENT_ID;        // Import PayPal Client ID from ..env file
 const PayPalSecret = process.env.PAYPAL_CLIENT_SECRET;      // Import PayPal Secret from ..env file
 const PayPal_endpoint_url = PayPalEnvironment === 'sandbox' ? 'https://api-m.sandbox.paypal.com' : 'https://api-m.paypal.com'; // Import PayPal endpoint URL from ..env file
+const projectID = process.env.CAPTCHA_PROJECT_ID            // Import Captcha Project ID from ..env file
+const recaptchaKey = process.env.CAPTCHA_SECRET_KEY         // Import Captcha Secret Key from ..env file
+process.env.GOOGLE_APPLICATION_CREDENTIALS = './thevintagegarage-1715977793921-f27e14d35c3e.json';
 
 // importing the database object from databaseConnection.js file
 var { database } = include('databaseConnection');
@@ -689,16 +698,54 @@ app.get('/StripeCancel', (req, res) => {
 
 // ----------------- Stripe Payment END -----------------
 
-async function markItemsAsSold(itemIds) {
-    const productsCollection = database.db(mongodb_database).collection('listing_items');
-    const objectIds = itemIds.map(id => ObjectId.createFromHexString(id));
-    try {
-        await productsCollection.updateMany(
-            { '_id': { $in: objectIds } },
-            { $set: { 'isSold': true } }
-        );
-        console.log('Items marked as sold');
-    } catch (error) {
-        console.error('Error marking items as sold:', error);
+// ----------------- reCAPTCHA START -----------------
+
+async function createAssessment({ token, recaptchaAction }) {
+    const client = new RecaptchaEnterpriseServiceClient();
+    const projectPath = client.projectPath(projectID);
+
+    const request = {
+        assessment: {
+            event: {
+                token: token,
+                siteKey: recaptchaKey,
+            },
+        },
+        parent: projectPath,
+    };
+
+    const [response] = await client.createAssessment(request);
+
+    if (!response.tokenProperties.valid) {
+        console.log(`The CreateAssessment call failed because the token was: ${response.tokenProperties.invalidReason}`);
+        return null;
+    }
+
+    if (response.tokenProperties.action === recaptchaAction) {
+        console.log(`The reCAPTCHA score is: ${response.riskAnalysis.score}`);
+        response.riskAnalysis.reasons.forEach((reason) => {
+            console.log(reason);
+        });
+        return response.riskAnalysis.score;
+    } else {
+        console.log("The action attribute in your reCAPTCHA tag does not match the action you are expecting to score");
+        return null;
     }
 }
+
+app.post('/submitContactForm', async (req, res) => {
+    const { name, email, message, token } = req.body;
+
+    console.log('Received form data:', { name, email, message, token });
+
+    const score = await createAssessment({ token, recaptchaAction: 'submit' });
+
+    if (score === null || score < 0.5) {
+        return res.status(400).send('Failed reCAPTCHA verification');
+    }
+
+    console.log('Form submitted successfully');
+    res.send('Form submitted successfully');
+});
+
+// ----------------- reCAPTCHA END -----------------
