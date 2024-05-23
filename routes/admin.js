@@ -256,6 +256,7 @@ router.get('/currentListings', async (req, res) => {
     }
 });
 
+
 // TODO: DONE
 router.get('/previousListings', async (req, res) => {
     try {
@@ -358,7 +359,7 @@ router.post('/updateUser/:id', async (req, res) => {
             { _id: new ObjectId(req.params.id) },
             { $set: { name, email }}
         );
-        res.redirect('/admin/adminUsers');
+        res.redirect('/admin/manage');
     } catch (error) {
         console.error('Error updating user:', error);
         res.status(500).send('Failed to update user');

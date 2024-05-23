@@ -152,26 +152,27 @@ app.get('/', async (req, res) => {
         let pageIndexes = [];
         let previousIndex = req.session.pageIndex - 1;
         let nextIndex = previousIndex + 2;
-        let numberOfPages = sortedPrices.length / 20;
+        console.log(sortedPrices.length)
+        let numberOfPages = sortedPrices.length / 18;
         if (previousIndex < 1)
             previousIndex = 1;
 
         if (nextIndex>=numberOfPages)
             nextIndex--;
 
-        for (let i = 0; i < (numberOfPages-1); i++)
+        for (let i = 0; i <= (numberOfPages); i++)
             pageIndexes.push(i+1);
 
-        const skips = 20*(((req.session.pageIndex-1) < 0 ) ? 0 : (req.session.pageIndex-1));
+        const skips = 18*(((req.session.pageIndex-1) < 0 ) ? 0 : (req.session.pageIndex-1));
 
-        // call another find to finally get the current 20 items in a page
+        // call another find to finally get the current 18 items in a page
         currentListingsArray =  await productsCollection.find({ isFeatureItem: false,
             item_title: {$regex: searchKey, $options: 'i'},
             item_price: {$lt: Math.round(maximumPrice)},
             item_category: {$regex: categoryKeyword},
             item_sub_category: {$regex: subCategoryKeyword}
         }).sort({item_price: orderCode}).skip(skips)
-            .limit(20)
+            .limit(18)
             .toArray();
 
         // initially set to 0
