@@ -31,6 +31,7 @@ app.use(express.json());                                    // parse json reques
 
 const searchRoute = require('./routes/filter');
 const adminRoute = require('./routes/admin');
+const cartRoute = require('./routes/cart');
 
 
 
@@ -68,8 +69,8 @@ var mongoStore = MongoDBStore.create({
 
 // **************************** Functions ****************************
 // Necessary functions to ensure non-repeating code.
-// Fetches all the items from the product list
-async function fetchAllItems() {
+
+async function () {
     const productsColl = database.db(mongodb_database).collection('listing_items');
     return await productsColl.find().toArray(); // Fetch all items;
 }
@@ -107,6 +108,7 @@ app.use((req, res, next) => {
 
 app.use('/filter', searchRoute);
 app.use('/admin', adminRoute);
+app.use('/cart', cartRoute);
 
 app.get('/', async (req, res) => {
 
@@ -169,7 +171,6 @@ app.get('/', async (req, res) => {
         let pageIndexes = [];
         let previousIndex = req.session.pageIndex - 1;
         let nextIndex = previousIndex + 2;
-        console.log(sortedPrices.length)
         let numberOfPages = sortedPrices.length / 18;
         if (previousIndex < 1)
             previousIndex = 1;
@@ -315,62 +316,6 @@ app.post('/userLogInSubmit', async (req, res) => {
     res.redirect("/");
 });
 
-app.get('/cart', async (req, res) => {
-    const cartItems = req.session.cart || [];
-    res.render('cartView', {
-        isLoggedIn: req.session.loggedIn,
-        items: cartItems,
-        paypalClientId: process.env.PAYPAL_CLIENT_ID,
-        categories: await getCategoriesNav(),
-        isAdmin: req.session.isAdmin || false
-    });
-});
-
-app.post('/add-to-cart', async (req, res) => {
-    const itemId = req.body.itemId;
-
-    try {
-        const productsCollection = database.db(mongodb_database).collection('listing_items');
-        const item = await productsCollection.findOne({ _id: ObjectId.createFromHexString(itemId) });
-
-        if (item) {
-            req.session.cart.push(item);
-            req.session.save(err => {
-                if (err) {
-                    console.error('Error saving session:', err);
-                }
-                res.json({ success: true, cartItemCount: req.session.cart.length });
-            });
-        } else {
-            res.json({ success: false, message: 'Item not found' });
-        }
-    } catch (error) {
-        console.error('Failed to add item to cart:', error);
-        res.json({ success: false, message: 'Error adding item to cart' });
-    }
-});
-
-app.post('/remove-from-cart', async (req, res) => {
-    const itemId = req.body.itemId;
-
-    try {
-        if (!req.session.cart) {
-            return res.json({ success: false, message: 'Cart is empty' });
-        }
-
-        req.session.cart = req.session.cart.filter(item => item._id.toString() !== itemId);
-        req.session.save(err => {
-            if (err) {
-                console.error('Error saving session:', err);
-                return res.json({ success: false, message: 'Error saving session' });
-            }
-            res.json({ success: true, cartItemCount: req.session.cart.length });
-        });
-    } catch (error) {
-        console.error('Failed to remove item from cart:', error);
-        res.json({ success: false, message: 'Error removing item from cart' });
-    }
-});
 
 app.get('/signout', (req, res) => {
     req.session.destroy()
@@ -436,6 +381,8 @@ app.get('/pastOrders', async (req, res) => {
         res.status(500).send('Error fetching past orders');
     }
 });
+
+// TODO: Can this be removed?
 async function addTestOrder() {
     try {
         const ordersCollection = database.db(mongodb_database).collection('orders');
@@ -512,9 +459,6 @@ app.post('/changePassword', async (req, res) => {
 
     res.render('passwordUpdated', { isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav() });
 });
-
-
-
 
 // Route to render feature video management page
 app.get('/featureVideo', async (req, res) => {
