@@ -183,8 +183,8 @@
                                             style="border: solid; border-width: 2px; border-color: lightgray; max-width: 20vw;" />
                                     </div>
                                     <div class="card-body">
-                                        <h3 class>
-                                            <%= item.item_title %>
+                                        <h3>
+                                            <%= (item.item_title.length > 35) ? `${item.item_title.slice(0, 35)}...` : item.item_title %>
                                         </h3>
                                         <div
                                             class="d-flex justify-content-between align-items-center">
