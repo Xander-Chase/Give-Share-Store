@@ -19,7 +19,7 @@ const mailchimp = require('@mailchimp/mailchimp_marketing');    // Import mailch
 const app = express();
 const routes = require('./routes');
 
-const {getBodyFilters, getCategoriesNav} = require('./controller/htmlContent');
+const { getBodyFilters, getCategoriesNav } = require('./controller/htmlContent');
 app.set('view engine', 'ejs');                              // Set view engine to ejs
 
 app.use(express.urlencoded({ extended: true }));            // parse urlencoded request bodies
@@ -65,6 +65,25 @@ var mongoStore = MongoDBStore.create({
         secret: mongodb_session_secret
     },
     collection: 'sessions'
+});
+
+// **************************** Functions ****************************
+// Necessary functions to ensure non-repeating code.
+
+async function () {
+    const productsColl = database.db(mongodb_database).collection('listing_items');
+    return await productsColl.find().toArray(); // Fetch all items;
+}
+
+// Format amounts with commas
+function formatAmount(amount) {
+    return amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// Make the helper function available in EJS templates
+app.use((req, res, next) => {
+    res.locals.formatAmount = formatAmount; // Make formatAmount available in templates
+    next();
 });
 
 // creating a session
@@ -113,6 +132,10 @@ app.get('/', async (req, res) => {
         const productsCollection = database.db(mongodb_database).collection('listing_items');
         const featureVideoCollection = database.db(mongodb_database).collection('featureVideo');
 
+        // Fetch all prices
+        prices = await fetchAllPrices();
+        console.log(prices); // debugging
+
         // Fetch featured items
         const featuredItems = await productsCollection.find({ isFeatureItem: true }).toArray();
 
@@ -156,17 +179,18 @@ app.get('/', async (req, res) => {
             nextIndex--;
 
         for (let i = 0; i <= (numberOfPages); i++)
-            pageIndexes.push(i+1);
+            pageIndexes.push(i + 1);
 
-        const skips = 18*(((req.session.pageIndex-1) < 0 ) ? 0 : (req.session.pageIndex-1));
+        const skips = 18 * (((req.session.pageIndex - 1) < 0) ? 0 : (req.session.pageIndex - 1));
 
         // call another find to finally get the current 18 items in a page
-        currentListingsArray =  await productsCollection.find({ isFeatureItem: false,
-            item_title: {$regex: searchKey, $options: 'i'},
-            item_price: {$lt: Math.round(maximumPrice)},
-            item_category: {$regex: categoryKeyword},
-            item_sub_category: {$regex: subCategoryKeyword}
-        }).sort({item_price: orderCode}).skip(skips)
+        currentListingsArray = await productsCollection.find({
+            isFeatureItem: false,
+            item_title: { $regex: searchKey, $options: 'i' },
+            item_price: { $lt: Math.round(maximumPrice) },
+            item_category: { $regex: categoryKeyword },
+            item_sub_category: { $regex: subCategoryKeyword }
+        }).sort({ item_price: orderCode }).skip(skips)
             .limit(18)
             .toArray();
 
@@ -199,7 +223,7 @@ app.get('/', async (req, res) => {
         });
     } catch (error) {
         console.error('Failed to fetch current listings:', error);
-        res.render("landing", {isLoggedIn: isLoggedIn, categories: [], isAdmin: isAdmin, currentListings: [], featureVideo: null });
+        res.render("landing", { isLoggedIn: isLoggedIn, categories: [], isAdmin: isAdmin, currentListings: [], featureVideo: null });
     }
 });
 
@@ -225,6 +249,18 @@ async function hashExistingPasswords() {
         console.error('Error updating passwords:', err);
     }
 }
+
+async function fetchAllPrices() {
+    try {
+        const productsCollection = database.db(mongodb_database).collection('listing_items');
+        const prices = await productsCollection.find({}, { projection: { item_price: 1 } }).toArray();
+        return prices.map(item => item.item_price);
+    } catch (error) {
+        console.error('Failed to fetch prices:', error);
+        return [];
+    }
+}
+
 
 app.get("/loginPortal", (req, res) => {
     res.render('loginPortal');
@@ -321,7 +357,7 @@ app.get('/contact-us', async (req, res) => {
 app.get('/manageUser', async (req, res) => {
     if (req.session.loggedIn) {
         const isLoggedIn = req.session.loggedIn;
-        res.render("user-management", {isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav()});
+        res.render("user-management", { isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav() });
 
     }
     else {
