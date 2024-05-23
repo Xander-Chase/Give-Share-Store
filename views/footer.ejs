@@ -3,7 +3,7 @@
         crossorigin="anonymous"></script>
 </head>
 <footer class="container-fluid">
-    <style>
+    <style type="text/css">
         body {
             min-height: 100vh;
             position: relative;
@@ -14,6 +14,15 @@
             position: absolute;
             bottom: 0;
         }
+        
+        #mc_embed_signup {
+            background:#fff;
+            clear:left;
+            font:14px Helvetica,Arial,sans-serif;
+            width: 470px;
+            color: black;
+        }
+
         .text {
             color: white;
         }
@@ -22,31 +31,74 @@
             font-size: 10pt;
         }
 
-
         .fa-brands.fa-x-twitter, .fa-brands.fa-instagram, .fa-brands.fa-linkedin-in, .fa-brands.fa-facebook, .fa-brands.fa-youtube{
             font-size: 1.7em;
             padding: 3px;
         }
+
         .fa-brands.fa-x-twitter{
             color: black;
         }
+
         .fa-brands.fa-instagram{
             color:#e897df;
         }
+
         .fa-brands.fa-linkedin-in{
             color: white
         }
+
         .fa-brands.fa-facebook{
             color: #1877F2;
         }
+
         .fa-brands.fa-youtube{
             color: #FF0101
         }
+
         .btn-smaller {
             padding: 5px 12px; /* Adjust padding for a smaller button */
             padding-bottom: 4px;
             font-size: 0.8em;  /* Adjust font size for a smaller button */
             width: auto;    
+        }
+
+        @media (max-width: 509px) {
+            body {
+                padding-bottom: 250px;
+            }
+
+            #mc_embed_signup {
+                width: 89vw;
+            }
+
+            #mce_EMAIL {
+                width: 77vw;
+            }
+        }
+
+        @media (min-width: 509px) {
+            @media (max-width: 576px) {
+                body {
+                    padding-bottom: 210px;
+                }
+
+                #mc_embed_signup {
+                    width: 78vw;
+                }
+
+                #mce_EMAIL {
+                    width: 67vw;
+                }
+            }
+        }
+
+        @media (min-width: 576px) {
+            @media (max-width: 690px) {
+                body {
+                    padding-bottom: 250px;
+                }
+            }
         }
     </style>
     <div class="row"><p></p></div>
@@ -58,12 +110,7 @@
         </div>
         <div class="col text">
             <div id="mc_embed_shell">
-                <link
-                    href="//cdn-images.mailchimp.com/embedcode/classic-061523.css"
-                    rel="stylesheet" type="text/css">
-                <style type="text/css">
-                    #mc_embed_signup{background:#fff; clear:left; font:14px Helvetica,Arial,sans-serif; width: 470px; color: black;}
-                </style>
+                <link href="//cdn-images.mailchimp.com/embedcode/classic-061523.css" rel="stylesheet" type="text/css">
                 <div id="mc_embed_signup">
                     <form
                         action="https://gmail.us17.list-manage.com/subscribe/post?u=8998d074c48d4f0464e383abc&amp;id=b35b4a780a&amp;f_id=00c7fae2f0"
