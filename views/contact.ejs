@@ -3,6 +3,7 @@
 <html lang="en">
   <head>
     <title>Contact Us</title>
+    <script src="https://www.google.com/recaptcha/enterprise.js" async defer></script>
     <style>
       .sendButton {
         width: 30vw;
@@ -97,69 +98,81 @@
       }
 
     </style>
-    <script src="https://www.google.com/recaptcha/enterprise.js" async defer></script>
   </head>
   <body>
     <%- include("searchNavBar") %>
     <div class="container-fluid">
-      <div class="row">
-        <div class="col get-involved-col">
-          <h2 class="text-center title">Get Involved!</h2>
-          <div class="text-center">
-            <form id="getInvolvedForm" method="POST" action="/submitContactForm">
-              <input type="text" placeholder="Name" class="input" name="name">
-              <input type="email" placeholder="Email*" required class="input" name="email">
-              <input type="text" placeholder="Where did you hear about us?" class="input" name="source">
-              <textarea placeholder="Tell us a bit about yourself." class="input specialInput" wrap="soft" style="resize: none;" name="message"></textarea>
-              <div class="g-recaptcha" data-sitekey="6Lfs9d8pAAAAAC1YSosyITORTx9OTJ8yN1yBDJht" data-action="submit"></div>
-              <input type="hidden" name="token" id="token-getInvolvedForm">
-              <button type="button" class="btn btn-outline-secondary sendButton" onclick="submitForm('getInvolvedForm')">Send</button>
-            </form>
-          </div>
-          <p class="required-text">*Required</p>
+        <div class="row">
+            <div class="col get-involved-col">
+                <h2 class="text-center title">Get Involved!</h2>
+                <div class="text-center">
+                    <form id="getInvolvedForm" method="POST" action="/submitContactForm">
+                        <input type="text" placeholder="Name" class="input" name="name">
+                        <input type="email" placeholder="Email*" required class="input" name="email">
+                        <input type="text" placeholder="Where did you hear about us?" class="input" name="source">
+                        <textarea placeholder="Tell us a bit about yourself." class="input specialInput" wrap="soft" style="resize: none;" name="message"></textarea>
+                        <div class="g-recaptcha" data-sitekey="6Lfs9d8pAAAAAC1YSosyITORTx9OTJ8yN1yBDJht" data-callback="onRecaptchaSuccess" data-action="submit"></div>
+                        <input type="hidden" name="token" id="token-getInvolvedForm">
+                        <button type="submit" class="btn btn-outline-secondary sendButton">Send</button>
+                    </form>
+                </div>
+                <p class="required-text">*Required</p>
+            </div>
+            <div class="col text-center contact-us-col">
+                <h2 class="title">Contact Us</h2>
+                <p class="contact-info">Phone: 778-229-3872<br>Email: wegiveshare@gmail.com</p>
+                <p>Share the website! thevintagegarage.ca</p>
+            </div>
+            <div class="col text-center find-more-ways-col">
+                <h2 class="title">Find more ways to help!</h2>
+                <p class="text-content">
+                    A nonprofit is as strong as the community that holds it up. Together, we can do more than we can do alone. Let's bring our abilities and passions together to affect real change.<br>
+                    There are many ways to join us and support our goals. Contact us to find out more about volunteer opportunities, and ways that you can get our message to your friends and family.
+                </p>
+            </div>
         </div>
-        <div class="col text-center contact-us-col">
-          <h2 class="title">Contact Us</h2>
-          <p class="contact-info">Phone: 778-229-3872<br>Email: wegiveshare@gmail.com</p>
-          <p>Share the website! thevintagegarage.ca</p>
+        <div class="row verticalSpacer"></div>
+        <div class="row">
+            <div class="col make-a-referral-col">
+                <h3 class="title text-center">Make a referral</h3>
+                <p class="referral-text text-center">If you are a community service organisation and would like to refer a client in need of furniture or household goods please fill out the form below and we will contact you to see how we can help. (Due to the current public activity restrictions we are low on supply at this time, but hoping for things to change soon). Please leave us a short message along with your phone #, as well as when you are available to contact. We do not need to know client names at this time.</p>
+                <div class="text-center">
+                    <form id="referralForm" method="POST" action="/submitContactForm">
+                        <input type="text" class="referral-input" placeholder="Organisation name" name="organisation">
+                        <input type="email" class="referral-input" placeholder="Email*" required name="email">
+                        <textarea name="message" class="referral-input specialInput" placeholder="Message" wrap="soft" style="resize: none;"></textarea>
+                        <div class="g-recaptcha" data-sitekey="6Lfs9d8pAAAAAC1YSosyITORTx9OTJ8yN1yBDJht" data-callback="onRecaptchaSuccess" data-action="submit"></div>
+                        <input type="hidden" name="token" id="token-referralForm">
+                        <button type="submit" class="btn btn-outline-secondary referral-send">Send</button>
+                        <p class="required-text">*Required</p>
+                    </form>
+                </div>
+            </div>
         </div>
-        <div class="col text-center find-more-ways-col">
-          <h2 class="title">Find more ways to help!</h2>
-          <p class="text-content">
-            A nonprofit is as strong as the community that holds it up. Together, we can do more than we can do alone. Let's bring our abilities and passions together to affect real change.<br>
-            There are many ways to join us and support our goals. Contact us to find out more about volunteer opportunities, and ways that you can get our message to your friends and family.
-          </p>
-        </div>
-      </div>
-      <div class="row verticalSpacer"></div>
-      <div class="row">
-        <div class="col make-a-referral-col">
-          <h3 class="title text-center">Make a referral</h3>
-          <p class="referral-text text-center">If you are a community service organisation and would like to refer a client in need of furniture or household goods please fill out the form below and we will contact you to see how we can help. (Due to the current public activity restrictions we are low on supply at this time, but hoping for things to change soon). Please leave us a short message along with your phone #, as well as when you are available to contact. We do not need to know client names at this time.</p>
-          <div class="text-center">
-            <form id="referralForm" method="POST" action="/submitContactForm">
-              <input type="text" class="referral-input" placeholder="Organisation name" name="organisation">
-              <input type="email" class="referral-input" placeholder="Email*" required name="email">
-              <textarea name="message" class="referral-input specialInput" placeholder="Message" wrap="soft" style="resize: none;"></textarea>
-              <div class="g-recaptcha" data-sitekey="6Lfs9d8pAAAAAC1YSosyITORTx9OTJ8yN1yBDJht" data-action="submit"></div>
-              <input type="hidden" name="token" id="token-referralForm">
-              <button type="button" class="btn btn-outline-secondary referral-send" onclick="submitForm('referralForm')">Send</button>
-              <p class="required-text">*Required</p>
-            </form>
-          </div>
-        </div>
-      </div>
     </div>
     <script>
-      function submitForm(formId) {
-        grecaptcha.ready(function() {
-          grecaptcha.execute('6Lfs9d8pAAAAAC1YSosyITORTx9OTJ8yN1yBDJht', {action: 'submit'}).then(function(token) {
-            document.getElementById('token-' + formId).value = token;
-            document.getElementById(formId).submit();
-          });
+        let recaptchaValid = false;
+
+        function onRecaptchaSuccess(token) {
+            recaptchaValid = true;
+            document.getElementById('token-getInvolvedForm').value = token;
+            document.getElementById('token-referralForm').value = token;
+        }
+
+        document.getElementById('getInvolvedForm').addEventListener('submit', function(event) {
+            if (!recaptchaValid) {
+                event.preventDefault();
+                alert('Please complete the reCAPTCHA');
+            }
         });
-      }
+
+        document.getElementById('referralForm').addEventListener('submit', function(event) {
+            if (!recaptchaValid) {
+                event.preventDefault();
+                alert('Please complete the reCAPTCHA');
+            }
+        });
     </script>
-  </body>
-  <%- include("footer") %>
+    <%- include("footer") %>
+</body>
 </html>

@@ -56,7 +56,7 @@ const PayPalSecret = process.env.PAYPAL_CLIENT_SECRET;      // Import PayPal Sec
 const PayPal_endpoint_url = PayPalEnvironment === 'sandbox' ? 'https://api-m.sandbox.paypal.com' : 'https://api-m.paypal.com'; // Import PayPal endpoint URL from ..env file
 const projectID = process.env.CAPTCHA_PROJECT_ID            // Import Captcha Project ID from ..env file
 const recaptchaKey = process.env.CAPTCHA_SECRET_KEY         // Import Captcha Secret Key from ..env file
-process.env.GOOGLE_APPLICATION_CREDENTIALS = './thevintagegarage-1715977793921-f27e14d35c3e.json'
+process.env.GOOGLE_APPLICATION_CREDENTIALS = './thevintagegarage-1715977793921-f27e14d35c3e.json';
 
 // importing the database object from databaseConnection.js file
 var { database } = include('databaseConnection');
@@ -735,52 +735,52 @@ app.get('/StripeCancel', (req, res) => {
 
 // ----------------- reCAPTCHA START -----------------
 
-async function validateRecaptchaToken(token, recaptchaAction) {
+async function createAssessment({ token, recaptchaAction }) {
     const client = new RecaptchaEnterpriseServiceClient();
     const projectPath = client.projectPath(projectID);
-  
+
     const request = {
-      assessment: {
-        event: {
-          token: token,
-          siteKey: recaptchaKey,
+        assessment: {
+            event: {
+                token: token,
+                siteKey: recaptchaKey,
+            },
         },
-      },
-      parent: projectPath,
+        parent: projectPath,
     };
-  
+
     const [response] = await client.createAssessment(request);
-  
+
     if (!response.tokenProperties.valid) {
-      console.log(`The CreateAssessment call failed because the token was: ${response.tokenProperties.invalidReason}`);
-      return false;
+        console.log(`The CreateAssessment call failed because the token was: ${response.tokenProperties.invalidReason}`);
+        return null;
     }
-  
+
     if (response.tokenProperties.action === recaptchaAction) {
-      console.log(`The reCAPTCHA score is: ${response.riskAnalysis.score}`);
-      response.riskAnalysis.reasons.forEach((reason) => {
-        console.log(reason);
-      });
-  
-      return response.riskAnalysis.score >= 0.5;
+        console.log(`The reCAPTCHA score is: ${response.riskAnalysis.score}`);
+        response.riskAnalysis.reasons.forEach((reason) => {
+            console.log(reason);
+        });
+        return response.riskAnalysis.score;
     } else {
-      console.log("The action attribute in your reCAPTCHA tag does not match the action you are expecting to score");
-      return false;
+        console.log("The action attribute in your reCAPTCHA tag does not match the action you are expecting to score");
+        return null;
     }
-  }
-  
-  app.post('/submitContactForm', async (req, res) => {
+}
+
+app.post('/submitContactForm', async (req, res) => {
     const { name, email, message, token } = req.body;
-  
-    const isValidRecaptcha = await validateRecaptchaToken(token, 'submit');
-  
-    if (!isValidRecaptcha) {
-      return res.status(400).send('Failed reCAPTCHA verification');
+
+    console.log('Received form data:', { name, email, message, token });
+
+    const score = await createAssessment({ token, recaptchaAction: 'submit' });
+
+    if (score === null || score < 0.5) {
+        return res.status(400).send('Failed reCAPTCHA verification');
     }
-  
-    // ********** IMPLEMENT MAILGUN AUTOMATED EMAIL HERE ********
+
     console.log('Form submitted successfully');
     res.send('Form submitted successfully');
-  });
+});
 
 // ----------------- reCAPTCHA END -----------------
