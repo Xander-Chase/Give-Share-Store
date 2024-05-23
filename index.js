@@ -1,12 +1,12 @@
-require ('dotenv').config();                                    // Import dotenv module to read ..env file
-require ('./utils');                                            // Import utils.js file to define include function
+require('dotenv').config();                                    // Import dotenv module to read ..env file
+require('./utils');                                            // Import utils.js file to define include function
 const express = require('express');                             // Import express module to create server
 const session = require('express-session');                     // Import express-session module to manage session
 const MongoDBStore = require('connect-mongo');                  // Import connect-mongo module to store session in MongoDB
 const Joi = require('joi');                                     // include the joi module
 const bcrypt = require('bcrypt');                               // include the bcrypt module
 const { ObjectId } = require('mongodb');                        // include the ObjectId module
-const { MongoClient} = require('mongodb');                      // include the MongoClient modules
+const { MongoClient } = require('mongodb');                      // include the MongoClient modules
 const AWS = require('aws-sdk');                                 // include the AWS module
 const multer = require('multer');                               // include the multer module
 const multerS3 = require('multer-s3');                          // include the multer-s3 module
@@ -69,8 +69,7 @@ var mongoStore = MongoDBStore.create({
 // **************************** Functions ****************************
 // Necessary functions to ensure non-repeating code.
 // Fetches all the items from the product list
-async function fetchAllItems()
-{
+async function fetchAllItems() {
     const productsColl = database.db(mongodb_database).collection('listing_items');
     return await productsColl.find().toArray(); // Fetch all items;
 }
@@ -121,17 +120,21 @@ app.get('/', async (req, res) => {
         const productsCollection = database.db(mongodb_database).collection('listing_items');
         const featureVideoCollection = database.db(mongodb_database).collection('featureVideo');
 
+        // Fetch featured items
+        const featuredItems = await productsCollection.find({ isFeatureItem: true }).toArray();
+
+
         // Called here to dynamically get the price through the category type
-        let currentListings = await productsCollection.find({ isFeatureItem: false,
-            item_title: {$regex: searchKey, $options: 'i'},
-            item_category: {$regex: categoryKeyword},
-            item_sub_category: {$regex: subCategoryKeyword}
-        }).sort({item_price: orderCode});
+        let currentListings = await productsCollection.find({
+            isFeatureItem: false,
+            item_title: { $regex: searchKey, $options: 'i' },
+            item_category: { $regex: categoryKeyword },
+            item_sub_category: { $regex: subCategoryKeyword }
+        }).sort({ item_price: orderCode });
 
         // turn into array and push price field into the prices array
         let currentListingsArray = await currentListings.toArray();
-        currentListingsArray.forEach(function(item)
-        {
+        currentListingsArray.forEach(function (item) {
             prices.push(item.item_price)
         });
 
@@ -139,7 +142,7 @@ app.get('/', async (req, res) => {
         currentListings.close();
 
         // sort prices to make it easy on finding min and max
-        const sortedPrices = prices.sort(function(a, b) {
+        const sortedPrices = prices.sort(function (a, b) {
             if (a < b)
                 return 1;
             else if (a > b)
@@ -157,7 +160,7 @@ app.get('/', async (req, res) => {
         if (previousIndex < 1)
             previousIndex = 1;
 
-        if (nextIndex>=numberOfPages)
+        if (nextIndex >= numberOfPages)
             nextIndex--;
 
         for (let i = 0; i <= (numberOfPages); i++)
@@ -178,12 +181,12 @@ app.get('/', async (req, res) => {
         // initially set to 0
         req.session.pageIndex = 0;
 
-        const subCategories = await categoryCollection.find({category_type: req.session.category}).project({_id: 0, sub_categories: 1}).toArray();
+        const subCategories = await categoryCollection.find({ category_type: req.session.category }).project({ _id: 0, sub_categories: 1 }).toArray();
         let bodyFilters;
         if (subCategories.length < 1 || subCategories[0].sub_categories.length < 1)
-            bodyFilters = getBodyFilters(sortedPrices[0], sortedPrices[prices.length-1], maximumPrice, []);
+            bodyFilters = getBodyFilters(sortedPrices[0], sortedPrices[prices.length - 1], maximumPrice, []);
         else
-            bodyFilters = getBodyFilters(sortedPrices[0], sortedPrices[prices.length-1], maximumPrice, subCategories[0].sub_categories);
+            bodyFilters = getBodyFilters(sortedPrices[0], sortedPrices[prices.length - 1], maximumPrice, subCategories[0].sub_categories);
 
 
         const featureVideo = await featureVideoCollection.findOne({});
@@ -199,7 +202,8 @@ app.get('/', async (req, res) => {
             paginationIndex: pageIndexes,
             previousPage: previousIndex,
             nextPage: nextIndex,
-            featureVideo: featureVideo
+            featureVideo: featureVideo,
+            featuredItems: featuredItems
         });
     } catch (error) {
         console.error('Failed to fetch current listings:', error);
@@ -256,21 +260,21 @@ app.post('/userLogInSubmit', async (req, res) => {
     const validationResult = schema.validate({ email, password });
     if (validationResult.error != null) {
         console.log(validationResult.error);
-        res.render("userLogIn", {error: "Error: "+validationResult.error.message});
+        res.render("userLogIn", { error: "Error: " + validationResult.error.message });
         return;
     }
 
     const user = await userCollection.findOne({ email: email });
     if (user === null) {
         console.log("User not found");
-        res.render("userLogIn", {error: "Error: User not found"});
+        res.render("userLogIn", { error: "Error: User not found" });
         return;
     }
 
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
         console.log("Invalid password");
-        res.render("userLogIn", {error: "Error: Invalid password"});
+        res.render("userLogIn", { error: "Error: Invalid password" });
         return;
     }
 
@@ -284,15 +288,14 @@ app.post('/userLogInSubmit', async (req, res) => {
     res.redirect("/");
 });
 
-
 app.get('/cart', async (req, res) => {
     const cartItems = req.session.cart || [];
     res.render('cartView', {
-      isLoggedIn: req.session.loggedIn, 
-      items: cartItems, 
-      paypalClientId: process.env.PAYPAL_CLIENT_ID, 
-      categories: await getCategoriesNav(),
-      isAdmin: req.session.isAdmin || false
+        isLoggedIn: req.session.loggedIn,
+        items: cartItems,
+        paypalClientId: process.env.PAYPAL_CLIENT_ID,
+        categories: await getCategoriesNav(),
+        isAdmin: req.session.isAdmin || false
     });
 });
 
@@ -352,7 +355,7 @@ app.get('/product-info/:id', async (req, res) => {
     try {
         const itemId = req.params.id;
         const productsCollection = database.db(mongodb_database).collection('listing_items');
-        
+
         const item = await productsCollection.findOne({ _id: new ObjectId(itemId) });
 
         if (!item) {
@@ -361,7 +364,7 @@ app.get('/product-info/:id', async (req, res) => {
         }
 
         const isLoggedIn = req.session.loggedIn;
-        res.render('product-info', { item: item, isLoggedIn : isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav()});
+        res.render('product-info', { item: item, isLoggedIn: isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav() });
     } catch (error) {
         console.error('Failed to fetch item:', error);
         res.status(500).send('Error fetching item details');
@@ -370,19 +373,20 @@ app.get('/product-info/:id', async (req, res) => {
 
 
 app.get('/about', async (req, res) => {
-    const isLoggedIn = req.session.loggedIn; 
-    res.render("about", {isLoggedIn : isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav()});
+    const isLoggedIn = req.session.loggedIn;
+    res.render("about", { isLoggedIn: isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav() });
 });
 
 app.get('/contact-us', async (req, res) => {
-    const isLoggedIn = req.session.loggedIn; 
-    res.render("contact", {isLoggedIn : isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav()});
+    const isLoggedIn = req.session.loggedIn;
+    res.render("contact", { isLoggedIn: isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav() });
 });
 
 app.get('/manageUser', async (req, res) => {
     if (req.session.loggedIn) {
         const isLoggedIn = req.session.loggedIn;
         res.render("user-management", {isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav()});
+
     }
     else {
         res.redirect('/userLogIn');
@@ -440,8 +444,8 @@ app.get('/settings', async (req, res) => {
         const isLoggedIn = req.session.loggedIn;
         const user = req.session.name;
         const email = req.session.email;
-        res.render("settings", {isLoggedIn : isLoggedIn, isAdmin: req.session.isAdmin, user : user, email : email, categories: await getCategoriesNav()});
-    } 
+        res.render("settings", { isLoggedIn: isLoggedIn, isAdmin: req.session.isAdmin, user: user, email: email, categories: await getCategoriesNav() });
+    }
     else {
         res.redirect('/adminLogIn');
     }
@@ -479,7 +483,7 @@ app.post('/changePassword', async (req, res) => {
     await adminCollection.updateOne({ email }, { $set: { password: hashedNewPassword } });
     req.session.password = hashedNewPassword;
 
-    res.render('passwordUpdated', { isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav()});
+    res.render('passwordUpdated', { isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav() });
 });
 
 
@@ -716,7 +720,7 @@ app.get('/StripeSuccess', async (req, res) => {
 
 app.get('/StripeCancel', (req, res) => {
     res.render('StripeCancel');
-}); 
+});
 
 // ----------------- Stripe Payment END -----------------
 
