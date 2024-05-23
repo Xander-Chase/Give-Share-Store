@@ -17,6 +17,7 @@ const { google } = require("googleapis");                       // Import google
 const fetch = import('node-fetch');                             // Import node-fetch module to fetch data from API
 const mailchimp = require('@mailchimp/mailchimp_marketing');    // Import mailchimp_marketing module to interact with Mailchimp API
 const {RecaptchaEnterpriseServiceClient} = require('@google-cloud/recaptcha-enterprise'); // Import recaptcha-enterprise module to interact with Google Recaptcha Enterprise API
+const bodyParser = require('body-parser');
 
 
 const app = express();
@@ -27,6 +28,8 @@ app.use(express.static('public'));                          // serve static imag
 app.use(express.static('css'));                             // serve static css files
 app.use(express.static('js'));                              // serve static js files
 app.use(express.json());                                    // parse json request bodies
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
 
 const port = process.env.PORT || 5000;                      // Set port to 5000 if not defined in ..env file
 
@@ -44,6 +47,7 @@ const PayPalSecret = process.env.PAYPAL_CLIENT_SECRET;      // Import PayPal Sec
 const PayPal_endpoint_url = PayPalEnvironment === 'sandbox' ? 'https://api-m.sandbox.paypal.com' : 'https://api-m.paypal.com'; // Import PayPal endpoint URL from ..env file
 const projectID = process.env.CAPTCHA_PROJECT_ID            // Import Captcha Project ID from ..env file
 const recaptchaKey = process.env.CAPTCHA_SECRET_KEY         // Import Captcha Secret Key from ..env file
+process.env.GOOGLE_APPLICATION_CREDENTIALS = './thevintagegarage-1715977793921-f27e14d35c3e.json'
 
 
 // Configure and instantiate Google OAuth2.0 client
@@ -1383,28 +1387,11 @@ app.get('/StripeCancel', (req, res) => {
 
 // ----------------- reCAPTCHA START -----------------
 
-/**
-  * Create an assessment to analyze the risk of a UI action.
-  *
-  * projectID: Your Google Cloud Project ID.
-  * recaptchaSiteKey: The reCAPTCHA key associated with the site/app
-  * token: The generated token obtained from the client.
-  * recaptchaAction: Action name corresponding to the token.
-  */
-async function createAssessment({
-    // TODO: Replace the token and reCAPTCHA action variables before running the sample.
-    projectID,
-    recaptchaKey,
-    token = "action-token",
-    recaptchaAction = "action-name",
-  }) {
-    // Create the reCAPTCHA client.
-    // TODO: Cache the client generation code (recommended) or call client.close() before exiting the method.
+async function validateRecaptchaToken(token, recaptchaAction) {
     const client = new RecaptchaEnterpriseServiceClient();
     const projectPath = client.projectPath(projectID);
   
-    // Build the assessment request.
-    const request = ({
+    const request = {
       assessment: {
         event: {
           token: token,
@@ -1412,32 +1399,40 @@ async function createAssessment({
         },
       },
       parent: projectPath,
-    });
+    };
   
-    const [ response ] = await client.createAssessment(request);
+    const [response] = await client.createAssessment(request);
   
-    // Check if the token is valid.
     if (!response.tokenProperties.valid) {
       console.log(`The CreateAssessment call failed because the token was: ${response.tokenProperties.invalidReason}`);
-      return null;
+      return false;
     }
   
-    // Check if the expected action was executed.
-    // The `action` property is set by user client in the grecaptcha.enterprise.execute() method.
     if (response.tokenProperties.action === recaptchaAction) {
-      // Get the risk score and the reason(s).
-      // For more information on interpreting the assessment, see:
-      // https://cloud.google.com/recaptcha-enterprise/docs/interpret-assessment
       console.log(`The reCAPTCHA score is: ${response.riskAnalysis.score}`);
       response.riskAnalysis.reasons.forEach((reason) => {
         console.log(reason);
       });
   
-      return response.riskAnalysis.score;
+      return response.riskAnalysis.score >= 0.5;
     } else {
       console.log("The action attribute in your reCAPTCHA tag does not match the action you are expecting to score");
-      return null;
+      return false;
     }
   }
+  
+  app.post('/submitContactForm', async (req, res) => {
+    const { name, email, message, token } = req.body;
+  
+    const isValidRecaptcha = await validateRecaptchaToken(token, 'submit');
+  
+    if (!isValidRecaptcha) {
+      return res.status(400).send('Failed reCAPTCHA verification');
+    }
+  
+    // ********** IMPLEMENT MAILGUN AUTOMATED EMAIL HERE ********
+    console.log('Form submitted successfully');
+    res.send('Form submitted successfully');
+  });
 
 // ----------------- reCAPTCHA END -----------------

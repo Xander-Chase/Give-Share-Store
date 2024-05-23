@@ -12,9 +12,11 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.574.0",
     "@aws-sdk/lib-storage": "^3.574.0",
+    "@google-cloud/recaptcha-enterprise": "^5.9.0",
     "@mailchimp/mailchimp_marketing": "^3.0.80",
     "aws-sdk": "^2.1621.0",
     "bcrypt": "^5.1.1",
+    "body-parser": "^1.20.2",
     "connect-mongo": "^5.1.0",
     "dotenv": "^16.4.5",
     "ejs": "^3.1.10",
