@@ -1,22 +1,220 @@
 <%- include("metadata") %>
+<head>
+    <style>
+        .first-img {
+            max-width: 30vw;
+            max-height: 40vh;
+        }
 
+        .first-img-container {
+            max-width: 30vw;
+            max-height: 40vh;
+            overflow: hidden;
+        }
+
+        .extra-img {
+            max-width: 16vw;
+            max-height: 20vh;
+        }
+
+        .extra-img-container {
+            max-width: 16vw;
+            max-height: 20vh;
+            overflow: hidden;
+            padding-left: 1vw;
+            padding-right: 1vw;
+        }
+
+        .product-video {
+            width: 874px;
+            height: 480px;
+        }
+
+        .header-text {
+            font-size: 24pt;
+            font-weight: bold;
+        }
+
+        .subtext {
+            font-size: 10pt;
+        }
+
+        .content-text {
+            font-size: 14pt;
+        }
+
+        .modal {
+            display: none;
+            width: 60vw;
+            height: 90vh;
+            background-color: rgba(100, 100, 100, 0.65);
+            position: fixed;
+            z-index: 100;
+            left: 20vw;
+            top: 5vh;
+            animation-name: animateModal;
+            animation-duration: 0.5s;
+        }
+
+        .modal-content {
+            background-color: rgba(0, 0, 0, 0);
+            width: inherit;
+            height: inherit;
+            border: 0px;
+        }
+
+        .modal-image {
+            display: block;
+            margin: auto;
+            max-width: 55vw;
+            max-height: 85vh;
+            border: 3px solid rgba(50, 50, 50, 0.8);
+        }
+
+        .modal-text {
+            margin-left: auto;
+            margin-right: auto;
+            color: white;
+            font-size: 16pt;
+        }
+
+        .big-btn {
+            width: 25vw;
+            height: 10vh;
+            font-size: 20pt;
+        }
+
+        button {
+            border: 0px;
+            background-color: white;
+        }
+
+        @media (max-width: 576px) {
+            .extra-img {
+                max-width: 12vw;
+                max-height: 15vh;
+            }
+
+            .subtext {
+                font-size: 12pt;
+            }
+
+            .content-text {
+                font-size: 16pt;
+            }
+        }
+
+        @media (max-width: 874px) {
+            .product-video {
+                width: 480px;
+                height: 360px;
+            }
+        }
+
+        @media (max-width: 632px) {
+            .big-btn {
+                width: 30vw;
+                font-size: 16pt;
+            }
+        }
+
+        @keyframes animateModal {
+            from {top: 0vh; opacity: 0%;}
+            to {top: 5vh; opacity: 100%;}
+        }
+    </style>
+</head>
 <%- include("searchNavBar") %>
-<div class="container mt-5">
+<% if (item.product_img_URL && item.product_img_URL.length > 0) { %>
+    <% item.product_img_URL.forEach(function(url, index) { %>
+        <div class="modal">
+            <div class="modal-content">
+                <span class="modal-text">Click/tap anywhere on this modal to dismiss it</span>
+                <img src="<%= item.product_img_URL[index] %>" class="modal-image">
+            </div>
+        </div>
+    <% }); %>
+<% } %>
+<div class="container mt-5" style="padding-bottom: 3vh;">
     <% if(item.product_img_URL && item.product_img_URL.length > 0) { %>
-        <img src="<%= item.product_img_URL[0] %>" alt="Product Image" height="200px" width="200px">
+        <% item.product_img_URL.forEach(function(url, index) { %>
+            <% if (index == 0) { %>
+                <div class="row">
+                    <div class="col-4 first-img-container d-flex align-items-center justify-content-center">
+                        <button onclick="DisplayImageModal('<%= index %>')">
+                            <img src="<%= url %>" alt="Product Image 1" class="first-img">
+                        </button>
+                    </div>
+                    <div class="col-8">
+                        <p class="header-text"><%= item.item_title %></p>
+                        <p class="subtext">Price: $<%= item.item_price.toFixed(2) %></p>
+                        <p class="subtext">Shipping Cost: $<%= item.item_estimatedShippingCost.toFixed(2) %></p>
+                        <p class="subtext">QTY: <%= item.item_quantity %></p>
+                        <p class="content-text">Description: <%= item.item_detailed_description %></p>
+                        <button type="button" class="btn btn-primary big-btn">Add to cart</button>
+                    </div>
+                </div>
+                <div class="row"><br></div>
+            <% } %>
+        <% }); %>
+        <div class="row">
+            <% item.product_img_URL.forEach(function(url, index) { %>
+                <% if (index != 0) { %>
+                    <div class="col-2 extra-img-container d-flex align-items-center justify-content-center">
+                        <button onclick="DisplayImageModal('<%= index %>')">
+                            <img src="<%= url %>" alt="Product Image <%= index + 1 %>" class="extra-img">
+                        </button>
+                    </div>
+                <% } %>
+            <% }); %>
+        </div>
     <% } %>
     <% if(item.product_video_URL && item.product_video_URL.length > 0) { %>
-        <video width="320" height="240" controls>
-            <source src="<%= item.product_video_URL[0] %>" type="video/mp4">
-            Your browser does not support the video tag.
-        </video>
+        <br>
+        <div class="row text-center">
+            <p class="header-text">Product Video:</p>
+            <div class="col d-flex justify-content-center">
+                <video class="product-video" controls>
+                    <source src="<%= item.product_video_URL[0] %>" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+        </div>
     <% } %>
-    <h2><%= item.item_title %></h2>
-    <h6>Price: $<%= item.item_price.toFixed(2) %></h6>
-    <h6>Shipping Cost: $<%= item.item_estimatedShippingCost.toFixed(2) %></h6>
-    <h6>QTY: <%= item.item_quantity %></h6>
-    <h4>Description: <%= item.item_detailed_description %></h4>
-    
-    <br>
-    <button type="button" class="btn btn-primary">Add to cart</button>
 </div>
+<%- include("footer") %>
+<script>
+    var img_modals = document.getElementsByClassName("modal");
+
+    function DisplayImageModal(index) {
+        img_modals[index].style.display = "block";
+    }
+
+    window.onclick = function(event) {
+        if (ImageModalClose(event) == true) {
+            for (var i = 0; i < 9; i++) {
+                img_modals[i].style.display = "none";
+            }
+        }
+    }
+
+    function ImageModalClose(event) {
+        var click = false;
+        for (var i = 0; i < img_modals.length; i++) {
+            if (event.target == img_modals[i]) {
+                click = true;
+            }
+            img_modals[i].childNodes.forEach(function(child) {
+                if (event.target == child) {
+                    click = true;
+                }
+                child.childNodes.forEach(function(child2) {
+                    if (event.target == child2) {
+                        click = true;
+                    }
+                });
+            });
+        }
+        return click;
+    }
+</script>

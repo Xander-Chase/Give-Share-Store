@@ -1,0 +1,37 @@
+<style>
+    .mandatory {
+        color: red;
+    }
+    .video-container {
+        margin-top: 20px;
+    }
+</style>
+
+<body>
+    <div class="container mt-5">
+        <h2>Manage Feature Video</h2>
+        <form action="/admin/submitFeatureVideo" method="post" enctype="multipart/form-data" class="mt-4">
+            <div class="mb-3">
+                <label for="video" class="form-label">Feature Video</label>
+                <input type="file" class="form-control" id="video" name="video" <%= featureVideo && featureVideo.url ? 'disabled' : '' %> >
+                <% if (featureVideo && featureVideo.url) { %>
+                    <p class="text-danger">Please remove the current video before uploading a new one.</p>
+                <% } %>
+            </div>
+            <button type="submit" class="btn btn-primary" <%= featureVideo && featureVideo.url ? 'disabled' : '' %> >Submit Video</button>
+        </form>
+
+        <% if (featureVideo && featureVideo.url) { %>
+            <div class="video-container">
+                <h4>Current Feature Video:</h4>
+                <video width="320" height="240" controls>
+                    <source src="<%= featureVideo.url %>" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+                <form action="/admin/removeFeatureVideo" method="post" class="mt-2">
+                    <button type="submit" class="btn btn-danger">Remove Video</button>
+                </form>
+            </div>
+        <% } %>
+    </div>
+</body>

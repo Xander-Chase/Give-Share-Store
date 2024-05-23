@@ -1,3 +1,11 @@
+<head>
+    <style>
+        .product-img {
+            max-height: 30vh;
+            overflow: hidden;
+        }
+    </style>
+</head>
 <div class="container mt-5">
     <h2>Current Listings</h2>
     <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
@@ -5,7 +13,9 @@
             <div class="col">
                 <div class="card shadow-sm">
                     <% if(listing.product_img_URL && listing.product_img_URL.length > 0) { %>
-                        <img src="<%= listing.product_img_URL[0] %>" class="bd-placeholder-img card-img-top" alt="...">
+                        <div class="d-flex product-img align-items-center justify-content-center" style="border: solid; border-width: 2px; border-color: lightgray; max-width: 25vw;">
+                            <img src="<%= listing.product_img_URL[0] %>" class="bd-placeholder-img card-img-top" alt="...">
+                        </div>
                     <% } else { %>
                         <svg class="bd-placeholder-img card-img-top" width="100%" height="225" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Placeholder: Thumbnail" preserveAspectRatio="xMidYMid slice" focusable="false">
                             <title>Placeholder</title>
@@ -18,7 +28,7 @@
                         <div class="d-flex justify-content-between align-items-center">
                             <div class="btn-group">
                                 <a href="/product-info/<%= listing._id %>" class="btn btn-sm btn-outline-secondary">View</a>
-                                <a href="/editListing/<%= listing._id %>" class="btn btn-sm btn-outline-secondary">Edit</a>
+                                <a href="/admin/editListing/<%= listing._id %>" class="btn btn-sm btn-outline-secondary">Edit</a>
                             </div>
                             <small class="text-muted"><%= listing.item_price %> CAD</small>
                         </div>
