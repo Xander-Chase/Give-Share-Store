@@ -33,18 +33,23 @@ const sendOrderConfirmationEmail = (email, orderDetails) => {
         from: 'thevintagegaragetest@gmail.com',
         to: email,
         subject: 'Order Confirmation',
-        text: `Thank you for your purchase!\n\n${orderDetails}`
+        text: `Thank you for your purchase!\n\n${orderDetails}
+                \n\n Your order is being shipped as soon as possible!
+                \n If you selected pickup, please email us at wegiveshare@gmail.com to arrange a time to pick up your order.`
     };
 
     return mg.messages.create(process.env.MAILGUN_DOMAIN, messageData);
 };
 
-const sendOrderNotificationEmail = (email, orderDetails) => {
+const sendOrderNotificationEmail = (email, orderDetails, customerDetails) => {
     const messageData = {
         from: 'thevintagegaragetest@gmail.com',
         to: email,
         subject: 'New Order Received',
-        text: `A new order has been placed:\n\n${orderDetails}`
+        text: `A new order has been placed:\n\n${orderDetails}
+        \n\n Customer Details:
+        \n ${customerDetails}
+        `
     };
 
     return mg.messages.create(process.env.MAILGUN_DOMAIN, messageData);

@@ -507,7 +507,7 @@ app.post('/create-paypal-order', async (req, res) => {
         const fetch = await import('node-fetch').then(module => module.default);
         const accessToken = await getAccessToken();
 
-        const { intent, purchase_units, insuranceTotal, shippingTotal, taxTotal, finalTotal } = req.body;
+        const { intent, insuranceTotal, shippingTotal, taxTotal, finalTotal, subtotal, email, address, city, state, zip, itemIds } = req.body;
 
         const orderData = {
             intent: intent.toUpperCase(),
@@ -516,10 +516,10 @@ app.post('/create-paypal-order', async (req, res) => {
                     currency_code: "CAD",
                     value: finalTotal.toFixed(2),
                     breakdown: {
-                        item_total: { value: (finalTotal - insuranceTotal - shippingTotal - taxTotal).toFixed(2), currency_code: "CAD" },
-                        shipping: { value: shippingTotal.toFixed(2), currency_code: "CAD" },
-                        insurance: { value: insuranceTotal.toFixed(2), currency_code: "CAD" },
-                        tax_total: { value: taxTotal.toFixed(2), currency_code: "CAD" }
+                        item_total: { value: (subtotal || 0).toFixed(2), currency_code: "CAD" },
+                        shipping: { value: (shippingTotal || 0).toFixed(2), currency_code: "CAD" },
+                        insurance: { value: (insuranceTotal || 0).toFixed(2), currency_code: "CAD" },
+                        tax_total: { value: (taxTotal || 0).toFixed(2), currency_code: "CAD" }
                     }
                 }
             }]
@@ -543,18 +543,41 @@ app.post('/create-paypal-order', async (req, res) => {
 });
 
 app.post('/mark-items-sold', async (req, res) => {
-    const itemIds = req.query.itemIds ? req.query.itemIds.split(',') : [];
+    const { itemIds, email, address, city, state, zip, subtotal, shippingTotal, insuranceTotal, taxTotal, finalTotal } = req.body;
 
     try {
-        if (itemIds.length > 0) {
+        if (itemIds && Array.isArray(itemIds) && itemIds.length > 0) {
             const productsCollection = database.db(mongodb_database).collection('listing_items');
+            const items = await productsCollection.find({ _id: { $in: itemIds.map(id => new ObjectId(id)) } }).toArray();
+
             await productsCollection.updateMany(
                 { _id: { $in: itemIds.map(id => new ObjectId(id)) } },
                 { $set: { isSold: true } }
             );
+
+            const itemDetails = items.map(item => `${item.item_title} - $${item.item_price}`).join('\n');
+            const ownerEmail = "ajgabl18@gmail.com";
+
+            const orderDetails = `
+                Items:
+                ${itemDetails}
+
+                Shipping: $${shippingTotal.toFixed(2)}
+                Insurance: $${insuranceTotal.toFixed(2)}
+                Taxes: $${taxTotal.toFixed(2)}
+                Total: $${finalTotal.toFixed(2)}
+
+            `;
+
+            const customerDetails = `
+                Purchaser Email: ${email}
+                Address: ${address}, ${city}, ${state}, ${zip}
+            `;
+
+            sendOrderConfirmationEmail(email, orderDetails);
+            sendOrderNotificationEmail(ownerEmail, orderDetails, customerDetails);
         }
 
-        // Clear the cart
         req.session.cart = [];
         req.session.save(err => {
             if (err) {
@@ -578,21 +601,17 @@ const stripe = require('stripe')('sk_test_51OZSVHAcq23T9yD7gpE3kQS73T5AnO6UEaecX
 
 app.post('/create-checkout-session', async (req, res) => {
     try {
-        const itemIds = req.body.productIds;
-        const insuranceTotal = parseFloat(req.body.insuranceTotal) || 0;
-        const shippingTotal = parseFloat(req.body.shippingTotal) || 0;
-        const taxTotal = parseFloat(req.body.taxTotal) || 0;
-        const email = req.body.email; // Capture email from request
+        const { productIds, insuranceTotal, shippingTotal, taxTotal, finalTotal, subtotal, email, address, city, state, zip } = req.body;
 
-        const YOUR_DOMAIN = 'http://localhost:5000'; // Replace with client's domain
+        const YOUR_DOMAIN = 'http://localhost:5000'; // Replace with client's domain when finalized
 
-        if (!itemIds || !Array.isArray(itemIds)) {
+        if (!productIds || !Array.isArray(productIds)) {
             throw new Error('Product IDs not received or not in array format');
         }
 
         const productsCollection = database.db(mongodb_database).collection('listing_items');
         const items = await productsCollection.find({
-            '_id': { $in: itemIds.map(id => ObjectId.createFromHexString(id)) }
+            '_id': { $in: productIds.map(id => ObjectId.createFromHexString(id)) }
         }).toArray();
 
         const line_items = items.map(item => ({
@@ -602,7 +621,7 @@ app.post('/create-checkout-session', async (req, res) => {
                     name: item.item_title,
                     images: [item.product_img_URL[0]]
                 },
-                unit_amount: Math.round(item.item_price * 100),
+                unit_amount: Math.round(item.item_price * 100), 
             },
             quantity: 1,
         }));
@@ -614,7 +633,7 @@ app.post('/create-checkout-session', async (req, res) => {
                     product_data: {
                         name: 'Shipping'
                     },
-                    unit_amount: Math.round(shippingTotal * 100),
+                    unit_amount: Math.round(shippingTotal * 100), 
                 },
                 quantity: 1,
             });
@@ -627,7 +646,7 @@ app.post('/create-checkout-session', async (req, res) => {
                     product_data: {
                         name: 'Insurance'
                     },
-                    unit_amount: Math.round(insuranceTotal * 100),
+                    unit_amount: Math.round(insuranceTotal * 100), 
                 },
                 quantity: 1,
             });
@@ -640,7 +659,7 @@ app.post('/create-checkout-session', async (req, res) => {
                     product_data: {
                         name: 'Tax'
                     },
-                    unit_amount: Math.round(taxTotal * 100),
+                    unit_amount: Math.round(taxTotal * 100), 
                 },
                 quantity: 1,
             });
@@ -650,7 +669,7 @@ app.post('/create-checkout-session', async (req, res) => {
             payment_method_types: ['card'],
             line_items,
             mode: 'payment',
-            success_url: `${YOUR_DOMAIN}/StripeSuccess?itemIds=${itemIds.join(',')}&email=${email}`,
+            success_url: `${YOUR_DOMAIN}/StripeSuccess?itemIds=${productIds.join(',')}&email=${email}&address=${address}&city=${city}&state=${state}&zip=${zip}&subtotal=${subtotal}&shippingTotal=${shippingTotal}&insuranceTotal=${insuranceTotal}&taxTotal=${taxTotal}&finalTotal=${finalTotal}`,
             cancel_url: `${YOUR_DOMAIN}/StripeCancel`,
             customer_email: email 
         });
@@ -659,6 +678,66 @@ app.post('/create-checkout-session', async (req, res) => {
     } catch (error) {
         console.error('Failed to create checkout session:', error);
         res.status(500).send('Error creating checkout session: ' + error.message);
+    }
+});
+
+app.get('/StripeSuccess', async (req, res) => {
+    const itemIds = req.query.itemIds ? req.query.itemIds.split(',') : [];
+    const email = req.query.email;
+    const address = req.query.address || '';
+    const city = req.query.city || '';
+    const state = req.query.state || '';
+    const zip = req.query.zip || '';
+    const subtotal = parseFloat(req.query.subtotal);
+    const shippingTotal = parseFloat(req.query.shippingTotal);
+    const insuranceTotal = parseFloat(req.query.insuranceTotal);
+    const taxTotal = parseFloat(req.query.taxTotal);
+    const finalTotal = parseFloat(req.query.finalTotal);
+
+    try {
+        if (itemIds.length > 0) {
+            const productsCollection = database.db(mongodb_database).collection('listing_items');
+            const items = await productsCollection.find({ _id: { $in: itemIds.map(id => new ObjectId(id)) } }).toArray();
+
+            await productsCollection.updateMany(
+                { _id: { $in: itemIds.map(id => new ObjectId(id)) } },
+                { $set: { isSold: true } }
+            );
+
+            const itemDetails = items.map(item => `${item.item_title} - $${item.item_price}`).join('\n');
+            const ownerEmail = "ajgabl18@gmail.com";
+
+            const orderDetails = `
+                Items:
+                ${itemDetails}
+
+                Shipping: $${shippingTotal.toFixed(2)}
+                Insurance: $${insuranceTotal.toFixed(2)}
+                Taxes: $${taxTotal.toFixed(2)}
+                Total: $${finalTotal.toFixed(2)}
+
+            `;
+
+            const customerDetails = `
+                Purchaser Email: ${email}
+                Address: ${address}, ${city}, ${state}, ${zip}
+            `;
+
+            sendOrderConfirmationEmail(email, orderDetails);
+            sendOrderNotificationEmail(ownerEmail, orderDetails, customerDetails);
+        }
+
+        req.session.cart = [];
+        req.session.save(err => {
+            if (err) {
+                console.error('Error saving session:', err);
+                return res.status(500).send('Error clearing the cart');
+            }
+            res.render('StripeSuccess', { message: 'Payment successful, items marked as sold.' });
+        });
+    } catch (error) {
+        console.error('Error updating items as sold:', error);
+        res.status(500).send('Error updating items as sold: ' + error.message);
     }
 });
 
@@ -717,84 +796,6 @@ app.post('/sendReferralEmail', async (req, res) => {
 });
 
 // ----------------- Email Sending END -----------------
-
-// ----------------- Stripe Payment Success START -----------------
-
-app.get('/StripeSuccess', async (req, res) => {
-    const itemIds = req.query.itemIds ? req.query.itemIds.split(',') : [];
-    const email = req.query.email; // Get email from query parameters
-
-    try {
-        if (itemIds.length > 0) {
-            const productsCollection = database.db(mongodb_database).collection('listing_items');
-            const items = await productsCollection.find({ _id: { $in: itemIds.map(id => new ObjectId(id)) } }).toArray();
-
-            await productsCollection.updateMany(
-                { _id: { $in: itemIds.map(id => new ObjectId(id)) } },
-                { $set: { isSold: true } }
-            );
-
-            const itemDetails = items.map(item => `${item.item_title} - $${item.item_price}`).join('\n');
-            const ownerEmail = "ajgabl18@gmail.com";
-
-            sendOrderConfirmationEmail(email, `Thank you for your purchase!\n\n${itemDetails}`);
-            sendOrderNotificationEmail(ownerEmail, `A new order has been placed:\n\n${itemDetails}`);
-        }
-
-        req.session.cart = [];
-        req.session.save(err => {
-            if (err) {
-                console.error('Error saving session:', err);
-                return res.status(500).send('Error clearing the cart');
-            }
-            res.render('StripeSuccess', { message: 'Payment successful, items marked as sold.' });
-        });
-    } catch (error) {
-        console.error('Error updating items as sold:', error);
-        res.status(500).send('Error updating items as sold: ' + error.message);
-    }
-});
-
-// ----------------- Stripe Payment Success END -----------------
-
-// ----------------- PayPal Payment Success START -----------------
- 
-app.post('/mark-items-sold', async (req, res) => {
-    const itemIds = req.body.itemIds ? req.body.itemIds.split(',') : [];
-    const email = req.body.email; // Capture email from request body
-
-    try {
-        if (itemIds.length > 0) {
-            const productsCollection = database.db(mongodb_database).collection('listing_items');
-            const items = await productsCollection.find({ _id: { $in: itemIds.map(id => new ObjectId(id)) } }).toArray();
-
-            await productsCollection.updateMany(
-                { _id: { $in: itemIds.map(id => new ObjectId(id)) } },
-                { $set: { isSold: true } }
-            );
-
-            const itemDetails = items.map(item => `${item.item_title} - $${item.item_price}`).join('\n');
-            const ownerEmail = "ajgabl18@gmail.com";
-
-            sendOrderConfirmationEmail(email, `Thank you for your purchase!\n\n${itemDetails}`);
-            sendOrderNotificationEmail(ownerEmail, `A new order has been placed:\n\n${itemDetails}`);
-        }
-
-        req.session.cart = [];
-        req.session.save(err => {
-            if (err) {
-                console.error('Error saving session:', err);
-                return res.status(500).send('Error clearing the cart');
-            }
-            res.render('paypalSuccess', { message: 'Payment successful, items marked as sold.' });
-        });
-    } catch (error) {
-        console.error('Error updating items as sold:', error);
-        res.status(500).send('Error updating items as sold: ' + error.message);
-    }
-});
-
-// ----------------- PayPal Payment Success END -----------------
 
 // ----------------- reCAPTCHA START -----------------
 

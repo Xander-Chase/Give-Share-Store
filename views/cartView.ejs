@@ -83,7 +83,7 @@
                                     <div>
                                         <label><input type="checkbox" class="insurance-checkbox" data-id="<%= item._id %>" data-cost="<%= item.item_estimatedInsuranceCost %>" /> Insurance ($<%= item.item_estimatedInsuranceCost %>)</label>
                                         <label><input type="checkbox" class="shipping-checkbox" data-id="<%= item._id %>" data-cost="<%= item.item_estimatedShippingCost %>" /> Shipping ($<%= item.item_estimatedShippingCost %>)</label>
-                                        <label><input type="checkbox" class="pickup-checkbox" data-id="<%= item._id %>" /> Pickup</label>
+                                        <label><input type="checkbox" class="pickup-checkbox" data-id="<%= item._id %>" checked /> Pickup</label>
                                     </div>
                                 </div>
                                 <div class="col-sm-5">
@@ -134,6 +134,29 @@
                             <strong id="total">$<%= total.toFixed(2) %></strong>
                         </li>
                     </ul>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email address</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+                    <div id="shipping-address-form" class="mb-3" style="display: none;">
+                        <h5>Shipping Address</h5>
+                        <div class="mb-3">
+                            <label for="address" class="form-label">Address</label>
+                            <input type="text" class="form-control" id="address" name="address" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="city" class="form-label">City</label>
+                            <input type="text" class="form-control" id="city" name="city" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="state" class="form-label">State</label>
+                            <input type="text" class="form-control" id="state" name="state" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="zip" class="form-label">Zip Code</label>
+                            <input type="text" class="form-control" id="zip" name="zip" required>
+                        </div>
+                    </div>
                     <form class="card p2" action="/create-checkout-session" method="POST" id="stripe-form">
                         <% items.forEach(function(item) { %>
                             <input type="hidden" name="productIds" value="<%= item._id.toString() %>">
@@ -142,17 +165,17 @@
                         <input type="hidden" name="shippingTotal" id="shippingTotalInput" value="0">
                         <input type="hidden" name="taxTotal" id="taxTotalInput" value="0">
                         <input type="hidden" name="finalTotal" id="finalTotalInput" value="0">
-                        <div class="mb-3">
-                            <label for="email" class="form-label">Email address</label>
-                            <input type="email" class="form-control" id="email" name="email" required>
-                        </div>
+                        <input type="hidden" name="email" id="emailInput">
+                        <input type="hidden" name="address" id="addressInput">
+                        <input type="hidden" name="city" id="cityInput">
+                        <input type="hidden" name="state" id="stateInput">
+                        <input type="hidden" name="zip" id="zipInput">
                         <button type="submit" id="checkout-button" class="btn btn-primary">Proceed to Checkout</button>
                     </form>
-                    
+
                     <div id="paypal-button-container"></div>
                     <script src="https://www.paypal.com/sdk/js?client-id=<%= paypalClientId %>&currency=CAD"></script>
                     <script>
-                        // PayPal Buttons
                         paypal.Buttons({
                             fundingSource: paypal.FUNDING.PAYPAL,
                             createOrder: async function() {
@@ -161,8 +184,13 @@
                                 const taxTotal = parseFloat(document.getElementById('taxTotalInput').value);
                                 const finalTotal = parseFloat(document.getElementById('finalTotalInput').value);
                                 const subtotal = parseFloat(document.getElementById('subtotal').textContent.replace('$', ''));
-                                const email = document.getElementById('email').value; 
-                    
+                                const email = document.getElementById('email').value; // Capture email from input field
+                                const address = document.getElementById('address').value;
+                                const city = document.getElementById('city').value;
+                                const state = document.getElementById('state').value;
+                                const zip = document.getElementById('zip').value;
+                                const itemIds = Array.from(document.querySelectorAll('input[name="productIds"]')).map(input => input.value);
+
                                 const response = await fetch("/create-paypal-order", {
                                     method: "POST",
                                     headers: {
@@ -174,19 +202,13 @@
                                         shippingTotal,
                                         taxTotal,
                                         finalTotal,
+                                        subtotal,
                                         email,
-                                        purchase_units: [{
-                                            amount: {
-                                                currency_code: "CAD",
-                                                value: finalTotal.toFixed(2),
-                                                breakdown: {
-                                                    item_total: { value: subtotal.toFixed(2), currency_code: "CAD" },
-                                                    shipping: { value: shippingTotal.toFixed(2), currency_code: "CAD" },
-                                                    insurance: { value: insuranceTotal.toFixed(2), currency_code: "CAD" },
-                                                    tax_total: { value: taxTotal.toFixed(2), currency_code: "CAD" }
-                                                }
-                                            }
-                                        }]
+                                        address,
+                                        city,
+                                        state,
+                                        zip,
+                                        itemIds
                                     })
                                 });
                                 const order = await response.json();
@@ -196,84 +218,139 @@
                                 return actions.order.capture().then(async function(details) {
                                     alert('Transaction completed by ' + details.payer.name.given_name);
                                     const email = details.payer.email_address;
-                    
-                                    const itemIds = `<%- JSON.stringify(items.map(item => item._id.toString())) %>`;
+
+                                    const itemIds = Array.from(document.querySelectorAll('input[name="productIds"]')).map(input => input.value);
+                                    const subtotal = parseFloat(document.getElementById('subtotal').textContent.replace('$', ''));
+                                    const shippingTotal = parseFloat(document.getElementById('shipping-total').textContent.replace('$', ''));
+                                    const insuranceTotal = parseFloat(document.getElementById('insurance-total').textContent.replace('$', ''));
+                                    const taxTotal = parseFloat(document.getElementById('tax-total').textContent.replace('$', ''));
+                                    const finalTotal = parseFloat(document.getElementById('total').textContent.replace('$', ''));
+                                    const address = document.getElementById('address').value;
+                                    const city = document.getElementById('city').value;
+                                    const state = document.getElementById('state').value;
+                                    const zip = document.getElementById('zip').value;
+
                                     await fetch('/mark-items-sold', {
                                         method: 'POST',
                                         headers: {
                                             'Content-Type': 'application/json',
                                         },
-                                        body: JSON.stringify({ itemIds, email })
+                                        body: JSON.stringify({ itemIds, email, address, city, state, zip, subtotal, shippingTotal, insuranceTotal, taxTotal, finalTotal })
                                     });
-                    
+
                                     window.location.href = '/';
                                 });
                             }
                         }).render('#paypal-button-container');
-                    </script>                                                                               
+                    </script>
+                </div>
             </div>
         </div>
-    </div>
-</body>
-<!-- <%- include("footer") %> -->
-<script>
-    function removeFromCart(itemId) {
-        fetch('/cart/remove-from-cart', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ itemId: itemId })
-        }).then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload();
-                } else {
-                    alert(data.message);
-                }
-            }).catch(error => {
-                console.error('Error removing item from cart:', error);
+    </body>
+    <script>
+        function removeFromCart(itemId) {
+            fetch('/cart/remove-from-cart', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ itemId: itemId })
+            }).then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert(data.message);
+                    }
+                }).catch(error => {
+                    console.error('Error removing item from cart:', error);
+                });
+        }
+
+        document.querySelectorAll('.insurance-checkbox, .shipping-checkbox, .pickup-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', updateTotals);
+        });
+
+        function updateTotals() {
+            let shippingTotal = 0;
+            let insuranceTotal = 0;
+            let subtotal = parseFloat(document.getElementById('subtotal').textContent.replace('$', ''));
+
+            document.querySelectorAll('.insurance-checkbox:checked').forEach(checkbox => {
+                insuranceTotal += parseFloat(checkbox.getAttribute('data-cost'));
             });
-    }
 
-    document.querySelectorAll('.insurance-checkbox, .shipping-checkbox, .pickup-checkbox').forEach(checkbox => {
-        checkbox.addEventListener('change', updateTotals);
-    });
+            document.querySelectorAll('.shipping-checkbox:checked').forEach(checkbox => {
+                shippingTotal += parseFloat(checkbox.getAttribute('data-cost'));
+            });
 
-    function updateTotals() {
-        let shippingTotal = 0;
-        let insuranceTotal = 0;
-        let subtotal = parseFloat(document.getElementById('subtotal').textContent.replace('$', ''));
+            const taxRate = 0.12; // 12% GST and PST
+            let total = subtotal + shippingTotal + insuranceTotal;
+            let taxTotal = total * taxRate;
+            let finalTotal = total + taxTotal;
 
-        document.querySelectorAll('.insurance-checkbox:checked').forEach(checkbox => {
-            insuranceTotal += parseFloat(checkbox.getAttribute('data-cost'));
+            document.getElementById('shipping-total').textContent = `$${shippingTotal.toFixed(2)}`;
+            document.getElementById('insurance-total').textContent = `$${insuranceTotal.toFixed(2)}`;
+            document.getElementById('tax-total').textContent = `$${taxTotal.toFixed(2)}`;
+            document.getElementById('total').textContent = `$${finalTotal.toFixed(2)}`;
+
+            document.getElementById('insuranceTotalInput').value = insuranceTotal.toFixed(2);
+            document.getElementById('shippingTotalInput').value = shippingTotal.toFixed(2);
+            document.getElementById('taxTotalInput').value = taxTotal.toFixed(2);
+            document.getElementById('finalTotalInput').value = finalTotal.toFixed(2);
+
+            // Show or hide the shipping address form based on the presence of checked shipping checkboxes
+            if (shippingTotal > 0) {
+                document.getElementById('shipping-address-form').style.display = 'block';
+                document.getElementById('address').required = true;
+                document.getElementById('city').required = true;
+                document.getElementById('state').required = true;
+                document.getElementById('zip').required = true;
+            } else {
+                document.getElementById('shipping-address-form').style.display = 'none';
+                document.getElementById('address').required = false;
+                document.getElementById('city').required = false;
+                document.getElementById('state').required = false;
+                document.getElementById('zip').required = false;
+            }
+        }
+
+        // Initial call to updateTotals when the page loads
+        window.onload = updateTotals;
+
+        document.querySelectorAll('.shipping-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const itemId = this.getAttribute('data-id');
+                const pickupCheckbox = document.querySelector(`.pickup-checkbox[data-id="${itemId}"]`);
+                pickupCheckbox.checked = !this.checked;
+            });
         });
 
-        document.querySelectorAll('.shipping-checkbox:checked').forEach(checkbox => {
-            shippingTotal += parseFloat(checkbox.getAttribute('data-cost'));
+        document.querySelectorAll('.pickup-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const itemId = this.getAttribute('data-id');
+                const shippingCheckbox = document.querySelector(`.shipping-checkbox[data-id="${itemId}"]`);
+                if (!this.checked) {
+                    shippingCheckbox.checked = true;
+                }
+                updateTotals();
+            });
         });
 
-        const taxRate = 0.12; // 12% GST and PST
-        let total = subtotal + shippingTotal + insuranceTotal;
-        let taxTotal = total * taxRate;
-        let finalTotal = total + taxTotal;
+        document.getElementById('stripe-form').addEventListener('submit', function(event) {
+            document.getElementById('emailInput').value = document.getElementById('email').value;
+            if (document.getElementById('shipping-address-form').style.display === 'block') {
+                document.getElementById('addressInput').value = document.getElementById('address').value;
+                document.getElementById('cityInput').value = document.getElementById('city').value;
+                document.getElementById('stateInput').value = document.getElementById('state').value;
+                document.getElementById('zipInput').value = document.getElementById('zip').value;
+            }
+            document.getElementById('shippingTotalInput').value = parseFloat(document.getElementById('shipping-total').textContent.replace('$', ''));
+            document.getElementById('insuranceTotalInput').value = parseFloat(document.getElementById('insurance-total').textContent.replace('$', ''));
+            document.getElementById('taxTotalInput').value = parseFloat(document.getElementById('tax-total').textContent.replace('$', ''));
+            document.getElementById('finalTotalInput').value = parseFloat(document.getElementById('total').textContent.replace('$', ''));
+        });
 
-        document.getElementById('shipping-total').textContent = `$${shippingTotal.toFixed(2)}`;
-        document.getElementById('insurance-total').textContent = `$${insuranceTotal.toFixed(2)}`;
-        document.getElementById('tax-total').textContent = `$${taxTotal.toFixed(2)}`;
-        document.getElementById('total').textContent = `$${finalTotal.toFixed(2)}`;
 
-        document.getElementById('insuranceTotalInput').value = insuranceTotal.toFixed(2);
-        document.getElementById('shippingTotalInput').value = shippingTotal.toFixed(2);
-        document.getElementById('taxTotalInput').value = taxTotal.toFixed(2);
-        document.getElementById('finalTotalInput').value = finalTotal.toFixed(2);
-    }
-
-    // Initial call to updateTotals when the page loads
-    window.onload = updateTotals;
-
-    document.querySelectorAll('.insurance-checkbox, .shipping-checkbox, .pickup-checkbox').forEach(checkbox => {
-        checkbox.addEventListener('change', updateTotals);
-    });
-</script>
+    </script>
 </html>
