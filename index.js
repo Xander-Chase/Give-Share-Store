@@ -723,16 +723,24 @@ const sendReferralEmail = (referralDetails) => {
         from: 'thevintagegaragetest@gmail.com',
         to: 'ajgabl18@gmail.com',
         subject: 'New Referral Message',
-        text: `You have received a new referral from ${referralDetails.orgName} (${referralDetails.email}):\n\n${referralDetails.message}`
+        text: `You have received a new referral from ${referralDetails.organisation} (${referralDetails.email}):\n\n${referralDetails.message}`
     };
 
     return mg.messages.create(process.env.MAILGUN_DOMAIN, messageData);
 };
 
-app.post('/sendContactUsEmail', (req, res) => {
-    const contactDetails = req.body;
+app.post('/sendContactUsEmail', async (req, res) => {
+    const { name, email, message, token } = req.body;
 
-    sendContactUsEmail(contactDetails)
+    console.log('Received contact form data:', { name, email, message, token });
+
+    const score = await createAssessment({ token, recaptchaAction: 'submit' });
+
+    if (score === null || score < 0.5) {
+        return res.status(400).json({ success: false, message: 'Failed reCAPTCHA verification' });
+    }
+
+    sendContactUsEmail({ name, email, message })
         .then(info => {
             console.log('Email sent:', info);
             res.json({ success: true });
@@ -743,10 +751,18 @@ app.post('/sendContactUsEmail', (req, res) => {
         });
 });
 
-app.post('/sendReferralEmail', (req, res) => {
-    const referralDetails = req.body;
+app.post('/sendReferralEmail', async (req, res) => {
+    const { organisation, email, message, token } = req.body;
 
-    sendReferralEmail(referralDetails)
+    console.log('Received referral form data:', { organisation, email, message, token });
+
+    const score = await createAssessment({ token, recaptchaAction: 'submit' });
+
+    if (score === null || score < 0.5) {
+        return res.status(400).json({ success: false, message: 'Failed reCAPTCHA verification' });
+    }
+
+    sendReferralEmail({ organisation, email, message })
         .then(info => {
             console.log('Referral email sent:', info);
             res.json({ success: true });
