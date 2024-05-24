@@ -590,7 +590,7 @@ app.post('/mark-items-sold', async (req, res) => {
             );
 
             const itemDetails = items.map((item, index) => `${item.item_title} - $${item.item_price} - ${shippingPickup[index] || 'Pickup'}`).join('\n');
-            const ownerEmail = "ajgabl18@gmail.com";
+            const ownerEmail = "shopthevintagegarage@gmail.com";
 
             const orderDetails = `
                 Date of purchase: ${soldDate.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' })} \n\n   
@@ -769,7 +769,7 @@ app.get('/StripeSuccess', async (req, res) => {
             );
 
             const itemDetails = items.map((item, index) => `${item.item_title} - $${item.item_price} - ${shippingPickup[index] || 'Pickup'}`).join('\n');
-            const ownerEmail = "ajgabl18@gmail.com";
+            const ownerEmail = "shopthevintagegarage@gmail.com";
 
             const orderDetails = `
                 Date of purchase: ${soldDate.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' })} \n\n   
