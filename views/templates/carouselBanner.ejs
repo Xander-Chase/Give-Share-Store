@@ -34,6 +34,12 @@
             height: auto;
         }
 
+        .featured-product-button {
+            width: 10vw;
+            height: 8vh;
+            font-size: 16pt;
+        }
+
         .img-container {
             max-width: 40vw;
             max-height: 70vh;
@@ -41,13 +47,19 @@
             border-radius: 2%;
         }
 
-        @media (max-width: 576px) {
+        @media only screen and (max-width: 576px) {
             .text-main {
                 font-size: 20pt;
             }
 
             .btn-lg {
                 font-size: 20pt;
+            }
+
+            .featured-product-button {
+                width: 15vw;
+                height: 7vh;
+                font-size: 14pt;
             }
         }
     </style>
@@ -68,10 +80,13 @@
             <div class="col-6 banner-column">
                 <p class="text-main">
                     <span class="product-title"><%= product_title
-                        %></span><br><br>
-                    $<%= product_price %><br>
+                    %></span><br><br>
+                    $<%= formatAmount(product_price) %><br>
                     QTY: <%= product_qty %><br>
-                    <%= product_description %>
+                    <%= product_description %><br>
+                    <a class="btn btn-primary featured-product-button d-flex align-items-center justify-content-center" href="">
+                        View Item
+                    </a>
                 </p>
             </div>
         </div>

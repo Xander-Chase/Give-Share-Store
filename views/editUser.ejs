@@ -11,7 +11,7 @@
 <body>
     <div class="container mt-5">
         <h2>Edit Admin User</h2>
-        <form action="/updateUser/<%= user._id %>" method="post">
+        <form action="/admin/updateUser/<%= user._id %>" method="post">
             <div class="mb-3">
                 <label for="name" class="form-label">Name</label>
                 <input type="text" class="form-control" id="name" name="name" value="<%= user.name %>" required>
@@ -29,11 +29,11 @@
     <script>
         function deleteUser(userId) {
             if(confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-                fetch(`/deleteUser/${userId}`, {
+                fetch(`/admin/deleteUser/${userId}`, {
                     method: 'POST'
                 }).then(response => {
                     if(response.ok) {
-                        window.location.href = '/manage';
+                        window.location.href = '/admin/manage';
                     } else {
                         alert('Failed to delete the user.');
                     }

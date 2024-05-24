@@ -16,7 +16,7 @@
     <div class="container mt-5">
         <h2>Edit: <%= listing.item_title %></h2>
         <p> Fields marked with <span class="mandatory">*</span> are mandatory.</p>
-        <form action="/updateListing/<%= listing._id %>" method="post" enctype="multipart/form-data" class="mt-4">
+        <form action="/admin/updateListing/<%= listing._id %>" method="post" enctype="multipart/form-data" class="mt-4">
             <div class="mb-3">
                 <label>Current Images:</label>
                 <div class="d-flex flex-wrap">

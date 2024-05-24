@@ -16,12 +16,16 @@ const Realm = require("realm");                                 // Import Realm 
 const { google } = require("googleapis");                       // Import googleapis module to interact with Google APIs
 const fetch = import('node-fetch');                             // Import node-fetch module to fetch data from API
 const mailchimp = require('@mailchimp/mailchimp_marketing');    // Import mailchimp_marketing module to interact with Mailchimp API
+const {RecaptchaEnterpriseServiceClient} = require('@google-cloud/recaptcha-enterprise'); // Import recaptcha-enterprise module to interact with Google Recaptcha Enterprise API
+const bodyParser = require('body-parser');                      // Import body-parser module to parse request body
+const { sendContactUsEmail, sendReferralEmail, sendOrderConfirmationEmail, sendOrderNotificationEmail } = require('./routes/mailer'); // Import mailer.js file to send emails
+
 
 
 const app = express();
-
 const routes = require('./routes');
 
+const { getBodyFilters, getCategoriesNav } = require('./controller/htmlContent');
 app.set('view engine', 'ejs');                              // Set view engine to ejs
 
 app.use(express.urlencoded({ extended: true }));            // parse urlencoded request bodies
@@ -29,9 +33,13 @@ app.use(express.static('public'));                          // serve static imag
 app.use(express.static('css'));                             // serve static css files
 app.use(express.static('js'));                              // serve static js files
 app.use(express.json());                                    // parse json request bodies
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
 
 
 const searchRoute = require('./routes/filter');
+const adminRoute = require('./routes/admin');
+const cartRoute = require('./routes/cart');
 
 
 
@@ -49,6 +57,9 @@ const PayPalEnvironment = process.env.PAYPAL_ENVIRONMENT;   // Import PayPal Env
 const PayPalClientID = process.env.PAYPAL_CLIENT_ID;        // Import PayPal Client ID from ..env file
 const PayPalSecret = process.env.PAYPAL_CLIENT_SECRET;      // Import PayPal Secret from ..env file
 const PayPal_endpoint_url = PayPalEnvironment === 'sandbox' ? 'https://api-m.sandbox.paypal.com' : 'https://api-m.paypal.com'; // Import PayPal endpoint URL from ..env file
+const projectID = process.env.CAPTCHA_PROJECT_ID            // Import Captcha Project ID from ..env file
+const recaptchaKey = process.env.CAPTCHA_SECRET_KEY         // Import Captcha Secret Key from ..env file
+process.env.GOOGLE_APPLICATION_CREDENTIALS = './thevintagegarage-1715977793921-f27e14d35c3e.json';
 
 // importing the database object from databaseConnection.js file
 var { database } = include('databaseConnection');
@@ -69,12 +80,16 @@ var mongoStore = MongoDBStore.create({
 
 // **************************** Functions ****************************
 // Necessary functions to ensure non-repeating code.
-// Fetches all the items from the product list
-async function fetchAllItems() {
-    const productsColl = database.db(mongodb_database).collection('listing_items');
-    return await productsColl.find().toArray(); // Fetch all items;
+// Format amounts with commas
+function formatAmount(amount) {
+    return amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+// Make the helper function available in EJS templates
+app.use((req, res, next) => {
+    res.locals.formatAmount = formatAmount; // Make formatAmount available in templates
+    next();
+});
 
 // creating a session
 app.use(session({
@@ -97,6 +112,8 @@ app.use((req, res, next) => {
 });
 
 app.use('/filter', searchRoute);
+app.use('/admin', adminRoute);
+app.use('/cart', cartRoute);
 
 app.get('/', async (req, res) => {
 
@@ -119,6 +136,10 @@ app.get('/', async (req, res) => {
         // Get current listing collection
         const productsCollection = database.db(mongodb_database).collection('listing_items');
         const featureVideoCollection = database.db(mongodb_database).collection('featureVideo');
+
+        // Fetch all prices
+        prices = await fetchAllPrices();
+        console.log(prices); // debugging
 
         // Fetch featured items
         const featuredItems = await productsCollection.find({ isFeatureItem: true }).toArray();
@@ -155,19 +176,19 @@ app.get('/', async (req, res) => {
         let pageIndexes = [];
         let previousIndex = req.session.pageIndex - 1;
         let nextIndex = previousIndex + 2;
-        let numberOfPages = sortedPrices.length / 20;
+        let numberOfPages = sortedPrices.length / 18;
         if (previousIndex < 1)
             previousIndex = 1;
 
         if (nextIndex >= numberOfPages)
             nextIndex--;
 
-        for (let i = 0; i < (numberOfPages - 1); i++)
+        for (let i = 0; i <= (numberOfPages); i++)
             pageIndexes.push(i + 1);
 
-        const skips = 20 * (((req.session.pageIndex - 1) < 0) ? 0 : (req.session.pageIndex - 1));
+        const skips = 18 * (((req.session.pageIndex - 1) < 0) ? 0 : (req.session.pageIndex - 1));
 
-        // call another find to finally get the current 20 items in a page
+        // call another find to finally get the current 18 items in a page
         currentListingsArray = await productsCollection.find({
             isFeatureItem: false,
             item_title: { $regex: searchKey, $options: 'i' },
@@ -175,7 +196,7 @@ app.get('/', async (req, res) => {
             item_category: { $regex: categoryKeyword },
             item_sub_category: { $regex: subCategoryKeyword }
         }).sort({ item_price: orderCode }).skip(skips)
-            .limit(20)
+            .limit(18)
             .toArray();
 
         // initially set to 0
@@ -207,7 +228,7 @@ app.get('/', async (req, res) => {
         });
     } catch (error) {
         console.error('Failed to fetch current listings:', error);
-        res.render("landing", { isLoggedIn: isLoggedIn, isAdmin: isAdmin, currentListings: [], featureVideo: null });
+        res.render("landing", { isLoggedIn: isLoggedIn, categories: [], isAdmin: isAdmin, currentListings: [], featureVideo: null });
     }
 });
 
@@ -234,13 +255,22 @@ async function hashExistingPasswords() {
     }
 }
 
+async function fetchAllPrices() {
+    try {
+        const productsCollection = database.db(mongodb_database).collection('listing_items');
+        const prices = await productsCollection.find({}, { projection: { item_price: 1 } }).toArray();
+        return prices.map(item => item.item_price);
+    } catch (error) {
+        console.error('Failed to fetch prices:', error);
+        return [];
+    }
+}
+
+
 app.get("/loginPortal", (req, res) => {
     res.render('loginPortal');
 })
 
-app.get('/adminLogIn', (req, res) => {
-    res.render("adminLogIn");
-});
 
 app.get('/userLogIn', (req, res) => {
     res.render("userLogIn");
@@ -248,46 +278,6 @@ app.get('/userLogIn', (req, res) => {
 
 app.get('/userNewLogIn', (req, res) => {
     res.render("userNewLogIn");
-});
-
-app.post('/adminLogInSubmit', async (req, res) => {
-
-    const email = req.body.email;
-    const password = req.body.password;
-
-    const schema = Joi.object({
-        email: Joi.string().required(),
-        password: Joi.string().max(20).required()
-    });
-
-    const validationResult = schema.validate({ email, password });
-    if (validationResult.error != null) {
-        console.log(validationResult.error);
-        res.render("adminLogIn", { error: "Error: " + validationResult.error.message });
-        return;
-    }
-
-    const user = await adminCollection.findOne({ email: email });
-    if (user === null) {
-        console.log("User not found");
-        res.render("adminLogIn", { error: "Error: User not found" });
-        return;
-    }
-
-    const passwordMatch = await bcrypt.compare(password, user.password);
-    if (!passwordMatch) {
-        console.log("Invalid password");
-        res.render("adminLogIn", { error: "Error: Invalid password" });
-        return;
-    }
-
-    req.session.loggedIn = true;
-    req.session.isAdmin = true;
-    req.session.name = user.name;
-    req.session.email = user.email;
-    req.session.password = user.password;
-    req.session.userId = user._id;
-    res.redirect("/");
 });
 
 app.post('/userLogInSubmit', async (req, res) => {
@@ -331,122 +321,6 @@ app.post('/userLogInSubmit', async (req, res) => {
     res.redirect("/");
 });
 
-function getBodyFilters(maxVal, minVal, currentPrice, subCategories) {
-    if (maxVal == null || minVal == null) {
-        maxVal = 0;
-        minVal = 0;
-        currentPrice = 0;
-    }
-
-    let minCalculation = (Math.floor(minVal / 5) * 5);
-    let maxCalculation = (Math.ceil(maxVal / 5) * 5);
-
-    if (currentPrice > maxVal)
-        currentPrice = maxCalculation / 2;
-
-    let categoriesBody =
-        "<ul class=\"list-group list-group-flush\">";
-
-    // for each subCategories on that array, assign it as a list element on the sub-category filter on the left
-    // since some of them are spaces, we split the spaces and join them with '_'
-    subCategories.forEach(function (subC) {
-        categoriesBody += "<li class=\"list-group-item\"><form method='post' action='/filter/subcategory=" + subC.split(" ").join("_") + "'><button " +
-            "style='background: none; border: none'" +
-            " type='submit'>" + subC + "</button></form></li>"
-    })
-    categoriesBody += "</ul>";
-    return [
-
-        categoriesBody,
-        "<ul class='list-group list-group-flush'>" +
-        " <li class='list-group-item'><form method='post' action='/filter/sortby=ascending'><button style='background: none; border: none' type='submit'>Sort by Lowest Price</button></form></li>" +
-        " <li class='list-group-item'><form method='post' action='/filter/sortby=descending'><button style='background: none; border: none' type='submit'>Sort by Highest Price</button></form></li>",
-        "<div class=\"row col-sm\">\n" +
-        "        <div class=\"col text-start\">\n" +
-        "            <label for=\"priceRange\" class=\"form-label\">" +
-        "               <strong>$" + minCalculation + "</strong>" +
-        "           </label>\n" +
-        "        </div>\n" +
-        "        <div class=\"col text-middle\">\n" +
-        "            <label id=\"userRange\" for=\"priceRange\" class=\"form-label\">$" + currentPrice + "</label>\n" +
-        "        </div>\n" +
-        "        <div class=\"col text-end\">\n" +
-        "            <label for=\"priceRange\" class=\"form-label\">" +
-        "               <strong>$" + maxCalculation + "</strong>" +
-        "           </label>\n" +
-        "        </div>\n" +
-        "        <input id=\"selectedPrice\" type=\"range\" class=\"form-range\" min=" + minCalculation + " max=" + maxCalculation + " step=5 id=\"priceRange\" oninput=\"" +
-        "{document.getElementById('userRange').innerHTML = `$${this.value}`;}\">\n" +
-        "</div>"
-    ];
-}
-
-async function getCategoriesNav() {
-    const categoriesCollection = database.db(mongodb_database).collection('categories');
-    return await categoriesCollection.find({}).toArray();
-
-}
-
-
-
-
-
-app.get('/cart', async (req, res) => {
-    const cartItems = req.session.cart || [];
-    res.render('cartView', {
-        isLoggedIn: req.session.loggedIn,
-        items: cartItems,
-        paypalClientId: process.env.PAYPAL_CLIENT_ID,
-        categories: await getCategoriesNav(),
-        isAdmin: req.session.isAdmin || false
-    });
-});
-
-app.post('/add-to-cart', async (req, res) => {
-    const itemId = req.body.itemId;
-
-    try {
-        const productsCollection = database.db(mongodb_database).collection('listing_items');
-        const item = await productsCollection.findOne({ _id: ObjectId.createFromHexString(itemId) });
-
-        if (item) {
-            req.session.cart.push(item);
-            req.session.save(err => {
-                if (err) {
-                    console.error('Error saving session:', err);
-                }
-                res.json({ success: true, cartItemCount: req.session.cart.length });
-            });
-        } else {
-            res.json({ success: false, message: 'Item not found' });
-        }
-    } catch (error) {
-        console.error('Failed to add item to cart:', error);
-        res.json({ success: false, message: 'Error adding item to cart' });
-    }
-});
-
-app.post('/remove-from-cart', async (req, res) => {
-    const itemId = req.body.itemId;
-
-    try {
-        if (!req.session.cart) {
-            return res.json({ success: false, message: 'Cart is empty' });
-        }
-
-        req.session.cart = req.session.cart.filter(item => item._id.toString() !== itemId);
-        req.session.save(err => {
-            if (err) {
-                console.error('Error saving session:', err);
-                return res.json({ success: false, message: 'Error saving session' });
-            }
-            res.json({ success: true, cartItemCount: req.session.cart.length });
-        });
-    } catch (error) {
-        console.error('Failed to remove item from cart:', error);
-        res.json({ success: false, message: 'Error removing item from cart' });
-    }
-});
 
 app.get('/signout', (req, res) => {
     req.session.destroy()
@@ -485,22 +359,11 @@ app.get('/contact-us', async (req, res) => {
     res.render("contact", { isLoggedIn: isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav() });
 });
 
-app.get('/manage', async (req, res) => {
-    if (req.session.loggedIn) {
-        const isLoggedIn = req.session.loggedIn;
-        const isAdmin = req.session.isAdmin;
-        res.render("product-management", { isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav() });
-    }
-    else {
-        res.redirect('/adminLogIn');
-    }
-});
-
 app.get('/manageUser', async (req, res) => {
     if (req.session.loggedIn) {
         const isLoggedIn = req.session.loggedIn;
-        const isAdmin = req.session.isAdmin;
         res.render("user-management", { isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav() });
+
     }
     else {
         res.redirect('/userLogIn');
@@ -509,15 +372,13 @@ app.get('/manageUser', async (req, res) => {
 
 app.get('/pastOrders', async (req, res) => {
     try {
-        const ordersCollection = database.db(mongodb_database).collection('orders');
+        const ordersCollection = database.db(MONGODB_DATABASE).collection('orders');
         const userOrders = await ordersCollection.find({ userId: req.session.userId }).toArray();
         const isLoggedIn = req.session.loggedIn;
-        const isAdmin = req.session.isAdmin || false;
-
         res.render('pastOrders', {
             orders: userOrders,
             isLoggedIn,
-            isAdmin,
+            isAdmin: req.session.isAdmin,
             categories: await getCategoriesNav()
         });
     } catch (error) {
@@ -526,6 +387,7 @@ app.get('/pastOrders', async (req, res) => {
     }
 });
 
+// TODO: Can this be removed?
 async function addTestOrder() {
     try {
         const ordersCollection = database.db(mongodb_database).collection('orders');
@@ -603,194 +465,6 @@ app.post('/changePassword', async (req, res) => {
     res.render('passwordUpdated', { isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav() });
 });
 
-
-// ------------------ AWS S3 START ------------------
-
-// Configures AWS to use .env credentials and region
-const s3 = new S3Client({
-    region: process.env.AWS_REGION,
-    credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
-    }
-});
-
-// ------------------ AWS S3 END ------------------
-
-// ------------------ multer START ------------------
-
-const upload = multer({
-    storage: multerS3({
-        s3: s3,
-        bucket: 'the-vintage-garage-test',
-        metadata: function (req, file, cb) {
-            cb(null, { fieldName: file.fieldname });
-        },
-        key: function (req, file, cb) {
-            const folder = file.mimetype.startsWith('image/') ? 'images/' : 'videos/';
-            cb(null, folder + Date.now().toString() + '-' + file.originalname);
-        }
-    })
-});
-
-const featureVideoUpload = multer({
-    storage: multerS3({
-        s3: s3,
-        bucket: 'the-vintage-garage-test',
-        metadata: function (req, file, cb) {
-            cb(null, { fieldName: file.fieldname });
-        },
-        key: function (req, file, cb) {
-            const folder = 'videos/';
-            cb(null, folder + Date.now().toString() + '-' + file.originalname);
-        }
-    })
-});
-
-// ------------------ multer END ------------------
-
-app.get('/addListing', async (req, res) => {
-
-    res.render('addListing', { categories: await categoryCollection.find().toArray() });
-});
-
-// Route to handle form submission
-app.post('/submitListing', upload.fields([{ name: 'photo', maxCount: 10 }, { name: 'video', maxCount: 1 }]), async (req, res) => {
-    const photos = req.files['photo'] ? req.files['photo'].map(file => file.location) : [];
-    const videos = req.files['video'] ? req.files['video'].map(file => file.location) : [];
-
-    const listingItemsCollection = database.db(mongodb_database).collection('listing_items');
-    const document = {
-        product_img_URL: photos,
-        product_video_URL: videos,
-        item_title: req.body.item_title,
-        item_price: parseFloat(req.body.item_price) || 0.00,
-        item_quantity: parseInt(req.body.item_quantity) || 0,
-        item_detailed_description: req.body.item_detailed_description || '',
-        item_estimatedShippingCost: parseFloat(req.body.item_estimatedShippingCost) || 0.0,
-        item_estimatedInsuranceCost: parseFloat(req.body.item_estimatedInsuranceCost) || 0.0,
-        isFeatureItem: req.body.isFeatureItem === 'true',
-        item_category: Array.isArray(req.body.item_category) ? req.body.item_category.map(function (item) {
-            return item.replace(/"/g, '');
-        }) : [req.body.item_category.replace(/"/g, '')],
-        item_sub_category: Array.isArray(req.body.item_sub_category) ? req.body.item_sub_category.map(function (item) {
-            return item.replace(/"/g, '');
-        }) : [req.body.item_sub_category.replace(/"/g, '')],
-        status: 'available' // Default status when a listing is created
-    };
-
-    try {
-        await listingItemsCollection.insertOne(document);
-        res.redirect('/manage');
-    } catch (error) {
-        console.error('Error submitting new listing:', error);
-        res.status(500).send('Failed to add new listing');
-    }
-});
-
-app.get('/editListing/:id', async (req, res) => {
-    const itemId = req.params.id;
-    const isLoggedIn = req.session.loggedIn;
-    const isAdmin = req.session.isAdmin || false;
-
-    console.log("Received ID for editing:", itemId);
-
-    if (!ObjectId.isValid(itemId)) {
-        return res.status(400).send('Invalid ID format');
-    }
-
-    try {
-        const listing = await database.db(mongodb_database).collection('listing_items').findOne({ _id: new ObjectId(itemId) });
-        if (!listing) {
-            return res.status(404).send('Listing not found');
-        }
-        res.render('editListing', { listing, isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav() });
-    } catch (error) {
-        console.error('Failed to fetch listing:', error);
-        res.status(500).send('Error fetching listing details');
-    }
-});
-
-
-// Function to delete a file from S3
-async function deleteFromS3(url) {
-    const bucketName = 'the-vintage-garage-test';
-    const key = url.split('.com/')[1];
-
-    const deleteParams = {
-        Bucket: bucketName,
-        Key: key
-    };
-
-    try {
-        const data = await s3.send(new DeleteObjectCommand(deleteParams));
-        console.log(`File deleted successfully from S3: ${url}`);
-    } catch (err) {
-        console.error(`Error deleting file from S3: ${url}`, err);
-    }
-}
-
-app.post('/updateListing/:id', upload.fields([{ name: 'photo', maxCount: 10 }, { name: 'video', maxCount: 1 }]), async (req, res) => {
-    const itemId = new ObjectId(req.params.id);
-    console.log("Form submission data:", req.body);
-
-    const photos = req.files['photo'] ? req.files['photo'].map(file => file.location) : [];
-    const videos = req.files['video'] ? req.files['video'].map(file => file.location) : [];
-
-    const removeImages = Array.isArray(req.body.remove_img_URL) ? req.body.remove_img_URL : [req.body.remove_img_URL].filter(Boolean);
-    const removeVideos = Array.isArray(req.body.remove_video_URL) ? req.body.remove_video_URL : [req.body.remove_video_URL].filter(Boolean);
-
-    try {
-        const listing = await database.db(mongodb_database).collection('listing_items').findOne({ _id: itemId });
-
-        // Remove images from S3 and update listing
-        if (removeImages.length > 0) {
-            for (const url of removeImages) {
-                await deleteFromS3(url);
-            }
-        }
-
-        // Remove videos from S3 and update listing
-        if (removeVideos.length > 0) {
-            for (const url of removeVideos) {
-                await deleteFromS3(url);
-            }
-        }
-
-        const updatedImages = listing.product_img_URL.filter(url => !removeImages.includes(url)).concat(photos);
-        const updatedVideos = listing.product_video_URL.filter(url => !removeVideos.includes(url)).concat(videos);
-
-        const updateData = {
-            item_title: req.body.item_title,
-            item_price: parseFloat(req.body.item_price) || 0.00,
-            item_quantity: parseInt(req.body.item_quantity) || 0,
-            item_detailed_description: req.body.item_detailed_description || '',
-            item_estimatedShippingCost: parseFloat(req.body.item_estimatedShippingCost) || 0.0,
-            item_estimatedInsuranceCost: parseFloat(req.body.item_estimatedInsuranceCost) || 0.0,
-            isFeatureItem: req.body.isFeatureItem ? req.body.isFeatureItem === 'true' : false,
-            product_img_URL: updatedImages,
-            product_video_URL: updatedVideos,
-            status: req.body.status || 'available' // Allow status update
-        };
-
-        const result = await database.db(mongodb_database).collection('listing_items').updateOne(
-            { _id: itemId },
-            { $set: updateData }
-        );
-
-        if (result.modifiedCount === 0) {
-            console.log("No changes were made.");
-            res.send("No changes were made.");
-        } else {
-            console.log("Updated listing successfully");
-            res.redirect('/manage');
-        }
-    } catch (error) {
-        console.error('Failed to update listing:', error);
-        res.status(500).send('Error updating listing');
-    }
-});
-
 // Route to render feature video management page
 app.get('/featureVideo', async (req, res) => {
     const featureVideoCollection = database.db(mongodb_database).collection('featureVideo');
@@ -798,292 +472,6 @@ app.get('/featureVideo', async (req, res) => {
     res.render('featureVideo', { featureVideo: featureVideo });
 });
 
-// Route to handle feature video upload
-app.post('/submitFeatureVideo', featureVideoUpload.single('video'), async (req, res) => {
-    if (!req.file) {
-        return res.status(400).send('No video file uploaded.');
-    }
-
-    const videoURL = req.file.location;
-
-    const featureVideoCollection = database.db(mongodb_database).collection('featureVideo');
-    await featureVideoCollection.updateOne({}, { $set: { url: videoURL } }, { upsert: true });
-
-    res.redirect('/manage');
-});
-
-// Route to handle feature video removal
-app.post('/removeFeatureVideo', async (req, res) => {
-    const featureVideoCollection = database.db(mongodb_database).collection('featureVideo');
-    const featureVideo = await featureVideoCollection.findOne({});
-    if (featureVideo && featureVideo.url) {
-        const key = featureVideo.url.split('.com/')[1];
-        const deleteParams = {
-            Bucket: 'the-vintage-garage-test',
-            Key: key
-        };
-        try {
-            await s3.send(new DeleteObjectCommand(deleteParams));
-            await featureVideoCollection.deleteOne({});
-            res.redirect('/manage');
-        } catch (error) {
-            console.error('Error removing feature video:', error);
-            res.status(500).send('Error removing feature video');
-        }
-    } else {
-        res.redirect('/manage');
-    }
-});
-
-app.get('/currentListings', async (req, res) => {
-    try {
-        const productsCollection = database.db(mongodb_database).collection('listing_items');
-        const currentListings = await productsCollection.find({ isFeatureItem: false }).toArray();
-        res.render('currentListings', { listings: currentListings });
-    } catch (error) {
-        console.error('Failed to fetch current listings:', error);
-        res.status(500).send('Error fetching current listings');
-        // handling error case - passing empty array
-        res.render('currentListings', { listings: [] }); // rendering the page even in case of error with an empty array
-    }
-});
-
-
-app.get('/previousListings', async (req, res) => {
-    try {
-        const productsCollection = database.db(mongodb_database).collection('listing_items');
-        const soldListings = await productsCollection.find({ status: 'sold' }).toArray();
-        const isLoggedIn = req.session.loggedIn;
-        const isAdmin = req.session.isAdmin || false;
-
-        res.render('previousListings', {
-            listings: soldListings,
-            isLoggedIn,
-            isAdmin,
-            categories: await getCategoriesNav()
-        });
-    } catch (error) {
-        console.error('Failed to fetch previous listings:', error);
-        res.status(500).send('Error fetching previous listings');
-    }
-});
-
-
-app.get('/mailingList', async (req, res) => {
-    try {
-        mailchimp.setConfig({
-            apiKey: process.env.MAILCHIMP_API_KEY,
-            server: process.env.MAILCHIMP_SERVER_PREFIX
-        });
-
-        const response = await mailchimp.lists.getListMembersInfo(process.env.MAILCHIMP_LIST_ID);
-        const subscribers = response.members.map(member => ({
-            firstName: member.merge_fields.FNAME,
-            lastName: member.merge_fields.LNAME,
-            email: member.email_address
-        }));
-
-        res.render('mailingList', {
-            people: subscribers
-        });
-    } catch (error) {
-        console.error('Error fetching mailing list:', error);
-        res.status(500).send('Error fetching mailing list');
-    }
-});
-
-
-
-
-app.get('/adminUsers', async (req, res) => {
-    try {
-        const admins = await adminCollection.find().toArray();
-        res.render('adminUsers', { users: admins });
-    } catch (error) {
-        console.error('Error fetching admin users:', error);
-        res.status(500).send('Error fetching admin users');
-    }
-});
-
-app.post('/addUser', async (req, res) => {
-    const { name, email, password, userType } = req.body;
-    try {
-        const hashedPassword = await bcrypt.hash(password, 10);
-        if (userType === 'admin') {
-            await adminCollection.insertOne({ name, email, password: hashedPassword });
-            req.session.loggedIn = true;
-            res.redirect('/manage');
-        } else if (userType === 'user') {
-            await userCollection.insertOne({ name, email, password: hashedPassword });
-            req.session.loggedIn = true;
-            res.redirect('/manageUser');
-        } else {
-            res.status(400).send('Invalid user type');
-        }
-    } catch (error) {
-        console.error('Error adding new user:', error);
-        res.status(500).send('Failed to add new user');
-    }
-});
-
-
-app.get('/editUser/:id', async (req, res) => {
-    try {
-        const user = await adminCollection.findOne({ _id: new ObjectId(req.params.id) });
-        if (!user) {
-            res.status(404).send('User not found');
-            return;
-        }
-        const isLoggedIn = req.session.loggedIn;
-        res.render('editUser', { user, isLoggedIn: isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav() });
-
-    } catch (error) {
-        console.error('Error retrieving user for editing:', error);
-        res.status(500).send('Error retrieving user');
-    }
-});
-
-app.post('/updateUser/:id', async (req, res) => {
-    try {
-        const { name, email } = req.body;
-        await adminCollection.updateOne(
-            { _id: new ObjectId(req.params.id) },
-            { $set: { name, email } }
-        );
-        res.redirect('/adminUsers');
-    } catch (error) {
-        console.error('Error updating user:', error);
-        res.status(500).send('Failed to update user');
-    }
-});
-
-app.post('/deleteUser/:id', async (req, res) => {
-    try {
-        const result = await adminCollection.deleteOne({ _id: new ObjectId(req.params.id) });
-        if (result.deletedCount === 1) {
-            res.status(200).send('User deleted successfully');
-        } else {
-            res.status(404).send('User not found');
-        }
-    } catch (error) {
-        console.error('Failed to delete user:', error);
-        res.status(500).send('Failed to delete user');
-    }
-});
-
-
-
-app.get('/featuredItems', async (req, res) => {
-    try {
-        const productsCollection = database.db(mongodb_database).collection('listing_items');
-        const featuredItems = await productsCollection.find({ isFeatureItem: true }).toArray();
-        res.render('featuredItems', { listings: featuredItems });
-    } catch (error) {
-        console.error('Failed to fetch featured items:', error);
-        res.status(500).send('Error fetching featured items');
-        res.render('featuredItems', { listings: [] });
-    }
-});
-
-app.get('/categoryManagement', async (req, res) => {
-    const categoriesArray = await categoryCollection.find().toArray();
-    res.render('categoryManagement', {
-        categories: categoriesArray
-    });
-})
-
-app.get('/editCategory/:id', async (req, res) => {
-    try {
-        const category = await categoryCollection.findOne({ _id: new ObjectId(req.params.id) });
-        res.render('editCategory', { category, isAdmin: req.session.isAdmin, isLoggedIn: req.session.loggedIn, categories: await getCategoriesNav() });
-    }
-    catch (error) {
-        console.error('Error retrieving category for editing:', error);
-        res.status(500).send('Error retrieving category');
-    }
-})
-
-app.post('/updateCategory/:id', async (req, res) => {
-    try {
-        const { name, sub_categories } = req.body;
-        console.log(`${name} and ${sub_categories}`)
-        await categoryCollection.updateOne(
-            { _id: new ObjectId(req.params.id) },
-            {
-                $set: {
-                    category_type: name,
-                    sub_categories: sub_categories.split(", ")
-                }
-            }
-        );
-        res.redirect('/manage');
-    } catch (error) {
-        console.error('Error updating category:', error);
-        res.status(500).send('Failed to update category');
-    }
-})
-
-app.post('/deleteCategory/:id', async (req, res) => {
-    try {
-        const result = await categoryCollection.deleteOne({ _id: new ObjectId(req.params.id) });
-        if (result.deletedCount === 1) {
-            res.status(200).send('Category deleted successfully');
-        } else {
-            res.status(404).send('Category not found');
-        }
-    } catch (error) {
-        console.error('Failed to delete user:', error);
-        res.status(500).send('Failed to delete user');
-    }
-})
-
-app.post('/addCategory', async (req, res) => {
-    const { category_name, sub_categories } = req.body;
-    try {
-        await categoryCollection.insertOne({ category_type: category_name, sub_categories: sub_categories.split(", ") });
-        res.redirect('/manage');
-
-    } catch (error) {
-        console.error('Error adding new category:', error);
-        res.status(500).send('Failed to add new user');
-    }
-});
-
-app.post('/load-subcategory', async (req, res) => {
-
-    const type = req.body.categoryType.replace(/"/g, '');
-    const { sub_categories } = await categoryCollection.findOne({ category_type: type });
-    try {
-        req.session.save(err => {
-            if (err) {
-                console.error('Error saving session:', err);
-                return res.json({ success: false, message: 'Error saving session' });
-            }
-            res.json({ success: true, subCategories: sub_categories });
-        });
-    } catch (error) {
-        console.error('Failed to remove item from cart:', error);
-        res.json({ success: false, message: 'Error removing item from cart' });
-    }
-
-    /*try {
-        if (!req.session.cart) {
-            return res.json({ success: false, message: 'Cart is empty' });
-        }
-
-        req.session.cart = req.session.cart.filter(item => item._id.toString() !== itemId);
-        req.session.save(err => {
-            if (err) {
-                console.error('Error saving session:', err);
-                return res.json({ success: false, message: 'Error saving session' });
-            }
-            res.json({ success: true, cartItemCount: req.session.cart.length });
-        });
-    } catch (error) {
-        console.error('Failed to remove item from cart:', error);
-        res.json({ success: false, message: 'Error removing item from cart' });
-    }*/
-})
 // connect to the database and hash passwords if necessary, then start the server
 database.connect().then(async () => {
     console.log('MongoDB connected successfully');
@@ -1119,7 +507,7 @@ app.post('/create-paypal-order', async (req, res) => {
         const fetch = await import('node-fetch').then(module => module.default);
         const accessToken = await getAccessToken();
 
-        const { intent, purchase_units, insuranceTotal, shippingTotal, taxTotal, finalTotal } = req.body;
+        const { intent, insuranceTotal, shippingTotal, taxTotal, finalTotal, subtotal, email, address, city, state, zip, itemIds } = req.body;
 
         const orderData = {
             intent: intent.toUpperCase(),
@@ -1128,10 +516,10 @@ app.post('/create-paypal-order', async (req, res) => {
                     currency_code: "CAD",
                     value: finalTotal.toFixed(2),
                     breakdown: {
-                        item_total: { value: (finalTotal - insuranceTotal - shippingTotal - taxTotal).toFixed(2), currency_code: "CAD" },
-                        shipping: { value: shippingTotal.toFixed(2), currency_code: "CAD" },
-                        insurance: { value: insuranceTotal.toFixed(2), currency_code: "CAD" },
-                        tax_total: { value: taxTotal.toFixed(2), currency_code: "CAD" }
+                        item_total: { value: (subtotal || 0).toFixed(2), currency_code: "CAD" },
+                        shipping: { value: (shippingTotal || 0).toFixed(2), currency_code: "CAD" },
+                        insurance: { value: (insuranceTotal || 0).toFixed(2), currency_code: "CAD" },
+                        tax_total: { value: (taxTotal || 0).toFixed(2), currency_code: "CAD" }
                     }
                 }
             }]
@@ -1155,18 +543,41 @@ app.post('/create-paypal-order', async (req, res) => {
 });
 
 app.post('/mark-items-sold', async (req, res) => {
-    const itemIds = req.query.itemIds ? req.query.itemIds.split(',') : [];
+    const { itemIds, email, address, city, state, zip, subtotal, shippingTotal, insuranceTotal, taxTotal, finalTotal } = req.body;
 
     try {
-        if (itemIds.length > 0) {
+        if (itemIds && Array.isArray(itemIds) && itemIds.length > 0) {
             const productsCollection = database.db(mongodb_database).collection('listing_items');
+            const items = await productsCollection.find({ _id: { $in: itemIds.map(id => new ObjectId(id)) } }).toArray();
+
             await productsCollection.updateMany(
                 { _id: { $in: itemIds.map(id => new ObjectId(id)) } },
                 { $set: { isSold: true } }
             );
+
+            const itemDetails = items.map(item => `${item.item_title} - $${item.item_price}`).join('\n');
+            const ownerEmail = "ajgabl18@gmail.com";
+
+            const orderDetails = `
+                Items:
+                ${itemDetails}
+
+                Shipping: $${shippingTotal.toFixed(2)}
+                Insurance: $${insuranceTotal.toFixed(2)}
+                Taxes: $${taxTotal.toFixed(2)}
+                Total: $${finalTotal.toFixed(2)}
+
+            `;
+
+            const customerDetails = `
+                Purchaser Email: ${email}
+                Address: ${address}, ${city}, ${state}, ${zip}
+            `;
+
+            sendOrderConfirmationEmail(email, orderDetails);
+            sendOrderNotificationEmail(ownerEmail, orderDetails, customerDetails);
         }
 
-        // Clear the cart
         req.session.cart = [];
         req.session.save(err => {
             if (err) {
@@ -1190,25 +601,19 @@ const stripe = require('stripe')('sk_test_51OZSVHAcq23T9yD7gpE3kQS73T5AnO6UEaecX
 
 app.post('/create-checkout-session', async (req, res) => {
     try {
-        // Extract product IDs from the POST data
-        const itemIds = req.body.productIds;
-        const insuranceTotal = parseFloat(req.body.insuranceTotal) || 0;
-        const shippingTotal = parseFloat(req.body.shippingTotal) || 0;
-        const taxTotal = parseFloat(req.body.taxTotal) || 0;
+        const { productIds, insuranceTotal, shippingTotal, taxTotal, finalTotal, subtotal, email, address, city, state, zip } = req.body;
 
-        const YOUR_DOMAIN = 'http://localhost:5000'; // Replace with clients domain
+        const YOUR_DOMAIN = 'http://localhost:5000'; // Replace with client's domain when finalized
 
-        if (!itemIds || !Array.isArray(itemIds)) {
+        if (!productIds || !Array.isArray(productIds)) {
             throw new Error('Product IDs not received or not in array format');
         }
 
-        // Fetch product details from MongoDB
         const productsCollection = database.db(mongodb_database).collection('listing_items');
         const items = await productsCollection.find({
-            '_id': { $in: itemIds.map(id => ObjectId.createFromHexString(id)) } // Convert string IDs to ObjectId instances
+            '_id': { $in: productIds.map(id => ObjectId.createFromHexString(id)) }
         }).toArray();
 
-        // Prepare line items for the Stripe session
         const line_items = items.map(item => ({
             price_data: {
                 currency: 'cad',
@@ -1216,12 +621,11 @@ app.post('/create-checkout-session', async (req, res) => {
                     name: item.item_title,
                     images: [item.product_img_URL[0]]
                 },
-                unit_amount: Math.round(item.item_price * 100), // Convert price to cents
+                unit_amount: Math.round(item.item_price * 100), 
             },
             quantity: 1,
         }));
 
-        // Include shipping, insurance, and tax as separate line items
         if (shippingTotal > 0) {
             line_items.push({
                 price_data: {
@@ -1229,7 +633,7 @@ app.post('/create-checkout-session', async (req, res) => {
                     product_data: {
                         name: 'Shipping'
                     },
-                    unit_amount: Math.round(shippingTotal * 100), // Convert price to cents
+                    unit_amount: Math.round(shippingTotal * 100), 
                 },
                 quantity: 1,
             });
@@ -1242,7 +646,7 @@ app.post('/create-checkout-session', async (req, res) => {
                     product_data: {
                         name: 'Insurance'
                     },
-                    unit_amount: Math.round(insuranceTotal * 100), // Convert price to cents
+                    unit_amount: Math.round(insuranceTotal * 100), 
                 },
                 quantity: 1,
             });
@@ -1255,22 +659,21 @@ app.post('/create-checkout-session', async (req, res) => {
                     product_data: {
                         name: 'Tax'
                     },
-                    unit_amount: Math.round(taxTotal * 100), // Convert price to cents
+                    unit_amount: Math.round(taxTotal * 100), 
                 },
                 quantity: 1,
             });
         }
 
-        // Create Stripe checkout session
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
             line_items,
             mode: 'payment',
-            success_url: `${YOUR_DOMAIN}/StripeSuccess?itemIds=${itemIds.join(',')}`,
+            success_url: `${YOUR_DOMAIN}/StripeSuccess?itemIds=${productIds.join(',')}&email=${email}&address=${address}&city=${city}&state=${state}&zip=${zip}&subtotal=${subtotal}&shippingTotal=${shippingTotal}&insuranceTotal=${insuranceTotal}&taxTotal=${taxTotal}&finalTotal=${finalTotal}`,
             cancel_url: `${YOUR_DOMAIN}/StripeCancel`,
+            customer_email: email 
         });
 
-        // Redirect the client to the Stripe checkout
         res.redirect(303, session.url);
     } catch (error) {
         console.error('Failed to create checkout session:', error);
@@ -1280,17 +683,50 @@ app.post('/create-checkout-session', async (req, res) => {
 
 app.get('/StripeSuccess', async (req, res) => {
     const itemIds = req.query.itemIds ? req.query.itemIds.split(',') : [];
+    const email = req.query.email;
+    const address = req.query.address || '';
+    const city = req.query.city || '';
+    const state = req.query.state || '';
+    const zip = req.query.zip || '';
+    const subtotal = parseFloat(req.query.subtotal);
+    const shippingTotal = parseFloat(req.query.shippingTotal);
+    const insuranceTotal = parseFloat(req.query.insuranceTotal);
+    const taxTotal = parseFloat(req.query.taxTotal);
+    const finalTotal = parseFloat(req.query.finalTotal);
 
     try {
         if (itemIds.length > 0) {
             const productsCollection = database.db(mongodb_database).collection('listing_items');
+            const items = await productsCollection.find({ _id: { $in: itemIds.map(id => new ObjectId(id)) } }).toArray();
+
             await productsCollection.updateMany(
                 { _id: { $in: itemIds.map(id => new ObjectId(id)) } },
                 { $set: { isSold: true } }
             );
+
+            const itemDetails = items.map(item => `${item.item_title} - $${item.item_price}`).join('\n');
+            const ownerEmail = "ajgabl18@gmail.com";
+
+            const orderDetails = `
+                Items:
+                ${itemDetails}
+
+                Shipping: $${shippingTotal.toFixed(2)}
+                Insurance: $${insuranceTotal.toFixed(2)}
+                Taxes: $${taxTotal.toFixed(2)}
+                Total: $${finalTotal.toFixed(2)}
+
+            `;
+
+            const customerDetails = `
+                Purchaser Email: ${email}
+                Address: ${address}, ${city}, ${state}, ${zip}
+            `;
+
+            sendOrderConfirmationEmail(email, orderDetails);
+            sendOrderNotificationEmail(ownerEmail, orderDetails, customerDetails);
         }
 
-        // Clear the cart
         req.session.cart = [];
         req.session.save(err => {
             if (err) {
@@ -1312,16 +748,103 @@ app.get('/StripeCancel', (req, res) => {
 
 // ----------------- Stripe Payment END -----------------
 
-async function markItemsAsSold(itemIds) {
-    const productsCollection = database.db(mongodb_database).collection('listing_items');
-    const objectIds = itemIds.map(id => ObjectId.createFromHexString(id));
-    try {
-        await productsCollection.updateMany(
-            { '_id': { $in: objectIds } },
-            { $set: { 'isSold': true } }
-        );
-        console.log('Items marked as sold');
-    } catch (error) {
-        console.error('Error marking items as sold:', error);
+// ----------------- Email Sending START -----------------
+
+
+app.post('/sendContactUsEmail', async (req, res) => {
+    const { name, email, message, token } = req.body;
+
+    console.log('Received contact form data:', { name, email, message, token });
+
+    const score = await createAssessment({ token, recaptchaAction: 'submit' });
+
+    if (score === null || score < 0.5) {
+        return res.status(400).json({ success: false, message: 'Failed reCAPTCHA verification' });
+    }
+
+    sendContactUsEmail({ name, email, message })
+        .then(info => {
+            console.log('Email sent:', info);
+            res.json({ success: true });
+        })
+        .catch(error => {
+            console.error('Error sending email:', error);
+            res.json({ success: false, message: error.message });
+        });
+});
+
+app.post('/sendReferralEmail', async (req, res) => {
+    const { organisation, email, message, token } = req.body;
+
+    console.log('Received referral form data:', { organisation, email, message, token });
+
+    const score = await createAssessment({ token, recaptchaAction: 'submit' });
+
+    if (score === null || score < 0.5) {
+        return res.status(400).json({ success: false, message: 'Failed reCAPTCHA verification' });
+    }
+
+    sendReferralEmail({ organisation, email, message })
+        .then(info => {
+            console.log('Referral email sent:', info);
+            res.json({ success: true });
+        })
+        .catch(error => {
+            console.error('Error sending referral email:', error);
+            res.json({ success: false, message: error.message });
+        });
+});
+
+// ----------------- Email Sending END -----------------
+
+// ----------------- reCAPTCHA START -----------------
+
+async function createAssessment({ token, recaptchaAction }) {
+    const client = new RecaptchaEnterpriseServiceClient();
+    const projectPath = client.projectPath(projectID);
+
+    const request = {
+        assessment: {
+            event: {
+                token: token,
+                siteKey: recaptchaKey,
+            },
+        },
+        parent: projectPath,
+    };
+
+    const [response] = await client.createAssessment(request);
+
+    if (!response.tokenProperties.valid) {
+        console.log(`The CreateAssessment call failed because the token was: ${response.tokenProperties.invalidReason}`);
+        return null;
+    }
+
+    if (response.tokenProperties.action === recaptchaAction) {
+        console.log(`The reCAPTCHA score is: ${response.riskAnalysis.score}`);
+        response.riskAnalysis.reasons.forEach((reason) => {
+            console.log(reason);
+        });
+        return response.riskAnalysis.score;
+    } else {
+        console.log("The action attribute in your reCAPTCHA tag does not match the action you are expecting to score");
+        return null;
     }
 }
+
+app.post('/submitContactForm', async (req, res) => {
+    const { name, email, message, token } = req.body;
+
+    console.log('Received form data:', { name, email, message, token });
+
+    const score = await createAssessment({ token, recaptchaAction: 'submit' });
+
+    if (score === null || score < 0.5) {
+        return res.status(400).send('Failed reCAPTCHA verification');
+    }
+
+    console.log('Form submitted successfully');
+    res.send('Form submitted successfully');
+});
+
+// ----------------- reCAPTCHA END -----------------

@@ -29,13 +29,13 @@
             <div class="row">
                 <div class="col-md-3">
                     <ul class="nav flex-column">
-                        <li class="item nav-item"><a href="#" onclick="loadContent('addListing')">Add New Listing</a></li>
-                        <li class="item nav-item"><a href="#" onclick="loadContent('currentListings')">Current Listings</a></li>
-                        <li class="item nav-item"><a href="#" onclick="loadContent('featuredItems')">Featured Items</a></li>
-                        <li class="item nav-item"><a href="#" onclick="loadContent('previousListings')">Previous Listings</a></li>
-                        <li class="item nav-item"><a href="#" onclick="loadContent('mailingList')">Mailing List</a></li>
-                        <li class="item nav-item"><a href="#adminUsers" onclick="loadContent('adminUsers')">Admin Users</a></li>
-                        <li class="item nav-item"><a href="#" onclick="loadContent('categoryManagement')">Manage Categories</a></li>
+                        <li class="item nav-item"><a href="#" onclick="loadContent('admin/addListing')">Add New Listing</a></li>
+                        <li class="item nav-item"><a href="#" onclick="loadContent('admin/currentListings')">Current Listings</a></li>
+                        <li class="item nav-item"><a href="#" onclick="loadContent('admin/featuredItems')">Featured Items</a></li>
+                        <li class="item nav-item"><a href="#" onclick="loadContent('admin/previousListings')">Previous Listings</a></li>
+                        <li class="item nav-item"><a href="#" onclick="loadContent('admin/mailingList')">Mailing List</a></li>
+                        <li class="item nav-item"><a href="#adminUsers" onclick="loadContent('admin/adminUsers')">Admin Users</a></li>
+                        <li class="item nav-item"><a href="#" onclick="loadContent('admin/categoryManagement')">Manage Categories</a></li>
                         <li class="item nav-item"><a href="#" onclick="loadContent('featureVideo')">Feature Video</a></li>
                     </ul>
                 </div>
@@ -57,9 +57,9 @@
                 .catch(error => console.error('Failed to load the content:', error));
         }
 
-        function loadThing(currentElement)
+        function loadSubCategories(currentElement)
         {
-            fetch('/load-subcategory', {
+            fetch('/admin/load-subcategory', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

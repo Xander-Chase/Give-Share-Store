@@ -8,7 +8,7 @@
     <div class="container mt-5">
         <h2>Add New Listing</h2>
         <p> Fields marked with <span class="mandatory">*</span> are mandatory.</p>
-        <form action="/submitListing" method="post" enctype="multipart/form-data" class="mt-4">
+        <form action="/admin/submitListing" method="post" enctype="multipart/form-data" class="mt-4">
 
             <!-- Product Images Input -->
             <div class="mb-3">
@@ -72,7 +72,7 @@
                     <div class="row">
                         <div class="col-md ">
                             <label for="item_category" class="form-label">Category <span class="mandatory">*</span> </label>
-                            <select class="form-select" id="itemCategory" name="item_category" multiple aria-label="multiple select example" onchange="loadThing(this)">
+                            <select class="form-select" id="itemCategory" name="item_category" multiple aria-label="multiple select example" onchange="loadSubCategories(this)">
                                 <% categories.forEach(function(category) { %>
                                 <option value='"<%= category.category_type %>"'><%= category.category_type%></option>
                                 <% }) %>

@@ -1,146 +1,196 @@
 <%- include("metadata") %>
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <style>
-            .sendButton {
-                width: 30vw;
-                height: 10vh;
-                border-radius: 5vh;
-            }
-
-            .input {
-                width: 30vw;
-                margin-top: 5px;
-                margin-bottom: 5px;
-            }
-
-            .specialInput {
-                height: 20vh;
-                text-wrap: pretty; /* FIXME: Front End Team, fix this to your liking asap*/
-            }
-
-            .title {
-                margin-bottom: 50px;
-            }
-
-            .contact-info {
-                font-size: 18pt;
-                margin-bottom: 15px;
-            }
-
-            .text-content {
-                font-size: 14pt;
-            }
-
-            .referral-text {
-                font-size: 18pt;
-            }
-
-            .referral-input {
-                width: 60vw;
-                margin-top: 10px;
-                margin-bottom: 5px;
-            }
-
-            .referral-send {
-                width: 60vw;
-                height: 10vh;
-                border-radius: 5vh;
-            }
-
-            .verticalSpacer {
-                margin-top: 15vh;
-                margin-bottom: 15vh;
-            }
-
-            .col.get-involved-col, .col.contact-us-col, .col.find-more-ways-col{
-                border-style: solid;
-                border-color: aquamarine;
-                border-radius: 4px;
-                padding: 5px;
-                margin-left: 4px;
-            }
-
-            .col.make-a-referral-col{
-                border-style: solid;
-                border-color: aquamarine;
-                border-radius: 4px;
-                padding: 5px;
-                margin-left: 4px;
-            }
-
-            h2,h3{
-                text-decoration: underline;
-            }
-
-            @media(min-width: 350px) and (max-width: 600px){
-                .col.get-involved-col{
-                min-width: 100vw;
-            }
-            .input.specialInput{
-                min-width: 50vw;
-                justify-content: center;
-            }
-            .btn.btn-outline-secondary.sendButton{
-                min-width: 50vw;
-                justify-content: center;
-            }
-
-            .required-text{
-                text-align: center;
-            }
-            }
-            .required-text{
-                text-align: center;
-            }
-           
-        </style>
-    </head>
-    <body>
-        <%- include("searchNavBar") %>
-        <div class="container-fluid">
-            <div class="row">
-                <div class="col get-involved-col">
-                    <h2 class="text-center title">Get Involved!</h2>
-                    <div class="text-center">
-                        <input type="text" placeholder="Name" class="input">
-                        <input type="email" placeholder="Email*" required class="input">
-                        <input type="text" placeholder="Where did you hear about us?" class="input">
-                        <textarea placeholder="Tell us a bit about yourself." class="input specialInput" wrap="soft" style="resize: none;"></textarea>
-                        <button type="button" class="btn btn-outline-secondary sendButton">Send</button>
-                    </div>
-                    <p class="required-text">*Required</p>
+<head>
+    <title>Contact Us</title>
+    <script src="https://www.google.com/recaptcha/enterprise.js" async defer></script>
+    <style>
+        .sendButton {
+          width: 30vw;
+          height: 10vh;
+          border-radius: 5vh;
+        }
+  
+        .input {
+          width: 30vw;
+          margin-top: 5px;
+          margin-bottom: 5px;
+        }
+  
+        .specialInput {
+          height: 20vh;
+          text-wrap: pretty;
+        }
+  
+        .title {
+          margin-bottom: 50px;
+        }
+  
+        .contact-info {
+          font-size: 18pt;
+          margin-bottom: 15px;
+        }
+  
+        .text-content {
+          font-size: 14pt;
+        }
+  
+        .referral-text {
+          font-size: 18pt;
+        }
+  
+        .referral-input {
+          width: 60vw;
+          margin-top: 10px;
+          margin-bottom: 5px;
+        }
+  
+        .referral-send {
+          width: 60vw;
+          height: 10vh;
+          border-radius: 5vh;
+        }
+  
+        .verticalSpacer {
+          margin-top: 15vh;
+          margin-bottom: 15vh;
+        }
+  
+        .col.get-involved-col, .col.contact-us-col, .col.find-more-ways-col {
+          border-style: solid;
+          border-color: aquamarine;
+          border-radius: 4px;
+          padding: 5px;
+          margin-left: 4px;
+        }
+  
+        .col.make-a-referral-col {
+          border-style: solid;
+          border-color: aquamarine;
+          border-radius: 4px;
+          padding: 5px;
+          margin-left: 4px;
+        }
+  
+        h2, h3 {
+          text-decoration: underline;
+        }
+  
+        @media(min-width: 350px) and (max-width: 600px) {
+          .col.get-involved-col {
+            min-width: 100vw;
+          }
+          .input.specialInput {
+            min-width: 50vw;
+            justify-content: center;
+          }
+          .btn.btn-outline-secondary.sendButton {
+            min-width: 50vw;
+            justify-content: center;
+          }
+  
+          .required-text {
+            text-align: center;
+          }
+        }
+  
+        .required-text {
+          text-align: center;
+        }
+  
+      </style>
+</head>
+<body>
+    <%- include("searchNavBar") %>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col get-involved-col">
+                <h2 class="text-center title">Get Involved!</h2>
+                <div class="text-center">
+                    <form id="getInvolvedForm" method="POST" onsubmit="return submitForm(event, 'getInvolvedForm', '/sendContactUsEmail')">
+                        <input type="text" placeholder="Name" class="input" name="name">
+                        <input type="email" placeholder="Email*" required class="input" name="email">
+                        <input type="text" placeholder="Where did you hear about us?" class="input" name="source">
+                        <textarea placeholder="Tell us a bit about yourself." class="input specialInput" wrap="soft" style="resize: none;" name="message"></textarea>
+                        <div class="g-recaptcha" data-sitekey="6Lfs9d8pAAAAAC1YSosyITORTx9OTJ8yN1yBDJht" data-callback="onRecaptchaSuccess" data-action="submit"></div>
+                        <input type="hidden" name="token" id="token-getInvolvedForm">
+                        <button type="submit" class="btn btn-outline-secondary sendButton">Send</button>
+                    </form>
                 </div>
-                <div class="col text-center contact-us-col">
-                    <h2 class="title">Contact Us</h2>
-                    <p class="contact-info">Phone: 778-229-3872<br>Email: wegiveshare@gmail.com</p>
-                    <p>Share the website! thevintagegarage.ca</p>
-                </div>
-                <div class="col text-center find-more-ways-col">
-                    <h2 class="title">Find more ways to help!</h2>
-                    <p class="text-content">
-                        A nonprofit is as strong as the community that holds it up. Together, we can do more than we can do alone. Let's bring our abilities and passions together to affect real change.<br>
-
-                        There are many ways to join us and support our goals. Contact us to find out  more about volunteer opportunities, and ways that you can get  our message to your friends and family.
-                    </p>
-                </div>
+                <p class="required-text">*Required</p>
             </div>
-            <div class="row verticalSpacer"></div>
-            <div class="row">
-                <div class="col make-a-referral-col">
-                    <h3 class="title text-center">Make a referral</h3>
-                    <p class="referral-text text-center">If you are a community service organisation and would like to refer a client in need of furniture or household goods please fill out the form below and we will contact you to see how we can help. (Due to the current public activity restrictions we are low on supply at this time, but hoping for things to change soon). Please leave us a short message along with your phone #, as well as when you are available to contact. We do not need to know client names at this time.</p>
-                    <div class="text-center">
-                        <input type="text" class="referral-input" placeholder="Organisation name">
-                        <input type="email" class="referral-input" placeholder="Email*" required>
+            <div class="col text-center contact-us-col">
+                <h2 class="title">Contact Us</h2>
+                <p class="contact-info">Phone: 778-229-3872<br>Email: wegiveshare@gmail.com</p>
+                <p>Share the website! thevintagegarage.ca</p>
+            </div>
+            <div class="col text-center find-more-ways-col">
+                <h2 class="title">Find more ways to help!</h2>
+                <p class="text-content">
+                    A nonprofit is as strong as the community that holds it up. Together, we can do more than we can do alone. Let's bring our abilities and passions together to affect real change.<br>
+                    There are many ways to join us and support our goals. Contact us to find out more about volunteer opportunities, and ways that you can get our message to your friends and family.
+                </p>
+            </div>
+        </div>
+        <div class="row verticalSpacer"></div>
+        <div class="row">
+            <div class="col make-a-referral-col">
+                <h3 class="title text-center">Make a referral</h3>
+                <p class="referral-text text-center">If you are a community service organisation and would like to refer a client in need of furniture or household goods please fill out the form below and we will contact you to see how we can help. (Due to the current public activity restrictions we are low on supply at this time, but hoping for things to change soon). Please leave us a short message along with your phone #, as well as when you are available to contact. We do not need to know client names at this time.</p>
+                <div class="text-center">
+                    <form id="referralForm" method="POST" onsubmit="return submitForm(event, 'referralForm', '/sendReferralEmail')">
+                        <input type="text" class="referral-input" placeholder="Organisation name" name="organisation">
+                        <input type="email" class="referral-input" placeholder="Email*" required name="email">
                         <textarea name="message" class="referral-input specialInput" placeholder="Message" wrap="soft" style="resize: none;"></textarea>
-                        <button type="button" class="btn btn-outline-secondary referral-send">Send</button>
+                        <div class="g-recaptcha" data-sitekey="6Lfs9d8pAAAAAC1YSosyITORTx9OTJ8yN1yBDJht" data-callback="onRecaptchaSuccess" data-action="submit"></div>
+                        <input type="hidden" name="token" id="token-referralForm">
+                        <button type="submit" class="btn btn-outline-secondary referral-send">Send</button>
                         <p class="required-text">*Required</p>
-                    </div>
+                    </form>
                 </div>
             </div>
         </div>
-    </body>
-<%- include("footer") %>
+    </div>
+    <script>
+        let recaptchaValid = false;
+
+        function onRecaptchaSuccess(token) {
+            recaptchaValid = true;
+            document.getElementById('token-getInvolvedForm').value = token;
+            document.getElementById('token-referralForm').value = token;
+        }
+
+        function submitForm(event, formId, actionUrl) {
+            event.preventDefault();
+            if (!recaptchaValid) {
+                alert('Please complete the reCAPTCHA');
+                return false;
+            }
+
+            const form = document.getElementById(formId);
+            const formData = new FormData(form);
+            fetch(actionUrl, {
+                method: 'POST',
+                body: JSON.stringify(Object.fromEntries(formData)),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Message sent successfully');
+                    window.location.href = '/';
+                } else {
+                    alert('Error sending message: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error sending message');
+            });
+        }
+    </script>
+    <%- include("footer") %>
+</body>
 </html>
