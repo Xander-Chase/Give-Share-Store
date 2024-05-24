@@ -7,7 +7,7 @@
         body {
             min-height: 100vh;
             position: relative;
-            padding-bottom: 145px;
+            padding-bottom: 150px;
         }
 
         footer {
@@ -28,7 +28,7 @@
         }
 
         .tos-text {
-            font-size: 10pt;
+            font-size: 8pt;
         }
 
         .fa-brands.fa-x-twitter, .fa-brands.fa-instagram, .fa-brands.fa-linkedin-in, .fa-brands.fa-facebook, .fa-brands.fa-youtube{
@@ -63,9 +63,9 @@
             width: auto;    
         }
 
-        @media (max-width: 509px) {
+        @media only screen and (max-width: 509px) {
             body {
-                padding-bottom: 250px;
+                padding-bottom: 290px;
             }
 
             #mc_embed_signup {
@@ -77,36 +77,42 @@
             }
         }
 
-        @media (min-width: 509px) {
-            @media (max-width: 576px) {
-                body {
-                    padding-bottom: 210px;
-                }
+        @media only screen and (min-width: 509px) and (max-width: 576px) {
+            body {
+                padding-bottom: 280px;
+            }
 
-                #mc_embed_signup {
-                    width: 78vw;
-                }
+            #mc_embed_signup {
+                width: 78vw;
+            }
 
-                #mce_EMAIL {
-                    width: 67vw;
-                }
+            #mce_EMAIL {
+                width: 67vw;
             }
         }
 
-        @media (min-width: 576px) {
-            @media (max-width: 690px) {
-                body {
-                    padding-bottom: 250px;
-                }
+        @media only screen and (min-width: 576px) and (max-width: 767px) {
+            body {
+                padding-bottom: 270px;
+            }
+        }
+
+        @media only screen and (max-width: 767px) {
+            .tos-text {
+                font-size: 10pt;
             }
         }
     </style>
     <div class="row"><p></p></div>
     <div class="row" style="background-color: #84A49A;">
         <div class="col d-flex align-items-end">
-            <span class="tos-text"><a
-                    href="https://www.youtube.com/watch?v=VViNk4o9RDQ">Terms of
-                    service</a>, Copyright GiveShare 2024</span>
+            <span class="tos-text">
+                <a href="/contact">Contact Us!</a><br>
+                <a href="https://www.youtube.com/watch?v=VViNk4o9RDQ">
+                    Terms of
+                    service
+                </a>, Copyright GiveShare 2024
+            </span>
         </div>
         <div class="col text">
             <div id="mc_embed_shell">
