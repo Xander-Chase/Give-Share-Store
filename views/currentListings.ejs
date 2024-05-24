@@ -1,20 +1,51 @@
 <head>
     <style>
+        body {
+            padding-bottom: 3vh;
+        }
+
+        .card {
+            min-height: 46vh;
+        }
+
         .product-img {
-            max-height: 30vh;
+            width: 25vw;
+            height: 25vh;
             overflow: hidden;
+            border: solid;
+            border-width: 2px;
+            border-color: lightgray;
+        }
+
+        div.pagination-btn {
+            margin-left: 0.75vw;
+            margin-right: 0.75vw;
+            margin-top: 2vh;
+            margin-bottom: 2vh;
+        }
+
+        a.pagination-btn {
+            padding-top: 1px;
+            padding-bottom: 1px;
+            padding-left: 5px;
+            padding-right: 5px;
+            font-size: 14pt;
+            color: rgb(100, 100, 100);
+            text-decoration: none;
         }
     </style>
 </head>
 <div class="container mt-5">
-    <h2>Current Listings</h2>
+    <span class="admin-header">Current Listings</span>
     <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
         <% listings.forEach(function(listing) { %>
             <div class="col">
                 <div class="card shadow-sm">
                     <% if(listing.product_img_URL && listing.product_img_URL.length > 0) { %>
-                        <div class="d-flex product-img align-items-center justify-content-center" style="border: solid; border-width: 2px; border-color: lightgray; max-width: 25vw;">
-                            <img src="<%= listing.product_img_URL[0] %>" class="bd-placeholder-img card-img-top" alt="...">
+                        <div class="d-flex align-items-center justify-content-center">
+                            <div class="product-img d-flex align-items-center">
+                                <img src="<%= listing.product_img_URL[0] %>" class="bd-placeholder-img card-img-top" alt="...">
+                            </div>
                         </div>
                     <% } else { %>
                         <svg class="bd-placeholder-img card-img-top" width="100%" height="225" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Placeholder: Thumbnail" preserveAspectRatio="xMidYMid slice" focusable="false">
@@ -24,7 +55,7 @@
                         </svg>
                     <% } %>
                     <div class="card-body">
-                        <p class="card-text"><%= listing.item_title %></p>
+                        <p class="card-text"><%= (listing.item_title.length > 68) ? `${listing.item_title.slice(0, 68)}...` : listing.item_title %></p>
                         <div class="d-flex justify-content-between align-items-center">
                             <div class="btn-group">
                                 <a href="/product-info/<%= listing._id %>" class="btn btn-sm btn-outline-secondary">View</a>
@@ -40,15 +71,15 @@
     <div class="row landing-pad-bottom">
         <div class="col d-flex justify-content-center">
             <div class="pagination-btn">
-                <a href="#" onclick="loadPostMethodContent('admin/page=<%= previousPage %>')"> < </a>
+                <a href="#" onclick="loadPostMethodContent('admin/page=<%= previousPage %>')" class="pagination-btn"> < </a>
             </div>
             <% paginationIndex.forEach(function(index) { %>
                 <div class="pagination-btn">
-                    <a href="#" onclick="loadPostMethodContent('admin/page=<%= index %>')"><%= index %></a>
+                    <a href="#" onclick="loadPostMethodContent('admin/page=<%= index %>')" class="pagination-btn"><%= index %></a>
                 </div>
             <% }); %>
             <div class="pagination-btn">
-                <a href="#" onclick="loadPostMethodContent('admin/page=<%= nextPage %>')"> > </a>
+                <a href="#" onclick="loadPostMethodContent('admin/page=<%= nextPage %>')" class="pagination-btn"> > </a>
             </div>
         </div>
     </div>
