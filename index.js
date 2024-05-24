@@ -1,5 +1,14 @@
+
+/**
+ * Basic Require Configs.
+ */
 require('dotenv').config();                                    // Import dotenv module to read ..env file
 require('./utils');                                            // Import utils.js file to define include function
+
+/*
+ * Assign most variables
+ *
+ */
 const express = require('express');                             // Import express module to create server
 const session = require('express-session');                     // Import express-session module to manage session
 const MongoDBStore = require('connect-mongo');                  // Import connect-mongo module to store session in MongoDB
@@ -21,12 +30,15 @@ const bodyParser = require('body-parser');                      // Import body-p
 const { sendContactUsEmail, sendReferralEmail, sendOrderConfirmationEmail, sendOrderNotificationEmail } = require('./routes/mailer'); // Import mailer.js file to send emails
 const moment = require('moment-timezone');
 
-
-
-const app = express();
-const routes = require('./routes');
-
+// Get most of the functions.
 const { getBodyFilters, getCategoriesNav } = require('./controller/htmlContent');
+const { sendContactUsEmail, sendReferralEmail, sendOrderConfirmationEmail, sendOrderNotificationEmail } = require('./routes/mailer'); // Import mailer.js file to send emails
+// Import Variables
+const {adminCollection, categoryCollection} = require('./database/constants');
+
+// Start express application
+const app = express();
+
 app.set('view engine', 'ejs');                              // Set view engine to ejs
 
 app.use(express.urlencoded({ extended: true }));            // parse urlencoded request bodies
@@ -34,44 +46,43 @@ app.use(express.static('public'));                          // serve static imag
 app.use(express.static('css'));                             // serve static css files
 app.use(express.static('js'));                              // serve static js files
 app.use(express.json());                                    // parse json request bodies
+
+// Allow body fields to be printed as JSON.
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-
-const searchRoute = require('./routes/filter');
-const adminRoute = require('./routes/admin');
-const cartRoute = require('./routes/cart');
-const userRoute = require('./routes/user');
-
+// Create routers for each duplicate or related routes.
+const filterRouter = require('./routes/filter');
+const adminRouter = require('./routes/admin');
+const cartRouter = require('./routes/cart');
+const userRouter = require('./routes/user');
 
 const port = process.env.PORT || 5000;                      // Set port to 5000 if not defined in ..env file
 
 
 // secret variables located in ..env file
-const mongodb_cluster = process.env.MONGODB_CLUSTER;
-const mongodb_user = process.env.MONGODB_USER;
-const mongodb_password = process.env.MONGODB_PASSWORD;
-const mongodb_database = process.env.MONGODB_DATABASE;
-const mongodb_session_secret = process.env.MONGODB_SESSION_SECRET;
-const node_session_secret = process.env.NODE_SESSION_SECRET;
-const PayPalEnvironment = process.env.PAYPAL_ENVIRONMENT;   // Import PayPal Environment from ..env file
-const PayPalClientID = process.env.PAYPAL_CLIENT_ID;        // Import PayPal Client ID from ..env file
-const PayPalSecret = process.env.PAYPAL_CLIENT_SECRET;      // Import PayPal Secret from ..env file
+// Mongo Database Variables
+const mongodb_cluster = process.env.MONGODB_CLUSTER;                    // MONGODB App
+const mongodb_user = process.env.MONGODB_USER;                          // MONGODB Owner's Username
+const mongodb_password = process.env.MONGODB_PASSWORD;                  // MONGODB Owner's Password
+const mongodb_database = process.env.MONGODB_DATABASE;                  // MONGODB Database
+const mongodb_session_secret = process.env.MONGODB_SESSION_SECRET;      // MONGODB Session
+
+const node_session_secret = process.env.NODE_SESSION_SECRET;            // Node secret setup
+const PayPalEnvironment = process.env.PAYPAL_ENVIRONMENT;               // Import PayPal Environment from ..env file
+const PayPalClientID = process.env.PAYPAL_CLIENT_ID;                    // Import PayPal Client ID from ..env file
+const PayPalSecret = process.env.PAYPAL_CLIENT_SECRET;                  // Import PayPal Secret from ..env file
 const PayPal_endpoint_url = PayPalEnvironment === 'sandbox' ? 'https://api-m.sandbox.paypal.com' : 'https://api-m.paypal.com'; // Import PayPal endpoint URL from ..env file
-const projectID = process.env.CAPTCHA_PROJECT_ID            // Import Captcha Project ID from ..env file
-const recaptchaKey = process.env.CAPTCHA_SECRET_KEY         // Import Captcha Secret Key from ..env file
+const projectID = process.env.CAPTCHA_PROJECT_ID                 // Import Captcha Project ID from ..env file
+const recaptchaKey = process.env.CAPTCHA_SECRET_KEY              // Import Captcha Secret Key from ..env file
 process.env.GOOGLE_APPLICATION_CREDENTIALS = './thevintagegarage-1715977793921-f27e14d35c3e.json';
 
 // importing the database object from databaseConnection.js file
-var { database } = include('databaseConnection');
+let { database } = include('databaseConnection');
 
-// referencing to admins and users collection in database
-const adminCollection = database.db(mongodb_database).collection('admins');
-const userCollection = database.db(mongodb_database).collection('users');
 
-const categoryCollection = database.db(mongodb_database).collection('categories');
 // linking to mongoDb database
-var mongoStore = MongoDBStore.create({
+let mongoStore = MongoDBStore.create({
     mongoUrl: `mongodb+srv://${mongodb_user}:${mongodb_password}@${mongodb_cluster}/${mongodb_database}`,
     crypto: {
         secret: mongodb_session_secret
@@ -102,6 +113,7 @@ app.use(session({
     cookie: { maxAge: 60 * 60 * 1000 * 10 }
 }));
 
+// Assign or setup variables before execution
 app.use((req, res, next) => {
     req.session = req.session || {};
 
@@ -113,10 +125,19 @@ app.use((req, res, next) => {
     next();
 });
 
-app.use('/filter', searchRoute);
-app.use('/admin', adminRoute);
-app.use('/cart', cartRoute);
-app.use('/user', userRoute)
+// Assign the filter route to its router
+app.use('/filter', filterRouter);
+
+// Assign the admin route to its router
+app.use('/admin', adminRouter);
+
+// Assign the cart route to its router
+app.use('/cart', cartRouter);
+
+// Assign the user route to its router
+app.use('/user', userRouter)
+
+// Landing Page Route
 app.get('/', async (req, res) => {
 
     // Set Up variables
@@ -132,7 +153,6 @@ app.get('/', async (req, res) => {
     let filtersHeader = [`Category ${categoryTab} ${subCategoryTab}`, "Sorting", "Price"];
     let filterAnchors = ["Category", "Sorting", "Price"];
     let prices = [];
-
 
     try {
         // Get current listing collection
@@ -159,23 +179,30 @@ app.get('/', async (req, res) => {
                 return 0;
         });
 
-        // pagination set up
+        // Pagination set up
         let pageIndexes = [];
         let previousIndex = req.session.pageIndex - 1;
         let nextIndex = previousIndex + 2;
-        let numberOfPages = sortedPrices.length / 18;
         if (previousIndex < 1)
             previousIndex = 1;
+        // TODO: TO MODIFY AMOUNT OF PAGES PER PAGE, CHANGE THE NUMBER.
+        let numberOfPages = sortedPrices.length / /* TODO: Change this number to modify */ 18;
 
         if (nextIndex >= numberOfPages)
             nextIndex--;
 
+        // Assign the number indexes to display
         for (let i = 0; i <= (numberOfPages); i++)
             pageIndexes.push(i + 1);
 
-        const skips = 18 * (((req.session.pageIndex - 1) < 0) ? 0 : (req.session.pageIndex - 1));
+        // TODO: TO MODIFY AMOUNT OF PAGES PER PAGE, CHANGE THE FIRST NUMBER.
+        const skips = /* TODO: Change this number to modify */ 18 * (((req.session.pageIndex - 1) < 0) ? 0 : (req.session.pageIndex - 1));
 
-        // call another find to finally get the current 18 items in a page
+        /*
+        Call its designed filters.
+        Skip is based on the current page.
+        Limit is how many items (maximum) should display per page.
+         */
         currentListings = await productsCollection.find({
             isFeatureItem: false,
             item_title: { $regex: searchKey, $options: 'i' },
@@ -186,19 +213,22 @@ app.get('/', async (req, res) => {
             .limit(18)
             .toArray();
 
-        // initially set to 0
+        // initially page index to 0 to prevent miscalculations.
         req.session.pageIndex = 0;
 
+        // Obtain Sub-Categories.
         const subCategories = await categoryCollection.find({ category_type: req.session.category }).project({ _id: 0, sub_categories: 1 }).toArray();
         let bodyFilters;
+
         if (subCategories.length < 1 || subCategories[0].sub_categories.length < 1)
             bodyFilters = getBodyFilters(sortedPrices[0], sortedPrices[prices.length - 1], maximumPrice, []);
         else
             bodyFilters = getBodyFilters(sortedPrices[0], sortedPrices[prices.length - 1], maximumPrice, subCategories[0].sub_categories);
 
-
+        // Find one featured video for the bottom of the page.
         const featureVideo = await featureVideoCollection.findOne({});
 
+        // Render landing page.
         res.render("landing", {
             isLoggedIn,
             currentListings: currentListings,
@@ -215,15 +245,32 @@ app.get('/', async (req, res) => {
         });
     } catch (error) {
         console.error('Failed to fetch current listings:', error);
-        res.render("landing", { isLoggedIn: isLoggedIn, categories: [], isAdmin: isAdmin, currentListings: [], featureVideo: null });
+        res.render("landing", {
+            isLoggedIn: isLoggedIn,
+            currentListings: [],
+            filterHeaders: [],
+            filterAnchors: [],
+            filterStuff: "",
+            categories: [],
+            isAdmin: isAdmin,
+            paginationIndex: 0,
+            previousPage: 0,
+            nextPage: 0,
+            featuredItems: null,
+            featureVideo: null
+        });
     }
 });
 
+// With each page, get its index and assign the page index to that.
 app.post('/page=:index', async (req, res) => {
     req.session.pageIndex = req.params.index;
     res.redirect('/');
 })
 
+/**
+ * Hashes all the passwords to ensure security.
+ */
 async function hashExistingPasswords() {
     try {
         const admins = adminCollection;
@@ -242,6 +289,13 @@ async function hashExistingPasswords() {
     }
 }
 
+/**
+ * Fetches all the prices in the database based on the filters used.
+ * @param searchKey a string, a pattern used to check the listings that contain that pattern.
+ * @param categoryKeyword a string, a category type to check the listings that has that category.
+ * @param subCategoryKeyword a string, a sub-category type to check the listings that has that sub-category.
+ * @returns all the non-featured items' prices based on the search, category, sub-category filter.
+ */
 async function fetchAllPrices(searchKey, categoryKeyword, subCategoryKeyword) {
     try {
         const productsCollection = database.db(mongodb_database).collection('listing_items');
@@ -260,19 +314,21 @@ async function fetchAllPrices(searchKey, categoryKeyword, subCategoryKeyword) {
     }
 }
 
-
+// Route for login portal
 app.get("/loginPortal", (req, res) => {
     res.render('loginPortal');
 })
 
+// Route for sign-out
 app.get('/signout', (req, res) => {
     req.session.destroy()
     res.redirect('/');
 });
 
-
+// Route for each product based on the ID
 app.get('/product-info/:id', async (req, res) => {
     try {
+        // get the id parameters
         const itemId = req.params.id;
         const productsCollection = database.db(mongodb_database).collection('listing_items');
 
@@ -283,39 +339,38 @@ app.get('/product-info/:id', async (req, res) => {
             return;
         }
 
-        const isLoggedIn = req.session.loggedIn;
-        res.render('product-info', { item: item, isLoggedIn: isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav() });
+        res.render('product-info', { item: item, isLoggedIn: req.session.loggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav() });
     } catch (error) {
         console.error('Failed to fetch item:', error);
         res.status(500).send('Error fetching item details');
     }
 });
 
-
+// Route for about page
 app.get('/about', async (req, res) => {
-    const isLoggedIn = req.session.loggedIn;
-    res.render("about", { isLoggedIn: isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav() });
+    res.render("about", { isLoggedIn: req.session.loggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav() });
 });
 
+// Route for contact us page
 app.get('/contact-us', async (req, res) => {
-    const isLoggedIn = req.session.loggedIn;
-    res.render("contact", { isLoggedIn: isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav() });
+    res.render("contact", { isLoggedIn: req.session.loggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav() });
 });
 
+// Route for managing a user
 app.get('/manageUser', async (req, res) => {
     if (req.session.loggedIn) {
         const isLoggedIn = req.session.loggedIn;
         res.render("user-management", { isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav() });
-
     }
     else {
         res.redirect('/user/LogIn');
     }
 });
 
+// Route for past orders.
 app.get('/pastOrders', async (req, res) => {
     try {
-        const ordersCollection = database.db(MONGODB_DATABASE).collection('orders');
+        const ordersCollection = database.db(mongodb_database).collection('orders');
         const userOrders = await ordersCollection.find({ userId: req.session.userId }).toArray();
         const isLoggedIn = req.session.loggedIn;
         res.render('pastOrders', {
@@ -330,37 +385,7 @@ app.get('/pastOrders', async (req, res) => {
     }
 });
 
-// TODO: Can this be removed?
-async function addTestOrder() {
-    try {
-        const ordersCollection = database.db(mongodb_database).collection('orders');
-        const testOrder = {
-            userId: 'testUserId',
-            date: new Date(),
-            totalAmount: 100.00,
-            items: [
-                {
-                    item_title: 'Test Item 1',
-                    item_price: 50.00,
-                    item_quantity: 1
-                },
-                {
-                    item_title: 'Test Item 2',
-                    item_price: 25.00,
-                    item_quantity: 2
-                }
-            ]
-        };
-        await ordersCollection.insertOne(testOrder);
-        console.log('Test order added successfully');
-    } catch (error) {
-        console.error('Error adding test order:', error);
-    }
-}
-
-addTestOrder();
-
-
+// Route for settings.
 app.get('/settings', async (req, res) => {
     if (req.session.loggedIn) {
         const isLoggedIn = req.session.loggedIn;
@@ -373,6 +398,7 @@ app.get('/settings', async (req, res) => {
     }
 });
 
+// Route for changing password
 app.post('/changePassword', async (req, res) => {
     const { currentPassword, newPassword, confirmPassword } = req.body;
     const email = req.session.email;
@@ -428,6 +454,10 @@ database.connect().then(async () => {
 
 // ----------------- PayPal Payment START -----------------
 
+/**
+ *  Based on performing the Paypal authentication to achieve access token.
+ * @returns Get the JSON access token
+ */
 async function getAccessToken() {
     const fetch = await import('node-fetch').then(module => module.default);
     const auth = `${PayPalClientID}:${PayPalSecret}`;
@@ -445,6 +475,7 @@ async function getAccessToken() {
     return json.access_token;
 }
 
+// Route post method for creation of paypal order.
 app.post('/create-paypal-order', async (req, res) => {
     try {
         const fetch = await import('node-fetch').then(module => module.default);
@@ -485,6 +516,7 @@ app.post('/create-paypal-order', async (req, res) => {
     }
 });
 
+// Post method for sold items.
 app.post('/mark-items-sold', async (req, res) => {
     const { itemIds, email, address, city, state, zip, subtotal, shippingTotal, insuranceTotal, taxTotal, finalTotal } = req.body;
     const shippingPickup = req.session.cart.map(item => item.shippingPickup);
@@ -544,6 +576,7 @@ app.post('/mark-items-sold', async (req, res) => {
 
 const stripe = require('stripe')('sk_test_51OZSVHAcq23T9yD7gpE3kQS73T5AnO6UEaecXMwkzvGc9hVh1QlPNFmM3rzI9cxJ2tU2FtUAPzvcSc1obqPcrUfZ00PojCiOni');
 
+// Post method for creation of a checkout session
 app.post('/create-checkout-session', async (req, res) => {
     try {
         let { productIds, insuranceTotal, shippingTotal, taxTotal, finalTotal, subtotal, email, address, city, state, zip } = req.body;
@@ -652,6 +685,7 @@ app.post('/cart/update-shipping-pickup', (req, res) => {
     });
 });
 
+// Route for successful process with stripe
 app.get('/StripeSuccess', async (req, res) => {
     const itemIds = req.query.itemIds ? req.query.itemIds.split(',') : [];
     const email = req.query.email;
@@ -713,7 +747,7 @@ app.get('/StripeSuccess', async (req, res) => {
     }
 });
 
-
+// Route for cancellation of the stripe process
 app.get('/StripeCancel', (req, res) => {
     res.render('StripeCancel');
 });
@@ -722,7 +756,7 @@ app.get('/StripeCancel', (req, res) => {
 
 // ----------------- Email Sending START -----------------
 
-
+// Post method on sending contact us email
 app.post('/sendContactUsEmail', async (req, res) => {
     const { name, email, message, token } = req.body;
 
@@ -745,6 +779,7 @@ app.post('/sendContactUsEmail', async (req, res) => {
         });
 });
 
+// Post method for sending referral email.
 app.post('/sendReferralEmail', async (req, res) => {
     const { organisation, email, message, token } = req.body;
 
