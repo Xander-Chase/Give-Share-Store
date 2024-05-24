@@ -40,7 +40,7 @@ app.use(bodyParser.json());
 const searchRoute = require('./routes/filter');
 const adminRoute = require('./routes/admin');
 const cartRoute = require('./routes/cart');
-
+const userRoute = require('./routes/user');
 
 
 const port = process.env.PORT || 5000;                      // Set port to 5000 if not defined in ..env file
@@ -114,7 +114,7 @@ app.use((req, res, next) => {
 app.use('/filter', searchRoute);
 app.use('/admin', adminRoute);
 app.use('/cart', cartRoute);
-
+app.use('/user', userRoute)
 app.get('/', async (req, res) => {
 
     // Set Up variables
@@ -138,29 +138,14 @@ app.get('/', async (req, res) => {
         const featureVideoCollection = database.db(mongodb_database).collection('featureVideo');
 
         // Fetch all prices
-        prices = await fetchAllPrices();
-        console.log(prices); // debugging
+        prices = await fetchAllPrices(searchKey, categoryKeyword, subCategoryKeyword);
 
         // Fetch featured items
         const featuredItems = await productsCollection.find({ isFeatureItem: true }).toArray();
 
 
         // Called here to dynamically get the price through the category type
-        let currentListings = await productsCollection.find({
-            isFeatureItem: false,
-            item_title: { $regex: searchKey, $options: 'i' },
-            item_category: { $regex: categoryKeyword },
-            item_sub_category: { $regex: subCategoryKeyword }
-        }).sort({ item_price: orderCode });
-
-        // turn into array and push price field into the prices array
-        let currentListingsArray = await currentListings.toArray();
-        currentListingsArray.forEach(function (item) {
-            prices.push(item.item_price)
-        });
-
-        // close resources
-        currentListings.close();
+        let currentListings;
 
         // sort prices to make it easy on finding min and max
         const sortedPrices = prices.sort(function (a, b) {
@@ -189,7 +174,7 @@ app.get('/', async (req, res) => {
         const skips = 18 * (((req.session.pageIndex - 1) < 0) ? 0 : (req.session.pageIndex - 1));
 
         // call another find to finally get the current 18 items in a page
-        currentListingsArray = await productsCollection.find({
+        currentListings = await productsCollection.find({
             isFeatureItem: false,
             item_title: { $regex: searchKey, $options: 'i' },
             item_price: { $lt: Math.round(maximumPrice) },
@@ -214,7 +199,7 @@ app.get('/', async (req, res) => {
 
         res.render("landing", {
             isLoggedIn,
-            currentListings: currentListingsArray,
+            currentListings: currentListings,
             filterHeaders: filtersHeader,
             filtersAnchor: filterAnchors,
             filterStuff: bodyFilters,
@@ -255,10 +240,17 @@ async function hashExistingPasswords() {
     }
 }
 
-async function fetchAllPrices() {
+async function fetchAllPrices(searchKey, categoryKeyword, subCategoryKeyword) {
     try {
         const productsCollection = database.db(mongodb_database).collection('listing_items');
-        const prices = await productsCollection.find({}, { projection: { item_price: 1 } }).toArray();
+        const prices = await productsCollection.find(
+            {
+                isFeatureItem: false,
+                item_title: { $regex: searchKey, $options: 'i' },
+                item_category: { $regex: categoryKeyword },
+                item_sub_category: { $regex: subCategoryKeyword }
+            },
+            { projection: { item_price: 1 } }).toArray();
         return prices.map(item => item.item_price);
     } catch (error) {
         console.error('Failed to fetch prices:', error);
@@ -270,57 +262,6 @@ async function fetchAllPrices() {
 app.get("/loginPortal", (req, res) => {
     res.render('loginPortal');
 })
-
-
-app.get('/userLogIn', (req, res) => {
-    res.render("userLogIn");
-});
-
-app.get('/userNewLogIn', (req, res) => {
-    res.render("userNewLogIn");
-});
-
-app.post('/userLogInSubmit', async (req, res) => {
-
-    const email = req.body.email;
-    const password = req.body.password;
-
-    const schema = Joi.object({
-        email: Joi.string().required(),
-        password: Joi.string().max(20).required()
-    });
-
-    const validationResult = schema.validate({ email, password });
-    if (validationResult.error != null) {
-        console.log(validationResult.error);
-        res.render("userLogIn", { error: "Error: " + validationResult.error.message });
-        return;
-    }
-
-    const user = await userCollection.findOne({ email: email });
-    if (user === null) {
-        console.log("User not found");
-        res.render("userLogIn", { error: "Error: User not found" });
-        return;
-    }
-
-    const passwordMatch = await bcrypt.compare(password, user.password);
-    if (!passwordMatch) {
-        console.log("Invalid password");
-        res.render("userLogIn", { error: "Error: Invalid password" });
-        return;
-    }
-
-    req.session.loggedIn = true;
-    req.session.isAdmin = false;
-    req.session.name = user.name;
-    req.session.email = user.email;
-    req.session.password = user.password;
-    console.log("user isLoggedIn:" + req.session.loggedIn);
-    req.session.userId = user._id;
-    res.redirect("/");
-});
-
 
 app.get('/signout', (req, res) => {
     req.session.destroy()
@@ -366,7 +307,7 @@ app.get('/manageUser', async (req, res) => {
 
     }
     else {
-        res.redirect('/userLogIn');
+        res.redirect('/user/LogIn');
     }
 });
 
