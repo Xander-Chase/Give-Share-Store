@@ -78,6 +78,7 @@ var mongoStore = MongoDBStore.create({
     collection: 'sessions'
 });
 
+
 // **************************** Functions ****************************
 // Necessary functions to ensure non-repeating code.
 // Format amounts with commas
