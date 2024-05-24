@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const Joi = require("joi");
 const bcrypt = require("bcrypt");
-const {ObjectId} = require("mongodb");
+const { ObjectId } = require("mongodb");
 const mailchimp = require("@mailchimp/mailchimp_marketing");
 const router = express.Router();
 
@@ -10,11 +10,29 @@ const mongo_database = process.env.MONGODB_DATABASE;
 const mailchimp_api_key = process.env.MAILCHIMP_API_KEY;
 const mailchimp_server_prefix = process.env.MAILCHIMP_SERVER_PREFIX;
 const mailchimp_list_id = process.env.MAILCHIMP_LIST_ID;
-const {adminCollection, userCollection, categoryCollection} = require('../database/constants')
-var {database} = require('../databaseConnection');
-const {getCategoriesNav} = require('../controller/htmlContent');
-const {upload, deleteFromS3, featureVideoUpload, s3} = require("../controller/awsController");
-const {DeleteObjectCommand} = require("@aws-sdk/client-s3");
+const { adminCollection, userCollection, categoryCollection } = require('../database/constants')
+var { database } = require('../databaseConnection');
+const { getCategoriesNav } = require('../controller/htmlContent');
+const { upload, deleteFromS3, featureVideoUpload, s3 } = require("../controller/awsController");
+const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
+
+const multer = require('multer');
+const storage = multer.memoryStorage();
+const multerUpload = multer({
+    storage: storage,
+    fileFilter: (req, file, cb) => {
+        const validImageTypes = ['image/jpeg', 'image/png', 'image/gif'];
+        const validVideoTypes = ['video/mp4', 'video/avi', 'video/mkv'];
+
+        if (file.fieldname === 'photo' && validImageTypes.includes(file.mimetype)) {
+            cb(null, true);
+        } else if (file.fieldname === 'video' && validVideoTypes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Invalid file type'));
+        }
+    }
+}).fields([{ name: 'photo', maxCount: 10 }, { name: 'video', maxCount: 1 }]);
 
 // TODO: Done
 router.get('/LogIn', (req, res) => {
@@ -35,21 +53,21 @@ router.post('/LogInSubmit', async (req, res) => {
     const validationResult = schema.validate({ email, password });
     if (validationResult.error != null) {
         console.log(validationResult.error);
-        res.render("adminLogIn", {error: "Error: "+validationResult.error.message});
+        res.render("adminLogIn", { error: "Error: " + validationResult.error.message });
         return;
     }
 
     const user = await adminCollection.findOne({ email: email });
     if (user === null) {
         console.log("User not found");
-        res.render("adminLogIn", {error: "Error: User not found"});
+        res.render("adminLogIn", { error: "Error: User not found" });
         return;
     }
 
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
         console.log("Invalid password");
-        res.render("adminLogIn", {error: "Error: Invalid password"});
+        res.render("adminLogIn", { error: "Error: Invalid password" });
         return;
     }
 
@@ -66,7 +84,8 @@ router.post('/LogInSubmit', async (req, res) => {
 router.get('/manage', async (req, res) => {
     if (req.session.loggedIn) {
         const isLoggedIn = req.session.loggedIn;
-        res.render("product-management", {isLoggedIn,
+        res.render("product-management", {
+            isLoggedIn,
             isAdmin: req.session.isAdmin,
             categories: await getCategoriesNav()
         });
@@ -79,12 +98,15 @@ router.get('/manage', async (req, res) => {
 // TODO: DONE
 router.get('/addListing', async (req, res) => {
 
-    res.render('addListing', {categories: await categoryCollection.find().toArray()});
+    res.render('addListing', { categories: await categoryCollection.find().toArray() });
 });
+
+
 
 // TODO: DONE
 // Route to handle form submission
-router.post('/submitListing', upload.fields([{ name: 'photo', maxCount: 10 }, { name: 'video', maxCount: 1 }]), async (req, res) => {
+router.post('/submitListing', upload.fields([{ name: 'photo', maxCount: 10 }, { name: 'video', maxCount: 1 }]), multerUpload, async (req, res) => {
+
     const photos = req.files['photo'] ? req.files['photo'].map(file => file.location) : [];
     const videos = req.files['video'] ? req.files['video'].map(file => file.location) : [];
 
@@ -99,12 +121,10 @@ router.post('/submitListing', upload.fields([{ name: 'photo', maxCount: 10 }, { 
         item_estimatedShippingCost: parseFloat(req.body.item_estimatedShippingCost) || 0.0,
         item_estimatedInsuranceCost: parseFloat(req.body.item_estimatedInsuranceCost) || 0.0,
         isFeatureItem: req.body.isFeatureItem === 'true',
-        item_category: Array.isArray(req.body.item_category) ? req.body.item_category.map(function(item)
-        {
+        item_category: Array.isArray(req.body.item_category) ? req.body.item_category.map(function (item) {
             return item.replace(/"/g, '');
         }) : [req.body.item_category.replace(/"/g, '')],
-        item_sub_category: Array.isArray(req.body.item_sub_category) ? req.body.item_sub_category.map(function(item)
-        {
+        item_sub_category: Array.isArray(req.body.item_sub_category) ? req.body.item_sub_category.map(function (item) {
             return item.replace(/"/g, '');
         }) : [req.body.item_sub_category.replace(/"/g, '')],
         status: 'available' // Default status when a listing is created
@@ -130,11 +150,11 @@ router.get('/editListing/:id', async (req, res) => {
     }
 
     try {
-        const listing = await database.db(mongo_database).collection('listing_items').findOne({_id: new ObjectId(itemId)});
+        const listing = await database.db(mongo_database).collection('listing_items').findOne({ _id: new ObjectId(itemId) });
         if (!listing) {
             return res.status(404).send('Listing not found');
         }
-        res.render('editListing', { listing, isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav()});
+        res.render('editListing', { listing, isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav() });
     } catch (error) {
         console.error('Failed to fetch listing:', error);
         res.status(500).send('Error fetching listing details');
@@ -142,7 +162,7 @@ router.get('/editListing/:id', async (req, res) => {
 });
 
 // TODO: DONE
-router.post('/updateListing/:id', upload.fields([{ name: 'photo', maxCount: 10 }, { name: 'video', maxCount: 1 }]), async (req, res) => {
+router.post('/updateListing/:id', upload.fields([{ name: 'photo', maxCount: 10 }, { name: 'video', maxCount: 1 }]), multerUpload, async (req, res) => {
     const itemId = new ObjectId(req.params.id);
     console.log("Form submission data:", req.body);
 
@@ -203,7 +223,7 @@ router.post('/updateListing/:id', upload.fields([{ name: 'photo', maxCount: 10 }
     }
 });
 
-// TODO: DONE
+
 // Route to handle feature video upload
 router.post('/submitFeatureVideo', featureVideoUpload.single('video'), async (req, res) => {
     if (!req.file) {
@@ -218,7 +238,7 @@ router.post('/submitFeatureVideo', featureVideoUpload.single('video'), async (re
     res.redirect('/admin/manage');
 });
 
-// TODO: DONE
+
 // Route to handle feature video removal
 router.post('/removeFeatureVideo', async (req, res) => {
     const featureVideoCollection = database.db(mongo_database).collection('featureVideo');
@@ -343,7 +363,7 @@ router.get('/editUser/:id', async (req, res) => {
             return;
         }
         const isLoggedIn = req.session.loggedIn;
-        res.render('editUser', { user, isLoggedIn : isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav()});
+        res.render('editUser', { user, isLoggedIn: isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav() });
 
     } catch (error) {
         console.error('Error retrieving user for editing:', error);
@@ -357,7 +377,7 @@ router.post('/updateUser/:id', async (req, res) => {
         const { name, email } = req.body;
         await adminCollection.updateOne(
             { _id: new ObjectId(req.params.id) },
-            { $set: { name, email }}
+            { $set: { name, email } }
         );
         res.redirect('/admin/manage');
     } catch (error) {
@@ -370,7 +390,7 @@ router.post('/updateUser/:id', async (req, res) => {
 router.post('/deleteUser/:id', async (req, res) => {
     try {
         const result = await adminCollection.deleteOne({ _id: new ObjectId(req.params.id) });
-        if(result.deletedCount === 1) {
+        if (result.deletedCount === 1) {
             res.status(200).send('User deleted successfully');
         } else {
             res.status(404).send('User not found');
@@ -403,15 +423,12 @@ router.get('/categoryManagement', async (req, res) => {
 })
 
 // TODO: DONE
-router.get('/editCategory/:id', async (req, res) =>
-{
-    try
-    {
+router.get('/editCategory/:id', async (req, res) => {
+    try {
         const category = await categoryCollection.findOne({ _id: new ObjectId(req.params.id) });
-        res.render('editCategory', { category, isAdmin: req.session.isAdmin, isLoggedIn : req.session.loggedIn, categories: await getCategoriesNav()});
+        res.render('editCategory', { category, isAdmin: req.session.isAdmin, isLoggedIn: req.session.loggedIn, categories: await getCategoriesNav() });
     }
-    catch (error)
-    {
+    catch (error) {
         console.error('Error retrieving category for editing:', error);
         res.status(500).send('Error retrieving category');
     }
@@ -424,10 +441,12 @@ router.post('/updateCategory/:id', async (req, res) => {
         console.log(`${name} and ${sub_categories}`)
         await categoryCollection.updateOne(
             { _id: new ObjectId(req.params.id) },
-            { $set: {
+            {
+                $set: {
                     category_type: name,
                     sub_categories: sub_categories.split(", ")
-                }}
+                }
+            }
         );
         res.redirect('/admin/manage');
     } catch (error) {
@@ -440,7 +459,7 @@ router.post('/updateCategory/:id', async (req, res) => {
 router.post('/deleteCategory/:id', async (req, res) => {
     try {
         const result = await categoryCollection.deleteOne({ _id: new ObjectId(req.params.id) });
-        if(result.deletedCount === 1) {
+        if (result.deletedCount === 1) {
             res.status(200).send('Category deleted successfully');
         } else {
             res.status(404).send('Category not found');
@@ -453,9 +472,9 @@ router.post('/deleteCategory/:id', async (req, res) => {
 
 // TODO: DONE
 router.post('/addCategory', async (req, res) => {
-    const { category_name, sub_categories} = req.body;
+    const { category_name, sub_categories } = req.body;
     try {
-        await categoryCollection.insertOne({ category_type: category_name, sub_categories: sub_categories.split(", ")});
+        await categoryCollection.insertOne({ category_type: category_name, sub_categories: sub_categories.split(", ") });
         res.redirect('/admin/manage');
 
     } catch (error) {
@@ -469,8 +488,8 @@ router.post('/addCategory', async (req, res) => {
 router.post('/load-subcategory', async (req, res) => {
 
     const type = req.body.categoryType.replace(/"/g, '');
-    const {sub_categories} = await categoryCollection.findOne({category_type: type});
-    try{
+    const { sub_categories } = await categoryCollection.findOne({ category_type: type });
+    try {
         req.session.save(err => {
             if (err) {
                 console.error('Error saving session:', err);
@@ -478,8 +497,7 @@ router.post('/load-subcategory', async (req, res) => {
             }
             res.json({ success: true, subCategories: sub_categories });
         });
-    }catch (error)
-    {
+    } catch (error) {
         console.error('Failed to remove item from cart:', error);
         res.json({ success: false, message: 'Error removing item from cart' });
     }
