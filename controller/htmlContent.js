@@ -1,7 +1,14 @@
+// Set up variables + imports
 const {categoryCollection} = require('../database/constants')
 
-
-
+/**
+ * Creates the accordion html code for the left filter sections in the landing page.
+ * @param maxVal a number, the maximum value of the listings
+ * @param minVal a number, the minimum value of the listings
+ * @param currentPrice a number, the price chosen
+ * @param subCategories a list of sub-categories depends on the current category
+ * @returns a list, contained with HTML code, used to display the filters accordions on the left section in the landing page.
+ */
 function getBodyFilters(maxVal, minVal, currentPrice, subCategories)
 {
     if (maxVal == null || minVal == null)
@@ -54,12 +61,16 @@ function getBodyFilters(maxVal, minVal, currentPrice, subCategories)
     ];
 }
 
+/**
+ * Get the categories which will be used to display on the nav bar
+ * @returns an array of categories.
+ */
 async function getCategoriesNav()
 {
     return await categoryCollection.find({}).toArray();
-
 }
 
+// Export the functions
 module.exports =
 {
     getBodyFilters,

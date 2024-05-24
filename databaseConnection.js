@@ -1,3 +1,4 @@
+// Set up variables + imports
 require('dotenv').config();
 
 const mongodb_cluster = process.env.MONGODB_CLUSTER;
@@ -9,4 +10,5 @@ const MongoClient = require("mongodb").MongoClient;
 const atlasURI = `mongodb+srv://${mongodb_user}:${mongodb_password}@${mongodb_cluster}/?retryWrites=true`;
 var database = new MongoClient(atlasURI, {useNewUrlParser: true, useUnifiedTopology: true});
 
+// Export the database
 module.exports = {database};
