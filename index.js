@@ -29,7 +29,7 @@ const mailchimp = require('@mailchimp/mailchimp_marketing');    // Import mailch
 const {RecaptchaEnterpriseServiceClient} = require('@google-cloud/recaptcha-enterprise'); // Import recaptcha-enterprise module to interact with Google Recaptcha Enterprise API
 const bodyParser = require('body-parser');                      // Import body-parser module to parse request body
 const moment = require('moment-timezone');
-const {sendContactUsEmail, sendOrderConfirmationEmail, sendOrderNotificationEmail} = require('./routes/mailer');
+const {sendContactUsEmail, sendReferralEmail, sendOrderConfirmationEmail, sendOrderNotificationEmail} = require('./routes/mailer');
 
 // Get most of the functions.
 const { getBodyFilters, getCategoriesNav } = require('./controller/htmlContent');
