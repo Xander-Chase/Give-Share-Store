@@ -162,8 +162,10 @@ app.get('/', async (req, res) => {
         prices = await fetchAllPrices(searchKey, categoryKeyword, subCategoryKeyword);
 
         // Fetch featured items
-        const featuredItems = await productsCollection.find({ isFeatureItem: true }).toArray();
-
+        const featuredItems = await productsCollection.find({
+            isFeatureItem: true,
+            $or: [{ isSold: false }, { isSold: { $exists: false } }]
+        }).toArray();
 
         // Called here to dynamically get the price through the category type
         let currentListings;
@@ -204,6 +206,7 @@ app.get('/', async (req, res) => {
          */
         currentListings = await productsCollection.find({
             isFeatureItem: false,
+            $or: [{ isSold: false }, { isSold: { $exists: false } }],
             item_title: { $regex: searchKey, $options: 'i' },
             item_price: { $lt: Math.round(maximumPrice) },
             item_category: { $regex: categoryKeyword },

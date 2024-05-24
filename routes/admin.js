@@ -261,7 +261,10 @@ router.post('/removeFeatureVideo', async (req, res) => {
 router.get('/currentListings', async (req, res) => {
     try {
         const productsCollection = database.db(mongo_database).collection('listing_items');
-        const currentListings = await productsCollection.find({ isFeatureItem: false }).toArray();
+        const currentListings = await productsCollection.find({
+            isFeatureItem: false,
+            $or: [{ isSold: false }, { isSold: { $exists: false } }]
+        }).toArray();
         res.render('currentListings', { listings: currentListings });
     } catch (error) {
         console.error('Failed to fetch current listings:', error);
@@ -273,10 +276,11 @@ router.get('/currentListings', async (req, res) => {
 
 
 // TODO: DONE
+// previousListings route
 router.get('/previousListings', async (req, res) => {
     try {
         const productsCollection = database.db(mongo_database).collection('listing_items');
-        const soldListings = await productsCollection.find({ status: 'sold' }).toArray();
+        const soldListings = await productsCollection.find({ isSold: true }).toArray();
         const isLoggedIn = req.session.loggedIn;
         const isAdmin = req.session.isAdmin || false;
 
@@ -291,6 +295,7 @@ router.get('/previousListings', async (req, res) => {
         res.status(500).send('Error fetching previous listings');
     }
 });
+
 
 // TODO: DONE
 router.get('/mailingList', async (req, res) => {
@@ -400,7 +405,10 @@ router.post('/deleteUser/:id', async (req, res) => {
 router.get('/featuredItems', async (req, res) => {
     try {
         const productsCollection = database.db(mongo_database).collection('listing_items');
-        const featuredItems = await productsCollection.find({ isFeatureItem: true }).toArray();
+        const featuredItems = await productsCollection.find({
+            isFeatureItem: true,
+            $or: [{ isSold: false }, { isSold: { $exists: false } }]
+        }).toArray();
         res.render('featuredItems', { listings: featuredItems });
     } catch (error) {
         console.error('Failed to fetch featured items:', error);
