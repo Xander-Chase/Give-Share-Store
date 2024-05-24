@@ -183,6 +183,7 @@ router.post('/updateListing/:id', upload.fields([{ name: 'photo', maxCount: 10 }
             isFeatureItem: req.body.isFeatureItem ? req.body.isFeatureItem === 'true' : false,
             product_img_URL: updatedImages,
             product_video_URL: updatedVideos,
+            isSold: req.body.isSold === 'on', // Update isSold status
             status: req.body.status || 'available' // Allow status update
         };
 
@@ -201,6 +202,28 @@ router.post('/updateListing/:id', upload.fields([{ name: 'photo', maxCount: 10 }
     } catch (error) {
         console.error('Failed to update listing:', error);
         res.status(500).send('Error updating listing');
+    }
+});
+
+router.post('/relist/:id', async (req, res) => {
+    const itemId = new ObjectId(req.params.id);
+    
+    try {
+        const result = await database.db(mongo_database).collection('listing_items').updateOne(
+            { _id: itemId },
+            { $set: { isSold: false } }
+        );
+
+        if (result.modifiedCount === 1) {
+            console.log("Item re-listed successfully");
+            res.redirect('/admin/manage');
+        } else {
+            console.log("No changes were made.");
+            res.status(500).send("Failed to re-list item");
+        }
+    } catch (error) {
+        console.error('Failed to re-list item:', error);
+        res.status(500).send('Error re-listing item');
     }
 });
 
@@ -296,6 +319,7 @@ router.get('/previousListings', async (req, res) => {
         res.status(500).send('Error fetching previous listings');
     }
 });
+
 
 
 // TODO: DONE
