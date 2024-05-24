@@ -103,7 +103,6 @@ router.get('/addListing', async (req, res) => {
 
 
 
-// TODO: DONE
 // Route to handle form submission
 router.post('/submitListing', upload.fields([{ name: 'photo', maxCount: 10 }, { name: 'video', maxCount: 1 }]), multerUpload, async (req, res) => {
 
@@ -223,6 +222,20 @@ router.post('/updateListing/:id', upload.fields([{ name: 'photo', maxCount: 10 }
     }
 });
 
+router.post('/deleteListing/:id', async (req, res) => {
+    try {
+        const listingCollection = database.db(mongo_database).collection('listing_items');
+        const result = await listingCollection.deleteOne({ _id: new ObjectId(req.params.id) });
+        if (result.deletedCount === 1) {
+            res.status(200).send('Category deleted successfully');
+        } else {
+            res.status(404).send('Category not found');
+        }
+    } catch (error) {
+        console.error('Failed to delete user:', error);
+        res.status(500).send('Failed to delete user');
+    }
+});
 
 // Route to handle feature video upload
 router.post('/submitFeatureVideo', featureVideoUpload.single('video'), async (req, res) => {

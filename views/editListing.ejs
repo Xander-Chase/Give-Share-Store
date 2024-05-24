@@ -98,6 +98,23 @@
 
             <!-- Submit Button -->
             <button type="submit" class="btn btn-primary">Save Changes</button>
+            <a href="/admin/manage" class="btn btn-secondary">Cancel</a>
+            <button type="button" class="btn btn-danger" onclick="deleteListing('<%= listing._id %>')">Delete</button>
         </form>
     </div>
 </body>
+<script>
+    function deleteListing(listingID) {
+        if(confirm('Are you sure you want to delete this listing? This action cannot be undone.')) {
+            fetch(`/admin/deleteListing/${listingID}`, {
+                method: 'POST'
+            }).then(response => {
+                if(response.ok) {
+                    window.location.href = '/admin/manage';
+                } else {
+                    alert('Failed to delete the category.');
+                }
+            });
+        }
+    }
+</script>
