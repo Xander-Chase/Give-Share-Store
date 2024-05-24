@@ -80,11 +80,14 @@
             <div class="col-6 banner-column">
                 <p class="text-main">
                     <span class="product-title"><%= product_title
-                    %></span><br><br>
+                        %></span><br><br>
                     $<%= formatAmount(product_price) %><br>
                     QTY: <%= product_qty %><br>
                     <%= product_description %><br>
-                    <a class="btn btn-primary featured-product-button d-flex align-items-center justify-content-center" href="/product-info/<%= product_link %>">
+                    <br>
+                    <a
+                        class="btn btn-primary featured-product-button d-flex align-items-center justify-content-center"
+                        href="/product-info/<%= product_link %>">
                         View Item
                     </a>
                 </p>

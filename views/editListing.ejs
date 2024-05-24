@@ -15,16 +15,21 @@
 <body>
     <div class="container mt-5">
         <h2>Edit: <%= listing.item_title %></h2>
-        <p> Fields marked with <span class="mandatory">*</span> are mandatory.</p>
-        <form action="/admin/updateListing/<%= listing._id %>" method="post" enctype="multipart/form-data" class="mt-4">
+        <p> Fields marked with <span class="mandatory">*</span> are
+            mandatory.</p>
+        <form action="/admin/updateListing/<%= listing._id %>" method="post"
+            enctype="multipart/form-data" class="mt-4">
             <div class="mb-3">
                 <label>Current Images:</label>
                 <div class="d-flex flex-wrap">
                     <% listing.product_img_URL.forEach(function(url, index) { %>
-                        <div class="pic m-2">
-                            <img src="<%= url %>" alt="Product Image <%= index + 1 %>" height="100px" width="150px">
-                            <input type="checkbox" name="remove_img_URL" value="<%= url %>"> Remove
-                        </div>
+                    <div class="pic m-2">
+                        <img src="<%= url %>"
+                            alt="Product Image <%= index + 1 %>" height="100px"
+                            width="150px">
+                        <input type="checkbox" name="remove_img_URL"
+                            value="<%= url %>"> Remove
+                    </div>
                     <% }); %>
                 </div>
             </div>
@@ -32,72 +37,125 @@
             <div class="mb-3">
                 <label>Current Videos:</label>
                 <div class="d-flex flex-wrap">
-                    <% listing.product_video_URL.forEach(function(url, index) { %>
-                        <div class="m-2">
-                            <video width="150" height="100" controls>
-                                <source src="<%= url %>" type="video/mp4">
-                                Your browser does not support the video tag.
-                            </video>
-                            <input type="checkbox" name="remove_video_URL" value="<%= url %>"> Remove
-                        </div>
+                    <% listing.product_video_URL.forEach(function(url, index) {
+                    %>
+                    <div class="m-2">
+                        <video width="150" height="100" controls>
+                            <source src="<%= url %>" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                        <input type="checkbox" name="remove_video_URL"
+                            value="<%= url %>"> Remove
+                    </div>
                     <% }); %>
                 </div>
             </div>
 
             <div class="mb-3">
                 <label for="newImages" class="form-label">Add New Images</label>
-                <input type="file" class="form-control" id="newImages" name="photo" multiple accept="image/*">
+                <input type="file" class="form-control" id="newImages"
+                    name="photo" multiple accept="image/*">
             </div>
 
             <div class="mb-3">
                 <label for="newVideos" class="form-label">Add New Videos</label>
-                <input type="file" class="form-control" id="newVideos" name="video" multiple accept="video/*">
+                <input type="file" class="form-control" id="newVideos"
+                    name="video" multiple accept="video/*">
             </div>
 
             <!-- Item Title Input -->
             <div class="mb-3">
-                <label for="itemTitle" class="form-label">Item Title <span class="mandatory">*</span></label>
-                <input type="text" class="form-control" id="itemTitle" name="item_title" value="<%= listing.item_title %>" required>
+                <label for="itemTitle" class="form-label">Item Title <span
+                        class="mandatory">*</span></label>
+                <input type="text" class="form-control" id="itemTitle"
+                    name="item_title" value="<%= listing.item_title %>"
+                    required>
             </div>
 
             <!-- Item Price Input -->
             <div class="mb-3">
-                <label for="itemPrice" class="form-label">Item Price <span class="mandatory">*</span></label>
-                <input type="number" class="form-control" id="itemPrice" name="item_price" value="<%= listing.item_price %>" step="0.01" required>
+                <label for="itemPrice" class="form-label">Item Price <span
+                        class="mandatory">*</span></label>
+                <input type="number" class="form-control" id="itemPrice"
+                    name="item_price" value="<%= listing.item_price %>"
+                    step="0.01" required>
             </div>
 
             <!-- Detailed Description Input -->
             <div class="mb-3">
-                <label for="itemDescription" class="form-label">Detailed Description</label>
-                <textarea class="form-control" id="itemDescription" name="item_detailed_description" rows="3"><%= listing.item_detailed_description %></textarea>
+                <label for="itemDescription" class="form-label">Detailed
+                    Description</label>
+                <textarea class="form-control" id="itemDescription"
+                    name="item_detailed_description"
+                    rows="3"><%= listing.item_detailed_description %></textarea>
             </div>
 
             <!-- Estimated Shipping Cost Input -->
             <div class="mb-3">
-                <label for="shippingCost" class="form-label">Estimated Shipping Cost</label>
-                <input type="number" class="form-control" id="shippingCost" name="item_estimatedShippingCost" value="<%= listing.item_estimatedShippingCost %>" step="0.01">
+                <label for="shippingCost" class="form-label">Estimated Shipping
+                    Cost</label>
+                <input type="number" class="form-control" id="shippingCost"
+                    name="item_estimatedShippingCost"
+                    value="<%= listing.item_estimatedShippingCost %>"
+                    step="0.01">
             </div>
 
             <!-- Estimated Insurance Cost Input-->
             <div class="mb-3">
-                <label for="insuranceCost" class="form-label">Estimated Insurance Cost</label>
-                <input type="number" class="form-control" id="insuranceCost" name="item_estimatedInsuranceCost" value="<%= listing.item_estimatedInsuranceCost %>" step="0.01">
+                <label for="insuranceCost" class="form-label">Estimated
+                    Insurance Cost</label>
+                <input type="number" class="form-control" id="insuranceCost"
+                    name="item_estimatedInsuranceCost"
+                    value="<%= listing.item_estimatedInsuranceCost %>"
+                    step="0.01">
             </div>
 
             <!-- Featured Item Checkbox -->
             <div class="mb-3 form-check">
-                <input type="checkbox" class="form-check-input" id="featureItem" name="isFeatureItem" value="true" <% if(listing.isFeatureItem) { %>checked<% } %>>
-                <label class="form-check-label" for="featureItem">Featured Item?</label>
+                <input type="checkbox" class="form-check-input" id="featureItem"
+                    name="isFeatureItem" value="true" <%
+                    if(listing.isFeatureItem) { %>checked<% } %>>
+                <label class="form-check-label" for="featureItem">Featured
+                    Item?</label>
+            </div>
+
+            <!-- Add a checkbox to mark the item as sold -->
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="isSold"
+                    name="isSold" <%=listing.isSold ? 'checked' : '' %>>
+                <label class="form-check-label" for="isSold">Mark as
+                    Sold</label>
             </div>
 
             <!-- Quantity Input -->
             <div class="mb-3">
-                <label for="itemQuantity" class="form-label">Quantity <span class="mandatory">*</span></label>
-                <input type="number" class="form-control" id="itemQuantity" name="item_quantity" value="<%= listing.item_quantity %>" required>
+                <label for="itemQuantity" class="form-label">Quantity <span
+                        class="mandatory">*</span></label>
+                <input type="number" class="form-control" id="itemQuantity"
+                    name="item_quantity" value="<%= listing.item_quantity %>"
+                    required>
             </div>
 
             <!-- Submit Button -->
             <button type="submit" class="btn btn-primary">Save Changes</button>
+            <a href="/admin/manage" class="btn btn-secondary">Cancel</a>
+            <button type="button" class="btn btn-danger"
+                onclick="deleteListing('<%= listing._id %>')">Delete</button>
         </form>
     </div>
 </body>
+<script>
+    function deleteListing(listingID) {
+        if(confirm('Are you sure you want to delete this listing? This action cannot be undone.')) {
+            fetch(`/admin/deleteListing/${listingID}`, {
+                method: 'POST'
+            }).then(response => {
+                if(response.ok) {
+                    window.location.href = '/admin/manage';
+                } else {
+                    alert('Failed to delete the category.');
+                }
+            });
+        }
+    }
+</script>

@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const Joi = require("joi");
 const bcrypt = require("bcrypt");
-const {ObjectId} = require("mongodb");
+const { ObjectId } = require("mongodb");
 const mailchimp = require("@mailchimp/mailchimp_marketing");
 const router = express.Router();
 
@@ -10,20 +10,82 @@ const mongo_database = process.env.MONGODB_DATABASE;
 const mailchimp_api_key = process.env.MAILCHIMP_API_KEY;
 const mailchimp_server_prefix = process.env.MAILCHIMP_SERVER_PREFIX;
 const mailchimp_list_id = process.env.MAILCHIMP_LIST_ID;
-const {adminCollection, userCollection, categoryCollection} = require('../database/constants')
-var {database} = require('../databaseConnection');
-const {getCategoriesNav} = require('../controller/htmlContent');
-const {upload, deleteFromS3, featureVideoUpload, s3} = require("../controller/awsController");
-const {DeleteObjectCommand} = require("@aws-sdk/client-s3");
+const { adminCollection, userCollection, categoryCollection } = require('../database/constants')
+var { database } = require('../databaseConnection');
+const { getCategoriesNav } = require('../controller/htmlContent');
+const { upload, deleteFromS3, featureVideoUpload, s3 } = require("../controller/awsController");
+const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
+
+// ------------------------------------------------- FUNCTION START -------------------------------------------------
+async function renderPaginationCurrentListings(req, res)
+{
+    try {
+        /* Change this maximum value to alter how many items should be shown per page. */
+        let max = 18;
+        let pageIndexes = [];
+        let previousIndex = req.session.pageIndex - 1;
+        let nextIndex = previousIndex + 2;
+        if (previousIndex < 1)
+            previousIndex = 1;
+
+        const prices = await getPrices();
+        let numberOfPages = prices.length / max;
+
+        if (nextIndex >= numberOfPages)
+            nextIndex--;
+
+        // Assign the number indexes to display
+        for (let i = 0; i <= (numberOfPages); i++)
+            pageIndexes.push(i + 1);
+
+        const skips = max * (((req.session.pageIndex - 1) < 0) ? 0 : (req.session.pageIndex - 1));
+
+        const productsCollection = database.db(mongo_database).collection('listing_items');
+        const currentListings = await productsCollection.find(
+            {
+                isFeatureItem: false,
+                $or: [{ isSold: false }, { isSold: { $exists: false } }]
+            })
+            .skip(skips)
+            .limit(max)
+            .toArray();
+
+        req.session.pageIndex = 0;
+        res.render('currentListings', {
+            listings: currentListings,
+            paginationIndex: pageIndexes,
+            previousPage: previousIndex,
+            nextPage: nextIndex,
+        });
+    } catch (error) {
+        console.error('Failed to fetch current listings:', error);
+        res.status(500).send('Error fetching current listings');
+        // handling error case - passing empty array
+        res.render('currentListings', { listings: [] }); // rendering the page even in case of error with an empty array
+    }
+}
+// ------------------------------------------------- FUNCTION END -------------------------------------------------
+
+async function getPrices()
+{
+    const productsCollection = database.db(mongo_database).collection('listing_items');
+    const prices = await productsCollection.find(
+        {
+            isFeatureItem: false,
+            $or: [{ isSold: false }, { isSold: { $exists: false } }]
+        },
+        { projection: { item_price: 1 } }).toArray();
+    return prices.map(item => item.item_price);
+}
 
 // TODO: Done
 router.get('/LogIn', (req, res) => {
     res.render("adminLogIn");
 });
 
+
 // TODO: Done
 router.post('/LogInSubmit', async (req, res) => {
-
     const email = req.body.email;
     const password = req.body.password;
 
@@ -35,26 +97,27 @@ router.post('/LogInSubmit', async (req, res) => {
     const validationResult = schema.validate({ email, password });
     if (validationResult.error != null) {
         console.log(validationResult.error);
-        res.render("adminLogIn", {error: "Error: "+validationResult.error.message});
+        res.render("adminLogIn", { error: "Error: " + validationResult.error.message });
         return;
     }
 
     const user = await adminCollection.findOne({ email: email });
     if (user === null) {
         console.log("User not found");
-        res.render("adminLogIn", {error: "Error: User not found"});
+        res.render("adminLogIn", { error: "Error: User not found" });
         return;
     }
 
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
         console.log("Invalid password");
-        res.render("adminLogIn", {error: "Error: Invalid password"});
+        res.render("adminLogIn", { error: "Error: Invalid password" });
         return;
     }
 
     req.session.loggedIn = true;
     req.session.isAdmin = true;
+    req.session.isOwner = user.isOwner || false;
     req.session.name = user.name;
     req.session.email = user.email;
     req.session.password = user.password;
@@ -62,13 +125,16 @@ router.post('/LogInSubmit', async (req, res) => {
     res.redirect("/");
 });
 
+
 // TODO: Done
 router.get('/manage', async (req, res) => {
     if (req.session.loggedIn) {
         const isLoggedIn = req.session.loggedIn;
-        res.render("product-management", {isLoggedIn,
+        res.render("product-management", {
+            isLoggedIn,
             isAdmin: req.session.isAdmin,
-            categories: await getCategoriesNav()
+            categories: await getCategoriesNav(),
+            isOwner: req.session.isOwner
         });
     }
     else {
@@ -76,14 +142,13 @@ router.get('/manage', async (req, res) => {
     }
 });
 
-// TODO: DONE
+
 router.get('/addListing', async (req, res) => {
 
-    res.render('addListing', {categories: await categoryCollection.find().toArray()});
+    res.render('addListing', { categories: await categoryCollection.find().toArray() });
 });
 
-// TODO: DONE
-// Route to handle form submission
+
 router.post('/submitListing', upload.fields([{ name: 'photo', maxCount: 10 }, { name: 'video', maxCount: 1 }]), async (req, res) => {
     const photos = req.files['photo'] ? req.files['photo'].map(file => file.location) : [];
     const videos = req.files['video'] ? req.files['video'].map(file => file.location) : [];
@@ -99,12 +164,10 @@ router.post('/submitListing', upload.fields([{ name: 'photo', maxCount: 10 }, { 
         item_estimatedShippingCost: parseFloat(req.body.item_estimatedShippingCost) || 0.0,
         item_estimatedInsuranceCost: parseFloat(req.body.item_estimatedInsuranceCost) || 0.0,
         isFeatureItem: req.body.isFeatureItem === 'true',
-        item_category: Array.isArray(req.body.item_category) ? req.body.item_category.map(function(item)
-        {
+        item_category: Array.isArray(req.body.item_category) ? req.body.item_category.map(function (item) {
             return item.replace(/"/g, '');
         }) : [req.body.item_category.replace(/"/g, '')],
-        item_sub_category: Array.isArray(req.body.item_sub_category) ? req.body.item_sub_category.map(function(item)
-        {
+        item_sub_category: Array.isArray(req.body.item_sub_category) ? req.body.item_sub_category.map(function (item) {
             return item.replace(/"/g, '');
         }) : [req.body.item_sub_category.replace(/"/g, '')],
         status: 'available' // Default status when a listing is created
@@ -119,7 +182,7 @@ router.post('/submitListing', upload.fields([{ name: 'photo', maxCount: 10 }, { 
     }
 });
 
-// TODO: DONE
+
 router.get('/editListing/:id', async (req, res) => {
     const itemId = req.params.id;
     const isLoggedIn = req.session.loggedIn;
@@ -130,18 +193,17 @@ router.get('/editListing/:id', async (req, res) => {
     }
 
     try {
-        const listing = await database.db(mongo_database).collection('listing_items').findOne({_id: new ObjectId(itemId)});
+        const listing = await database.db(mongo_database).collection('listing_items').findOne({ _id: new ObjectId(itemId) });
         if (!listing) {
             return res.status(404).send('Listing not found');
         }
-        res.render('editListing', { listing, isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav()});
+        res.render('editListing', { listing, isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav() });
     } catch (error) {
         console.error('Failed to fetch listing:', error);
         res.status(500).send('Error fetching listing details');
     }
 });
 
-// TODO: DONE
 router.post('/updateListing/:id', upload.fields([{ name: 'photo', maxCount: 10 }, { name: 'video', maxCount: 1 }]), async (req, res) => {
     const itemId = new ObjectId(req.params.id);
     console.log("Form submission data:", req.body);
@@ -182,6 +244,7 @@ router.post('/updateListing/:id', upload.fields([{ name: 'photo', maxCount: 10 }
             isFeatureItem: req.body.isFeatureItem ? req.body.isFeatureItem === 'true' : false,
             product_img_URL: updatedImages,
             product_video_URL: updatedVideos,
+            isSold: req.body.isSold === 'on', // Update isSold status
             status: req.body.status || 'available' // Allow status update
         };
 
@@ -203,7 +266,44 @@ router.post('/updateListing/:id', upload.fields([{ name: 'photo', maxCount: 10 }
     }
 });
 
-// TODO: DONE
+router.post('/relist/:id', async (req, res) => {
+    const itemId = new ObjectId(req.params.id);
+    
+    try {
+        const result = await database.db(mongo_database).collection('listing_items').updateOne(
+            { _id: itemId },
+            { $set: { isSold: false } }
+        );
+
+        if (result.modifiedCount === 1) {
+            console.log("Item re-listed successfully");
+            res.redirect('/admin/manage');
+        } else {
+            console.log("No changes were made.");
+            res.status(500).send("Failed to re-list item");
+        }
+    } catch (error) {
+        console.error('Failed to re-list item:', error);
+        res.status(500).send('Error re-listing item');
+    }
+});
+
+
+router.post('/deleteListing/:id', async (req, res) => {
+    try {
+        const listingCollection = database.db(mongo_database).collection('listing_items');
+        const result = await listingCollection.deleteOne({ _id: new ObjectId(req.params.id) });
+        if (result.deletedCount === 1) {
+            res.status(200).send('Category deleted successfully');
+        } else {
+            res.status(404).send('Category not found');
+        }
+    } catch (error) {
+        console.error('Failed to delete user:', error);
+        res.status(500).send('Failed to delete user');
+    }
+});
+
 // Route to handle feature video upload
 router.post('/submitFeatureVideo', featureVideoUpload.single('video'), async (req, res) => {
     if (!req.file) {
@@ -218,7 +318,7 @@ router.post('/submitFeatureVideo', featureVideoUpload.single('video'), async (re
     res.redirect('/admin/manage');
 });
 
-// TODO: DONE
+
 // Route to handle feature video removal
 router.post('/removeFeatureVideo', async (req, res) => {
     const featureVideoCollection = database.db(mongo_database).collection('featureVideo');
@@ -242,26 +342,24 @@ router.post('/removeFeatureVideo', async (req, res) => {
     }
 });
 
+// With each page, get its index and assign the page index to that.
+router.post('/page=:index', async (req, res) => {
+    req.session.pageIndex = req.params.index;
+    renderPaginationCurrentListings(req, res);
+})
+
 // TODO: DONE
 router.get('/currentListings', async (req, res) => {
-    try {
-        const productsCollection = database.db(mongo_database).collection('listing_items');
-        const currentListings = await productsCollection.find({ isFeatureItem: false }).toArray();
-        res.render('currentListings', { listings: currentListings });
-    } catch (error) {
-        console.error('Failed to fetch current listings:', error);
-        res.status(500).send('Error fetching current listings');
-        // handling error case - passing empty array
-        res.render('currentListings', { listings: [] }); // rendering the page even in case of error with an empty array
-    }
+    renderPaginationCurrentListings(req, res);
+
 });
 
-
 // TODO: DONE
+// previousListings route
 router.get('/previousListings', async (req, res) => {
     try {
         const productsCollection = database.db(mongo_database).collection('listing_items');
-        const soldListings = await productsCollection.find({ status: 'sold' }).toArray();
+        const soldListings = await productsCollection.find({ isSold: true }).toArray();
         const isLoggedIn = req.session.loggedIn;
         const isAdmin = req.session.isAdmin || false;
 
@@ -276,6 +374,8 @@ router.get('/previousListings', async (req, res) => {
         res.status(500).send('Error fetching previous listings');
     }
 });
+
+
 
 // TODO: DONE
 router.get('/mailingList', async (req, res) => {
@@ -301,28 +401,40 @@ router.get('/mailingList', async (req, res) => {
     }
 });
 
+
 // TODO: DONE
 router.get('/adminUsers', async (req, res) => {
     try {
+        if (!req.session.isAdmin || !req.session.isOwner) {
+            return res.status(403).send('Access denied');
+        }
+
         const admins = await adminCollection.find().toArray();
-        res.render('adminUsers', { users: admins });
+        res.render('adminUsers', {
+            users: admins,
+            isOwner: req.session.isOwner // Pass isOwner to the template
+        });
     } catch (error) {
         console.error('Error fetching admin users:', error);
         res.status(500).send('Error fetching admin users');
     }
 });
 
+
+
 // TODO: DONE
 router.post('/addUser', async (req, res) => {
     const { name, email, password, userType } = req.body;
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
+        const userDocument = { name, email, password: hashedPassword, isOwner: false };
+
         if (userType === 'admin') {
-            await adminCollection.insertOne({ name, email, password: hashedPassword });
+            await adminCollection.insertOne(userDocument);
             req.session.loggedIn = true;
             res.redirect('/admin/manage');
         } else if (userType === 'user') {
-            await userCollection.insertOne({ name, email, password: hashedPassword });
+            await userCollection.insertOne(userDocument);
             req.session.loggedIn = true;
             res.redirect('/manageUser');
         } else {
@@ -334,6 +446,7 @@ router.post('/addUser', async (req, res) => {
     }
 });
 
+
 // TODO: DONE
 router.get('/editUser/:id', async (req, res) => {
     try {
@@ -343,7 +456,7 @@ router.get('/editUser/:id', async (req, res) => {
             return;
         }
         const isLoggedIn = req.session.loggedIn;
-        res.render('editUser', { user, isLoggedIn : isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav()});
+        res.render('editUser', { user, isLoggedIn: isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav() });
 
     } catch (error) {
         console.error('Error retrieving user for editing:', error);
@@ -357,7 +470,7 @@ router.post('/updateUser/:id', async (req, res) => {
         const { name, email } = req.body;
         await adminCollection.updateOne(
             { _id: new ObjectId(req.params.id) },
-            { $set: { name, email }}
+            { $set: { name, email } }
         );
         res.redirect('/admin/manage');
     } catch (error) {
@@ -370,7 +483,7 @@ router.post('/updateUser/:id', async (req, res) => {
 router.post('/deleteUser/:id', async (req, res) => {
     try {
         const result = await adminCollection.deleteOne({ _id: new ObjectId(req.params.id) });
-        if(result.deletedCount === 1) {
+        if (result.deletedCount === 1) {
             res.status(200).send('User deleted successfully');
         } else {
             res.status(404).send('User not found');
@@ -385,7 +498,10 @@ router.post('/deleteUser/:id', async (req, res) => {
 router.get('/featuredItems', async (req, res) => {
     try {
         const productsCollection = database.db(mongo_database).collection('listing_items');
-        const featuredItems = await productsCollection.find({ isFeatureItem: true }).toArray();
+        const featuredItems = await productsCollection.find({
+            isFeatureItem: true,
+            $or: [{ isSold: false }, { isSold: { $exists: false } }]
+        }).toArray();
         res.render('featuredItems', { listings: featuredItems });
     } catch (error) {
         console.error('Failed to fetch featured items:', error);
@@ -403,15 +519,12 @@ router.get('/categoryManagement', async (req, res) => {
 })
 
 // TODO: DONE
-router.get('/editCategory/:id', async (req, res) =>
-{
-    try
-    {
+router.get('/editCategory/:id', async (req, res) => {
+    try {
         const category = await categoryCollection.findOne({ _id: new ObjectId(req.params.id) });
-        res.render('editCategory', { category, isAdmin: req.session.isAdmin, isLoggedIn : req.session.loggedIn, categories: await getCategoriesNav()});
+        res.render('editCategory', { category, isAdmin: req.session.isAdmin, isLoggedIn: req.session.loggedIn, categories: await getCategoriesNav() });
     }
-    catch (error)
-    {
+    catch (error) {
         console.error('Error retrieving category for editing:', error);
         res.status(500).send('Error retrieving category');
     }
@@ -424,10 +537,12 @@ router.post('/updateCategory/:id', async (req, res) => {
         console.log(`${name} and ${sub_categories}`)
         await categoryCollection.updateOne(
             { _id: new ObjectId(req.params.id) },
-            { $set: {
+            {
+                $set: {
                     category_type: name,
                     sub_categories: sub_categories.split(", ")
-                }}
+                }
+            }
         );
         res.redirect('/admin/manage');
     } catch (error) {
@@ -440,7 +555,7 @@ router.post('/updateCategory/:id', async (req, res) => {
 router.post('/deleteCategory/:id', async (req, res) => {
     try {
         const result = await categoryCollection.deleteOne({ _id: new ObjectId(req.params.id) });
-        if(result.deletedCount === 1) {
+        if (result.deletedCount === 1) {
             res.status(200).send('Category deleted successfully');
         } else {
             res.status(404).send('Category not found');
@@ -453,9 +568,9 @@ router.post('/deleteCategory/:id', async (req, res) => {
 
 // TODO: DONE
 router.post('/addCategory', async (req, res) => {
-    const { category_name, sub_categories} = req.body;
+    const { category_name, sub_categories } = req.body;
     try {
-        await categoryCollection.insertOne({ category_type: category_name, sub_categories: sub_categories.split(", ")});
+        await categoryCollection.insertOne({ category_type: category_name, sub_categories: sub_categories.split(", ") });
         res.redirect('/admin/manage');
 
     } catch (error) {
@@ -469,8 +584,8 @@ router.post('/addCategory', async (req, res) => {
 router.post('/load-subcategory', async (req, res) => {
 
     const type = req.body.categoryType.replace(/"/g, '');
-    const {sub_categories} = await categoryCollection.findOne({category_type: type});
-    try{
+    const { sub_categories } = await categoryCollection.findOne({ category_type: type });
+    try {
         req.session.save(err => {
             if (err) {
                 console.error('Error saving session:', err);
@@ -478,8 +593,7 @@ router.post('/load-subcategory', async (req, res) => {
             }
             res.json({ success: true, subCategories: sub_categories });
         });
-    }catch (error)
-    {
+    } catch (error) {
         console.error('Failed to remove item from cart:', error);
         res.json({ success: false, message: 'Error removing item from cart' });
     }

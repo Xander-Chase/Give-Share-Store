@@ -1,3 +1,4 @@
+require('dotenv').config();                                    // Import dotenv module to read ..env file
 const AWS = require('aws-sdk');                                 // include the AWS module
 const multer = require('multer');                               // include the multer module
 const multerS3 = require('multer-s3');                          // include the multer-s3 module

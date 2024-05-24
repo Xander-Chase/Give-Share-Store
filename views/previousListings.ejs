@@ -35,8 +35,9 @@
                             <p class="card-text"><%= listing.item_title %></p>
                             <div class="d-flex justify-content-between align-items-center">
                                 <div class="btn-group">
-                                    <a href="/product-info/<%= listing._id %>" class="btn btn-sm btn-outline-secondary">View</a>
-                                    <a href="/editListing/<%= listing._id %>" class="btn btn-sm btn-outline-secondary">Edit</a>
+                                    <form action="/admin/relist/<%= listing._id %>" method="post">
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary">Re-List</button>
+                                    </form>
                                 </div>
                                 <small class="text-muted">Sold</small>
                             </div>
