@@ -16,23 +16,6 @@ const { getCategoriesNav } = require('../controller/htmlContent');
 const { upload, deleteFromS3, featureVideoUpload, s3 } = require("../controller/awsController");
 const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
 
-const multer = require('multer');
-const storage = multer.memoryStorage();
-const multerUpload = multer({
-    storage: storage,
-    fileFilter: (req, file, cb) => {
-        const validImageTypes = ['image/jpeg', 'image/png', 'image/gif'];
-        const validVideoTypes = ['video/mp4', 'video/avi', 'video/mkv'];
-
-        if (file.fieldname === 'photo' && validImageTypes.includes(file.mimetype)) {
-            cb(null, true);
-        } else if (file.fieldname === 'video' && validVideoTypes.includes(file.mimetype)) {
-            cb(null, true);
-        } else {
-            cb(new Error('Invalid file type'));
-        }
-    }
-}).fields([{ name: 'photo', maxCount: 10 }, { name: 'video', maxCount: 1 }]);
 
 // TODO: Done
 router.get('/LogIn', (req, res) => {
@@ -102,9 +85,7 @@ router.get('/addListing', async (req, res) => {
 });
 
 
-
-
-router.post('/submitListing', multerUpload, async (req, res) => {
+router.post('/submitListing', upload.fields([{ name: 'photo', maxCount: 10 }, { name: 'video', maxCount: 1 }]), async (req, res) => {
     const photos = req.files['photo'] ? req.files['photo'].map(file => file.location) : [];
     const videos = req.files['video'] ? req.files['video'].map(file => file.location) : [];
 
@@ -119,8 +100,14 @@ router.post('/submitListing', multerUpload, async (req, res) => {
         item_estimatedShippingCost: parseFloat(req.body.item_estimatedShippingCost) || 0.0,
         item_estimatedInsuranceCost: parseFloat(req.body.item_estimatedInsuranceCost) || 0.0,
         isFeatureItem: req.body.isFeatureItem === 'true',
-        item_category: Array.isArray(req.body.item_category) ? req.body.item_category.map(item => item.replace(/"/g, '')) : [req.body.item_category.replace(/"/g, '')],
-        item_sub_category: Array.isArray(req.body.item_sub_category) ? req.body.item_sub_category.map(item => item.replace(/"/g, '')) : [req.body.item_sub_category.replace(/"/g, '')],
+        item_category: Array.isArray(req.body.item_category) ? req.body.item_category.map(function(item)
+        {
+            return item.replace(/"/g, '');
+        }) : [req.body.item_category.replace(/"/g, '')],
+        item_sub_category: Array.isArray(req.body.item_sub_category) ? req.body.item_sub_category.map(function(item)
+        {
+            return item.replace(/"/g, '');
+        }) : [req.body.item_sub_category.replace(/"/g, '')],
         status: 'available' // Default status when a listing is created
     };
 
@@ -155,7 +142,7 @@ router.get('/editListing/:id', async (req, res) => {
     }
 });
 
-router.post('/updateListing/:id', multerUpload, async (req, res) => {
+router.post('/updateListing/:id', upload.fields([{ name: 'photo', maxCount: 10 }, { name: 'video', maxCount: 1 }]), async (req, res) => {
     const itemId = new ObjectId(req.params.id);
     console.log("Form submission data:", req.body);
 
@@ -215,6 +202,7 @@ router.post('/updateListing/:id', multerUpload, async (req, res) => {
         res.status(500).send('Error updating listing');
     }
 });
+
 
 router.post('/deleteListing/:id', async (req, res) => {
     try {
