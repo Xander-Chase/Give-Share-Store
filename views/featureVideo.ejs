@@ -1,7 +1,12 @@
 <style>
+    body {
+        padding-bottom: 3vh;
+    }
+
     .mandatory {
         color: red;
     }
+
     .video-container {
         margin-top: 20px;
     }
@@ -9,7 +14,7 @@
 
 <body>
     <div class="container mt-5">
-        <h2>Manage Feature Video</h2>
+        <span class="admin-header">Manage Feature Video</span>
         <form action="/admin/submitFeatureVideo" method="post" enctype="multipart/form-data" class="mt-4">
             <div class="mb-3">
                 <label for="video" class="form-label">Feature Video</label>

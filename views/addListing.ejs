@@ -1,4 +1,8 @@
 <style>
+    body {
+        padding-bottom: 3vh;
+    }
+
     .mandatory {
         color: red;
     }
@@ -6,15 +10,15 @@
 
 <body>
     <div class="container mt-5">
-        <h2>Add New Listing</h2>
-        <p> Fields marked with <span class="mandatory">*</span> are
+        <span class="admin-header">Add New Listing</span><br>
+        <p class="admin-content-text"> Fields marked with <span class="mandatory">*</span> are
             mandatory.</p>
         <form action="/admin/submitListing" method="post"
             enctype="multipart/form-data" class="mt-4">
 
             <!-- Product Images Input -->
             <div class="mb-3">
-                <label for="photo" class="form-label">Product Images <span
+                <label for="photo" class="form-label admin-content-text">Product Images <span
                         class="mandatory">*</span> </label>
                 <input type="file" class="form-control" id="photo" name="photo"
                     required multiple>
@@ -23,14 +27,14 @@
 
             <!-- Product Videos Input -->
             <div class="mb-3">
-                <label for="video" class="form-label">Product Videos</label>
+                <label for="video" class="form-label admin-content-text">Product Videos</label>
                 <input type="file" class="form-control" id="video" name="video">
                 <div class="invalid-feedback" id="videoFeedback"></div>
             </div>
 
             <!-- Item Title Input -->
             <div class="mb-3">
-                <label for="itemTitle" class="form-label">Item Title <span
+                <label for="itemTitle" class="form-label admin-content-text">Item Title <span
                         class="mandatory">*</span> </label>
                 <input type="text" class="form-control" id="itemTitle"
                     name="item_title" required>
@@ -38,7 +42,7 @@
 
             <!-- Item Price Input -->
             <div class="mb-3">
-                <label for="itemPrice" class="form-label">Item Price <span
+                <label for="itemPrice" class="form-label admin-content-text">Item Price <span
                         class="mandatory">*</span> </label>
                 <input type="number" class="form-control" id="itemPrice"
                     name="item_price" step="0.01" required>
@@ -46,7 +50,7 @@
 
             <!-- Detailed Description Input -->
             <div class="mb-3">
-                <label for="itemDescription" class="form-label">Detailed
+                <label for="itemDescription" class="form-label admin-content-text">Detailed
                     Description</label>
                 <textarea class="form-control" id="itemDescription"
                     name="item_detailed_description" rows="3"></textarea>
@@ -54,7 +58,7 @@
 
             <!-- Estimated Shipping Cost Input -->
             <div class="mb-3">
-                <label for="shippingCost" class="form-label">Estimated Shipping
+                <label for="shippingCost" class="form-label admin-content-text">Estimated Shipping
                     Cost</label>
                 <input type="number" class="form-control" id="shippingCost"
                     name="item_estimatedShippingCost" step="0.01">
@@ -62,7 +66,7 @@
 
             <!-- Estimated Insurance Cost Input-->
             <div class="mb-3">
-                <label for="insuranceCost" class="form-label">Estimated
+                <label for="insuranceCost" class="form-label admin-content-text">Estimated
                     Insurance Cost</label>
                 <input type="number" class="form-control" id="insuranceCost"
                     name="item_estimatedInsuranceCost" step="0.01">
@@ -73,13 +77,13 @@
                 <input type="hidden" name="isFeatureItem" value="false">
                 <input type="checkbox" class="form-check-input" id="featureItem"
                     name="isFeatureItem" value="true">
-                <label class="form-check-label" for="featureItem">Featured
+                <label class="form-check-label admin-content-text" for="featureItem">Featured
                     Item?</label>
             </div>
 
             <!-- Quantity Input -->
             <div class="mb-3">
-                <label for="itemQuantity" class="form-label">Quantity <span
+                <label for="itemQuantity" class="form-label admin-content-text">Quantity <span
                         class="mandatory">*</span> </label>
                 <input type="number" class="form-control" id="itemQuantity"
                     name="item_quantity" required>
@@ -91,7 +95,7 @@
                     <div class="row">
                         <div class="col-md ">
                             <label for="item_category"
-                                class="form-label">Category <span
+                                class="form-label admin-content-text">Category <span
                                     class="mandatory">*</span> </label>
                             <select class="form-select" id="itemCategory"
                                 name="item_category" multiple
@@ -106,7 +110,7 @@
                         </div>
                         <div class="col-md ">
                             <label for="item_sub_category"
-                                class="form-label">Sub-Category <span
+                                class="form-label admin-content-text">Sub-Category <span
                                     class="mandatory">*</span> </label>
                             <select class="form-select" id="itemSubCategory"
                                 name="item_sub_category" multiple

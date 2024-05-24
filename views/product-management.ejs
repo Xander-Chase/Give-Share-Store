@@ -16,11 +16,43 @@
             }
 
             .item :hover {
-                padding: 10px;
                 background-color: #007bff;
                 color: white;
             }
 
+            .nav-button:hover {
+                padding-left: 0.5vw;
+                padding-right: 0.5vw;
+                padding-top: 1vh;
+                padding-bottom: 1vh;
+            }
+
+            .admin-header {
+                font-size: 20pt;
+                font-weight: bold;
+            }
+
+            @media only screen and (max-width: 767px) {
+                .nav-button {
+                    display:block;
+                    text-align: center;
+                }
+
+                .nav-button:hover {
+                    padding-left: 0.5vw;
+                    padding-right: 0.5vw;
+                    padding-top: 0.25vh;
+                    padding-bottom: 0.25vh;
+                }
+
+                .admin-header {
+                    font-size: 24pt;
+                }
+
+                .admin-content-text {
+                    font-size: 14pt;
+                }
+            }
         </style>
     </head>
     <body>
@@ -29,16 +61,16 @@
             <div class="row">
                 <div class="col-md-3">
                     <ul class="nav flex-column">
-                        <li class="item nav-item"><a href="#" onclick="loadContent('admin/addListing')">Add New Listing</a></li>
-                        <li class="item nav-item"><a href="#" onclick="loadContent('admin/currentListings')">Current Listings</a></li>
-                        <li class="item nav-item"><a href="#" onclick="loadContent('admin/featuredItems')">Featured Items</a></li>
-                        <li class="item nav-item"><a href="#" onclick="loadContent('admin/previousListings')">Previous Listings</a></li>
-                        <li class="item nav-item"><a href="#" onclick="loadContent('admin/mailingList')">Mailing List</a></li>
+                        <li class="item nav-item"><a href="#" onclick="loadContent('admin/addListing')" class="nav-button">Add New Listing</a></li>
+                        <li class="item nav-item"><a href="#" onclick="loadContent('admin/currentListings')" class="nav-button">Current Listings</a></li>
+                        <li class="item nav-item"><a href="#" onclick="loadContent('admin/featuredItems')" class="nav-button">Featured Items</a></li>
+                        <li class="item nav-item"><a href="#" onclick="loadContent('admin/previousListings')" class="nav-button">Previous Listings</a></li>
+                        <li class="item nav-item"><a href="#" onclick="loadContent('admin/mailingList')" class="nav-button">Mailing List</a></li>
                         <% if(isOwner) { %>
-                            <li class="item nav-item"><a href="#adminUsers" onclick="loadContent('admin/adminUsers')">Admin Users</a></li>
+                            <li class="item nav-item"><a href="#adminUsers" onclick="loadContent('admin/adminUsers')" class="nav-button">Admin Users</a></li>
                         <% } %>
-                        <li class="item nav-item"><a href="#" onclick="loadContent('admin/categoryManagement')">Manage Categories</a></li>
-                        <li class="item nav-item"><a href="#" onclick="loadContent('featureVideo')">Feature Video</a></li>
+                        <li class="item nav-item"><a href="#" onclick="loadContent('admin/categoryManagement')" class="nav-button">Manage Categories</a></li>
+                        <li class="item nav-item"><a href="#" onclick="loadContent('featureVideo')" class="nav-button">Feature Video</a></li>
                     </ul>
                 </div>
                 <div class="col-md-9" id="contentArea">

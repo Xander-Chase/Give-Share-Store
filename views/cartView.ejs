@@ -3,9 +3,13 @@
     <%- include("searchNavBar") %>
     <head>
         <style>
+            .container {
+                max-width: 90vw;
+            }
+
             .product-img {
-                max-width: 15vw;
-                max-height: 20vh;
+                max-width: 16vw;
+                max-height: 25vh;
                 overflow: hidden;
             }
 
@@ -33,14 +37,20 @@
                 font-weight: 500;
             }
 
-            @media (max-width: 576px) {
-                .product-img {
-                    max-width: 16vw;
-                    max-height: 10vh;
-                }
+            #checkout-button {
+                height: 6vh;
+                margin-bottom: 1vh;
+            }
 
-                .product-card {
-                    width: 75vw;
+            #paypal-button-container {
+                height: 6vh;
+                margin-top: 1vh;
+            }
+
+            @media only screen and (max-width: 767px) {
+                .product-img {
+                    max-width: 20vw;
+                    max-height: 15vh;
                 }
 
                 .item-title {
@@ -51,16 +61,52 @@
                     font-size: 12pt;
                 }
 
+                .w-100 {
+                    margin-top: 1vh;
+                    margin-bottom: 1vh;
+                }
+
                 .price-text {
                     font-size: 16pt;
                 }
 
+                .rem-btn {
+                    margin-top: 1vh;
+                }
+
                 #your-cart {
-                    width: 75vw;
+                    margin-top: 1vh;
                 }
 
                 #title {
                     font-size: 22pt;
+                }
+
+                #checkout-button {
+                    margin-bottom: 3vh;
+                    height: 10vh;
+                }
+
+                #paypal-button-container {
+                    margin-bottom: 1vh;
+                    height: 10vh;
+                }
+            }
+
+            @media only screen and (min-width: 768px) and (max-width: 992px) {
+                .item-title {
+                    font-size: 20pt;
+                }
+
+                .price-text {
+                    font-size: 20pt;
+                }
+
+                .product-img {
+                    min-width: 14vw;
+                    min-height: 20vh;
+                    max-width: 18vw;
+                    max-height: 26vh;
                 }
             }
         </style>
@@ -86,7 +132,7 @@
                                         <label><input type="checkbox" class="pickup-checkbox" data-id="<%= item._id %>" checked /> Pickup</label>
                                     </div>
                                 </div>
-                                <div class="col-sm-5">
+                                <div class="col-sm-5 rem-btn">
                                     <button class="btn btn-danger btn-sm" onclick="removeFromCart('<%= item._id %>')">Remove</button>
                                 </div>
                             </div>
@@ -246,6 +292,7 @@
             </div>
         </div>
     </body>
+    <%- include("footer") %>
     <script>
         function removeFromCart(itemId) {
             fetch('/cart/remove-from-cart', {
