@@ -3,7 +3,6 @@
     <%- include("searchNavBar") %>
     <head>
         <style>
-
             #myCarousel {
                 background-color: #84A49A;
             }
@@ -46,10 +45,20 @@
                 padding-right: 1vw;
             }
 
-            @media (max-width: 576px) {
+            @media only screen and (max-width: 767px) {
                 .card {
-                    height: 30vh;
-                    width: 99vw;
+                    height: 35vh;
+                    width: 90vw;
+                }
+
+                .product-img {
+                    max-height: 30vh;
+                }
+
+                .product-btn {
+                    width: 20vw;
+                    height: 7vh;
+                    font-size: 12pt;
                 }
 
                 .filter-header {
@@ -59,12 +68,28 @@
                 .accordion-body {
                     font-size: 16pt;
                 }
+
+                .form-range::-webkit-slider-thumb {
+                    height: 25px;
+                    width: 25px;
+                }
+
+                .form-range::-moz-range-thumb {
+                    height: 25px;
+                    width: 25px;
+                }
             }
 
-            @media (max-width: 854px) {
+            @media only screen and (max-width: 854px) {
                 .video {
                     width: 480px;
                     height: 360px;
+                }
+            }
+
+            @media only screen and (min-width: 768px) and (max-width: 992px) {
+                .product-listings-container {
+                    width: 98vw;
                 }
             }
         </style>
@@ -72,39 +97,40 @@
     <body>
         <div class="container-fluid gap-1 align-items-center">
 
-<!-- Slide Banner -->
-<div class="row">
-    <div id="myCarousel" class="carousel slide mb-6 pointer-event" data-bs-ride="carousel">
-        <div class="carousel-indicators">
-            <% featuredItems.forEach((item, index) => { %>
-                <button type="button" data-bs-target="#myCarousel" data-bs-slide-to="<%= index %>" class="<%= index === 0 ? 'active' : '' %>" aria-label="Slide <%= index + 1 %>"></button>
-            <% }); %>
-        </div>
+            <!-- Slide Banner -->
+            <div class="row">
+                <div id="myCarousel" class="carousel slide mb-6 pointer-event" data-bs-ride="carousel">
+                    <div class="carousel-indicators">
+                        <% featuredItems.forEach((item, index) => { %>
+                            <button type="button" data-bs-target="#myCarousel" data-bs-slide-to="<%= index %>" class="<%= index === 0 ? 'active' : '' %>" aria-label="Slide <%= index + 1 %>"></button>
+                        <% }); %>
+                    </div>
 
-        <div class="carousel-inner">
-            <% featuredItems.forEach((item, index) => { %>
-                <%- include("templates/carouselBanner", { 
-                    activeStatus: index === 0 ? 'active' : '', 
-                    product_description: item.item_detailed_description, 
-                    product_title: item.item_title, 
-                    source: item.banner_image, // Assuming 'banner_image' is the field for background images of carousel
-                    product_img: item.product_img_URL[0], 
-                    product_qty: item.item_quantity, 
-                    product_price: item.item_price 
-                }) %>
-            <% }); %>
-        </div>
+                    <div class="carousel-inner">
+                        <% featuredItems.forEach((item, index) => { %>
+                            <%- include("templates/carouselBanner", { 
+                                activeStatus: index === 0 ? 'active' : '', 
+                                product_description: item.item_detailed_description, 
+                                product_title: item.item_title, 
+                                source: item.banner_image, // Assuming 'banner_image' is the field for background images of carousel
+                                product_img: item.product_img_URL[0], 
+                                product_qty: item.item_quantity, 
+                                product_price: item.item_price,
+                                product_link: item._id
+                            }) %>
+                        <% }); %>
+                    </div>
 
-        <button class="carousel-control-prev" type="button" data-bs-target="#myCarousel" data-bs-slide="prev">
-            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-            <span class="visually-hidden">Previous</span>
-        </button>
-        <button class="carousel-control-next" type="button" data-bs-target="#myCarousel" data-bs-slide="next">
-            <span class="carousel-control-next-icon" aria-hidden="true"></span>
-            <span class="visually-hidden">Next</span>
-        </button>
-    </div>
-</div>
+                    <button class="carousel-control-prev" type="button" data-bs-target="#myCarousel" data-bs-slide="prev">
+                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                        <span class="visually-hidden">Previous</span>
+                    </button>
+                    <button class="carousel-control-next" type="button" data-bs-target="#myCarousel" data-bs-slide="next">
+                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                        <span class="visually-hidden">Next</span>
+                    </button>
+                </div>
+            </div>
 
             <div class="row">
                 <div class="col text-center">
@@ -133,8 +159,7 @@
                                             data-bs-target="#<%= filtersAnchor[i] %>"
                                             aria-expanded="true"
                                             aria-controls="<%= filtersAnchor[i] %>">
-                                            <strong class="filter-header"><%=
-                                                filterHeaders[i] %></strong>
+                                            <strong class="filter-header"><%= filterHeaders[i] %></strong>
                                             <!-- TODO: Variable -->
                                         </button>
                                     </span>
@@ -168,11 +193,11 @@
                     </div>
                 </div>
 
-                <div class="col-9">
+                <div class="col-md-9 product-listings-container">
                     <div class="container-fluid">
                         <div class="row">
                             <% currentListings.forEach(function(item) { %>
-                            <div class="col-lg-4 landing-pad-bottom">
+                            <div class="col-md-4 landing-pad-bottom">
                                 <div class="card shadow-sm">
                                     <div
                                         class="d-flex product-img align-items-center justify-content-center">
@@ -189,11 +214,12 @@
                                         <div
                                             class="d-flex justify-content-between align-items-center">
                                             <div class="btn-group">
-                                                <a
-                                                    href="/product-info/<%= item._id %>"
-                                                    class="btn btn-sm btn-outline-secondary">View</a>
+                                                <a href="/product-info/<%= item._id %>"
+                                                class="btn btn-sm btn-outline-secondary product-btn d-flex justify-content-center align-items-center">
+                                                    View
+                                                </a>
                                                 <button type="button"
-                                                    class="btn btn-sm btn-outline-secondary"
+                                                    class="btn btn-sm btn-outline-secondary product-btn"
                                                     onclick="addToCart('<%= item._id %>')">Add
                                                     to Cart</button>
                                             </div>

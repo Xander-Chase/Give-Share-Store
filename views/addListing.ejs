@@ -7,63 +7,82 @@
 <body>
     <div class="container mt-5">
         <h2>Add New Listing</h2>
-        <p> Fields marked with <span class="mandatory">*</span> are mandatory.</p>
-        <form action="/admin/submitListing" method="post" enctype="multipart/form-data" class="mt-4">
+        <p> Fields marked with <span class="mandatory">*</span> are
+            mandatory.</p>
+        <form action="/admin/submitListing" method="post"
+            enctype="multipart/form-data" class="mt-4">
 
             <!-- Product Images Input -->
             <div class="mb-3">
-                <label for="photo" class="form-label">Product Images <span class="mandatory">*</span> </label>
-                <input type="file" class="form-control" id="photo" name="photo" required multiple>
+                <label for="photo" class="form-label">Product Images <span
+                        class="mandatory">*</span> </label>
+                <input type="file" class="form-control" id="photo" name="photo"
+                    required multiple>
+                <div class="invalid-feedback" id="photoFeedback"></div>
             </div>
 
             <!-- Product Videos Input -->
             <div class="mb-3">
                 <label for="video" class="form-label">Product Videos</label>
                 <input type="file" class="form-control" id="video" name="video">
+                <div class="invalid-feedback" id="videoFeedback"></div>
             </div>
-
 
             <!-- Item Title Input -->
             <div class="mb-3">
-                <label for="itemTitle" class="form-label">Item Title <span class="mandatory">*</span> </label>
-                <input type="text" class="form-control" id="itemTitle" name="item_title" required>
+                <label for="itemTitle" class="form-label">Item Title <span
+                        class="mandatory">*</span> </label>
+                <input type="text" class="form-control" id="itemTitle"
+                    name="item_title" required>
             </div>
-            
+
             <!-- Item Price Input -->
             <div class="mb-3">
-                <label for="itemPrice" class="form-label">Item Price <span class="mandatory">*</span> </label>
-                <input type="number" class="form-control" id="itemPrice" name="item_price" step="0.01" required>
+                <label for="itemPrice" class="form-label">Item Price <span
+                        class="mandatory">*</span> </label>
+                <input type="number" class="form-control" id="itemPrice"
+                    name="item_price" step="0.01" required>
             </div>
-            
+
             <!-- Detailed Description Input -->
             <div class="mb-3">
-                <label for="itemDescription" class="form-label">Detailed Description</label>
-                <textarea class="form-control" id="itemDescription" name="item_detailed_description" rows="3"></textarea>
+                <label for="itemDescription" class="form-label">Detailed
+                    Description</label>
+                <textarea class="form-control" id="itemDescription"
+                    name="item_detailed_description" rows="3"></textarea>
             </div>
-            
+
             <!-- Estimated Shipping Cost Input -->
             <div class="mb-3">
-                <label for="shippingCost" class="form-label">Estimated Shipping Cost</label>
-                <input type="number" class="form-control" id="shippingCost" name="item_estimatedShippingCost" step="0.01">
+                <label for="shippingCost" class="form-label">Estimated Shipping
+                    Cost</label>
+                <input type="number" class="form-control" id="shippingCost"
+                    name="item_estimatedShippingCost" step="0.01">
             </div>
 
             <!-- Estimated Insurance Cost Input-->
             <div class="mb-3">
-                <label for="insuranceCost" class="form-label">Estimated Insurance Cost</label>
-                <input type="number" class="form-control" id="insuranceCost" name="item_estimatedInsuranceCost" step="0.01">
+                <label for="insuranceCost" class="form-label">Estimated
+                    Insurance Cost</label>
+                <input type="number" class="form-control" id="insuranceCost"
+                    name="item_estimatedInsuranceCost" step="0.01">
             </div>
 
             <!-- Featured Item Checkbox -->
             <div class="mb-3 form-check">
                 <input type="hidden" name="isFeatureItem" value="false">
-                <input type="checkbox" class="form-check-input" id="featureItem" name="isFeatureItem" value="true">
-                <label class="form-check-label" for="featureItem">Featured Item?</label>
+                <input type="checkbox" class="form-check-input" id="featureItem"
+                    name="isFeatureItem" value="true">
+                <label class="form-check-label" for="featureItem">Featured
+                    Item?</label>
             </div>
-            
+
             <!-- Quantity Input -->
             <div class="mb-3">
-                <label for="itemQuantity" class="form-label">Quantity <span class="mandatory">*</span> </label>
-                <input type="number" class="form-control" id="itemQuantity" name="item_quantity" required>
+                <label for="itemQuantity" class="form-label">Quantity <span
+                        class="mandatory">*</span> </label>
+                <input type="number" class="form-control" id="itemQuantity"
+                    name="item_quantity" required>
             </div>
 
             <!-- Category Selection -->
@@ -71,32 +90,89 @@
                 <div class="container">
                     <div class="row">
                         <div class="col-md ">
-                            <label for="item_category" class="form-label">Category <span class="mandatory">*</span> </label>
-                            <select class="form-select" id="itemCategory" name="item_category" multiple aria-label="multiple select example" onchange="loadSubCategories(this)">
+                            <label for="item_category"
+                                class="form-label">Category <span
+                                    class="mandatory">*</span> </label>
+                            <select class="form-select" id="itemCategory"
+                                name="item_category" multiple
+                                aria-label="multiple select example"
+                                onchange="loadSubCategories(this)">
                                 <% categories.forEach(function(category) { %>
-                                <option value='"<%= category.category_type %>"'><%= category.category_type%></option>
+                                <option
+                                    value='"<%= category.category_type %>"'><%=
+                                    category.category_type%></option>
                                 <% }) %>
                             </select>
                         </div>
                         <div class="col-md ">
-                            <label for="item_sub_category" class="form-label">Sub-Category <span class="mandatory">*</span> </label>
-                            <select class="form-select" id="itemSubCategory" name="item_sub_category" multiple aria-label="multiple select example" >
+                            <label for="item_sub_category"
+                                class="form-label">Sub-Category <span
+                                    class="mandatory">*</span> </label>
+                            <select class="form-select" id="itemSubCategory"
+                                name="item_sub_category" multiple
+                                aria-label="multiple select example">
                             </select>
                         </div>
                     </div>
                 </div>
             </div>
 
-
             <!-- Submit Button -->
-            <button type="submit" class="btn btn-primary">Submit Listing</button>
+            <button type="submit" class="btn btn-primary">Submit
+                Listing</button>
             <br>
             <br>
 
         </form>
     </div>
     <script>
+          document.getElementById('listingForm').addEventListener('submit', function (e) {
+            let valid = true;
+            
+            // validate images
+            const photoInput = document.getElementById('photo');
+            const photoFeedback = document.getElementById('photoFeedback');
+            const photoFiles = photoInput.files;
+            const validImageTypes = ['image/jpeg', 'image/png', 'image/gif'];
+            photoFeedback.textContent = '';
 
+            if (photoFiles.length > 10) {
+                photoFeedback.textContent = 'You can upload a maximum of 10 images.';
+                valid = false;
+            }
+
+            for (let file of photoFiles) {
+                if (!validImageTypes.includes(file.type)) {
+                    photoFeedback.textContent = 'Only JPEG, PNG, and GIF formats are allowed for images.';
+                    valid = false;
+                    break;
+                }
+            }
+
+            // validate video
+            const videoInput = document.getElementById('video');
+            const videoFeedback = document.getElementById('videoFeedback');
+            const videoFiles = videoInput.files;
+            const validVideoTypes = ['video/mp4', 'video/avi', 'video/mkv'];
+            videoFeedback.textContent = '';
+
+            if (videoFiles.length > 1) {
+                videoFeedback.textContent = 'You can upload only one video.';
+                valid = false;
+            }
+
+            for (let file of videoFiles) {
+                if (!validVideoTypes.includes(file.type)) {
+                    videoFeedback.textContent = 'Only MP4, AVI, and MKV formats are allowed for videos.';
+                    valid = false;
+                    break;
+                }
+            }
+
+            if (!valid) {
+                e.preventDefault();
+            }
+        });
 
     </script>
 </body>
