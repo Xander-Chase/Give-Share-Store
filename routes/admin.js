@@ -16,23 +16,6 @@ const { getCategoriesNav } = require('../controller/htmlContent');
 const { upload, deleteFromS3, featureVideoUpload, s3 } = require("../controller/awsController");
 const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
 
-const multer = require('multer');
-const storage = multer.memoryStorage();
-const multerUpload = multer({
-    storage: storage,
-    fileFilter: (req, file, cb) => {
-        const validImageTypes = ['image/jpeg', 'image/png', 'image/gif'];
-        const validVideoTypes = ['video/mp4', 'video/avi', 'video/mkv'];
-
-        if (file.fieldname === 'photo' && validImageTypes.includes(file.mimetype)) {
-            cb(null, true);
-        } else if (file.fieldname === 'video' && validVideoTypes.includes(file.mimetype)) {
-            cb(null, true);
-        } else {
-            cb(new Error('Invalid file type'));
-        }
-    }
-}).fields([{ name: 'photo', maxCount: 10 }, { name: 'video', maxCount: 1 }]);
 
 // TODO: Done
 router.get('/LogIn', (req, res) => {
@@ -95,18 +78,14 @@ router.get('/manage', async (req, res) => {
     }
 });
 
-// TODO: DONE
+
 router.get('/addListing', async (req, res) => {
 
     res.render('addListing', { categories: await categoryCollection.find().toArray() });
 });
 
 
-
-// TODO: DONE
-// Route to handle form submission
-router.post('/submitListing', upload.fields([{ name: 'photo', maxCount: 10 }, { name: 'video', maxCount: 1 }]), multerUpload, async (req, res) => {
-
+router.post('/submitListing', upload.fields([{ name: 'photo', maxCount: 10 }, { name: 'video', maxCount: 1 }]), async (req, res) => {
     const photos = req.files['photo'] ? req.files['photo'].map(file => file.location) : [];
     const videos = req.files['video'] ? req.files['video'].map(file => file.location) : [];
 
@@ -121,10 +100,12 @@ router.post('/submitListing', upload.fields([{ name: 'photo', maxCount: 10 }, { 
         item_estimatedShippingCost: parseFloat(req.body.item_estimatedShippingCost) || 0.0,
         item_estimatedInsuranceCost: parseFloat(req.body.item_estimatedInsuranceCost) || 0.0,
         isFeatureItem: req.body.isFeatureItem === 'true',
-        item_category: Array.isArray(req.body.item_category) ? req.body.item_category.map(function (item) {
+        item_category: Array.isArray(req.body.item_category) ? req.body.item_category.map(function(item)
+        {
             return item.replace(/"/g, '');
         }) : [req.body.item_category.replace(/"/g, '')],
-        item_sub_category: Array.isArray(req.body.item_sub_category) ? req.body.item_sub_category.map(function (item) {
+        item_sub_category: Array.isArray(req.body.item_sub_category) ? req.body.item_sub_category.map(function(item)
+        {
             return item.replace(/"/g, '');
         }) : [req.body.item_sub_category.replace(/"/g, '')],
         status: 'available' // Default status when a listing is created
@@ -139,7 +120,7 @@ router.post('/submitListing', upload.fields([{ name: 'photo', maxCount: 10 }, { 
     }
 });
 
-// TODO: DONE
+
 router.get('/editListing/:id', async (req, res) => {
     const itemId = req.params.id;
     const isLoggedIn = req.session.loggedIn;
@@ -161,8 +142,7 @@ router.get('/editListing/:id', async (req, res) => {
     }
 });
 
-// TODO: DONE
-router.post('/updateListing/:id', upload.fields([{ name: 'photo', maxCount: 10 }, { name: 'video', maxCount: 1 }]), multerUpload, async (req, res) => {
+router.post('/updateListing/:id', upload.fields([{ name: 'photo', maxCount: 10 }, { name: 'video', maxCount: 1 }]), async (req, res) => {
     const itemId = new ObjectId(req.params.id);
     console.log("Form submission data:", req.body);
 
@@ -223,6 +203,21 @@ router.post('/updateListing/:id', upload.fields([{ name: 'photo', maxCount: 10 }
     }
 });
 
+
+router.post('/deleteListing/:id', async (req, res) => {
+    try {
+        const listingCollection = database.db(mongo_database).collection('listing_items');
+        const result = await listingCollection.deleteOne({ _id: new ObjectId(req.params.id) });
+        if (result.deletedCount === 1) {
+            res.status(200).send('Category deleted successfully');
+        } else {
+            res.status(404).send('Category not found');
+        }
+    } catch (error) {
+        console.error('Failed to delete user:', error);
+        res.status(500).send('Failed to delete user');
+    }
+});
 
 // Route to handle feature video upload
 router.post('/submitFeatureVideo', featureVideoUpload.single('video'), async (req, res) => {
