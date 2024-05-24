@@ -1,7 +1,8 @@
-
 /**
  * Basic Require Configs.
  */
+
+
 require('dotenv').config();                                    // Import dotenv module to read ..env file
 require('./utils');                                            // Import utils.js file to define include function
 
@@ -182,23 +183,24 @@ app.get('/', async (req, res) => {
         });
 
         // Pagination set up
+        let max = 18;
         let pageIndexes = [];
         let previousIndex = req.session.pageIndex - 1;
         let nextIndex = previousIndex + 2;
         if (previousIndex < 1)
             previousIndex = 1;
-        // TODO: TO MODIFY AMOUNT OF PAGES PER PAGE, CHANGE THE NUMBER.
-        let numberOfPages = sortedPrices.length / /* TODO: Change this number to modify */ 18;
 
-        if (nextIndex >= numberOfPages)
+        let filteredPrices = await fetchFilteredPrices(searchKey, categoryKeyword, subCategoryKeyword, maximumPrice);
+        let numberOfPages = Math.ceil(filteredPrices.length / max);
+        if (nextIndex > numberOfPages)
             nextIndex--;
 
         // Assign the number indexes to display
-        for (let i = 0; i <= (numberOfPages); i++)
+        for (let i = 0; i < (numberOfPages); i++)
             pageIndexes.push(i + 1);
 
-        // TODO: TO MODIFY AMOUNT OF PAGES PER PAGE, CHANGE THE FIRST NUMBER.
-        const skips = /* TODO: Change this number to modify */ 18 * (((req.session.pageIndex - 1) < 0) ? 0 : (req.session.pageIndex - 1));
+
+        const skips = max * (((req.session.pageIndex - 1) < 0) ? 0 : (req.session.pageIndex - 1));
 
         /*
         Call its designed filters.
@@ -209,15 +211,15 @@ app.get('/', async (req, res) => {
             isFeatureItem: false,
             $or: [{ isSold: false }, { isSold: { $exists: false } }],
             item_title: { $regex: searchKey, $options: 'i' },
-            item_price: { $lt: Math.round(maximumPrice) },
+            item_price: { $lte: Math.round(maximumPrice) },
             item_category: { $regex: categoryKeyword },
             item_sub_category: { $regex: subCategoryKeyword }
         }).sort({ item_price: orderCode }).skip(skips)
-            .limit(18)
+            .limit(max)
             .toArray();
 
-        // initially page index to 0 to prevent miscalculations.
-        req.session.pageIndex = 0;
+        // initially page index to 1 to reset when reloaded
+        req.session.pageIndex = 1;
 
         // Obtain Sub-Categories.
         const subCategories = await categoryCollection.find({ category_type: req.session.category }).project({ _id: 0, sub_categories: 1 }).toArray();
@@ -326,6 +328,35 @@ async function fetchAllPrices(searchKey, categoryKeyword, subCategoryKeyword) {
         const prices = await productsCollection.find(
             {
                 isFeatureItem: false,
+                $or: [{ isSold: false }, { isSold: { $exists: false } }],
+                item_title: { $regex: searchKey, $options: 'i' },
+                item_category: { $regex: categoryKeyword },
+                item_sub_category: { $regex: subCategoryKeyword }
+            },
+            { projection: { item_price: 1 } }).toArray();
+        return prices.map(item => item.item_price);
+    } catch (error) {
+        console.error('Failed to fetch prices:', error);
+        return [];
+    }
+}
+
+/**
+ * Fetches all the prices in the database based on the filters used. And based on the filtered prices.
+ * @param searchKey a string, a pattern used to check the listings that contain that pattern.
+ * @param categoryKeyword a string, a category type to check the listings that has that category.
+ * @param subCategoryKeyword a string, a sub-category type to check the listings that has that sub-category.
+ * @param maximumPrice a number, current maximum price to find.
+ * @returns all the non-featured items' prices based on the search, category, sub-category filter.
+ */
+async function fetchFilteredPrices(searchKey, categoryKeyword, subCategoryKeyword, maximumPrice) {
+    try {
+        const productsCollection = database.db(mongodb_database).collection('listing_items');
+        const prices = await productsCollection.find(
+            {
+                isFeatureItem: false,
+                $or: [{ isSold: false }, { isSold: { $exists: false } }],
+                item_price: { $lt: Math.round(maximumPrice) },
                 item_title: { $regex: searchKey, $options: 'i' },
                 item_category: { $regex: categoryKeyword },
                 item_sub_category: { $regex: subCategoryKeyword }
@@ -687,6 +718,7 @@ app.post('/create-checkout-session', async (req, res) => {
     }
 });
 
+// Post method for updating shipping
 app.post('/cart/update-shipping-pickup', (req, res) => {
     const { itemId, value } = req.body;
     const cart = req.session.cart || [];
@@ -830,6 +862,12 @@ app.post('/sendReferralEmail', async (req, res) => {
 
 // ----------------- reCAPTCHA START -----------------
 
+/**
+ *
+ * @param token
+ * @param recaptchaAction
+ * @returns Recaptcha score to validate
+ */
 async function createAssessment({ token, recaptchaAction }) {
     const client = new RecaptchaEnterpriseServiceClient();
     const projectPath = client.projectPath(projectID);
@@ -863,6 +901,7 @@ async function createAssessment({ token, recaptchaAction }) {
     }
 }
 
+// Post method for submitting contact form
 app.post('/submitContactForm', async (req, res) => {
     const { name, email, message, token } = req.body;
 
