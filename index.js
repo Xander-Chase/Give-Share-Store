@@ -19,6 +19,7 @@ const mailchimp = require('@mailchimp/mailchimp_marketing');    // Import mailch
 const {RecaptchaEnterpriseServiceClient} = require('@google-cloud/recaptcha-enterprise'); // Import recaptcha-enterprise module to interact with Google Recaptcha Enterprise API
 const bodyParser = require('body-parser');                      // Import body-parser module to parse request body
 const { sendContactUsEmail, sendReferralEmail, sendOrderConfirmationEmail, sendOrderNotificationEmail } = require('./routes/mailer'); // Import mailer.js file to send emails
+const moment = require('moment-timezone');
 
 
 
@@ -485,35 +486,36 @@ app.post('/create-paypal-order', async (req, res) => {
 });
 
 app.post('/mark-items-sold', async (req, res) => {
-    const { itemIds, email, address, city, state, zip, subtotal, shippingTotal, insuranceTotal, taxTotal, finalTotal } = req.body;
+    const { itemIds, email, address, city, state, zip, shippingTotal, insuranceTotal, taxTotal, finalTotal, shippingPickup } = req.body;
 
     try {
         if (itemIds && Array.isArray(itemIds) && itemIds.length > 0) {
             const productsCollection = database.db(mongodb_database).collection('listing_items');
             const items = await productsCollection.find({ _id: { $in: itemIds.map(id => new ObjectId(id)) } }).toArray();
 
+            // To get the current date and time in PST
+            const soldDate = moment().tz('America/Los_Angeles').toDate();
+            
             await productsCollection.updateMany(
                 { _id: { $in: itemIds.map(id => new ObjectId(id)) } },
-                { $set: { isSold: true } }
+                { $set: { isSold: true, soldDate: soldDate, soldTo: email } }
             );
 
-            const itemDetails = items.map(item => `${item.item_title} - $${item.item_price}`).join('\n');
+            const itemDetails = items.map(item => `${item.item_title} - $${item.item_price} - ${shippingPickup[index]}`).join('\n');
             const ownerEmail = "ajgabl18@gmail.com";
 
             const orderDetails = `
-                Items:
-                ${itemDetails}
-
-                Shipping: $${shippingTotal.toFixed(2)}
-                Insurance: $${insuranceTotal.toFixed(2)}
-                Taxes: $${taxTotal.toFixed(2)}
-                Total: $${finalTotal.toFixed(2)}
-
+            Date of purchase: ${soldDate} \n\n   
+            Items: ${itemDetails}
+            Shipping: $${shippingTotal.toFixed(2)}
+            Insurance: $${insuranceTotal.toFixed(2)}
+            Taxes: $${taxTotal.toFixed(2)}
+            Total: $${finalTotal.toFixed(2)}
             `;
 
             const customerDetails = `
-                Purchaser Email: ${email}
-                Address: ${address}, ${city}, ${state}, ${zip}
+                Buyer Email: ${email}
+                Shipping Address: ${address}, ${city}, ${state}, ${zip}
             `;
 
             sendOrderConfirmationEmail(email, orderDetails);
@@ -543,12 +545,16 @@ const stripe = require('stripe')('sk_test_51OZSVHAcq23T9yD7gpE3kQS73T5AnO6UEaecX
 
 app.post('/create-checkout-session', async (req, res) => {
     try {
-        const { productIds, insuranceTotal, shippingTotal, taxTotal, finalTotal, subtotal, email, address, city, state, zip } = req.body;
+        let { productIds, insuranceTotal, shippingTotal, taxTotal, finalTotal, subtotal, email, address, city, state, zip } = req.body;
 
         const YOUR_DOMAIN = 'http://localhost:5000'; // Replace with client's domain when finalized
 
-        if (!productIds || !Array.isArray(productIds)) {
-            throw new Error('Product IDs not received or not in array format');
+        if (!productIds) {
+            throw new Error('Product IDs not received');
+        }
+
+        if (!Array.isArray(productIds)) {
+            productIds = [productIds];
         }
 
         const productsCollection = database.db(mongodb_database).collection('listing_items');
@@ -630,39 +636,44 @@ app.get('/StripeSuccess', async (req, res) => {
     const city = req.query.city || '';
     const state = req.query.state || '';
     const zip = req.query.zip || '';
-    const subtotal = parseFloat(req.query.subtotal);
     const shippingTotal = parseFloat(req.query.shippingTotal);
     const insuranceTotal = parseFloat(req.query.insuranceTotal);
     const taxTotal = parseFloat(req.query.taxTotal);
     const finalTotal = parseFloat(req.query.finalTotal);
+    const shippingPickup = req.query.shippingPickup ? req.query.shippingPickup.split(',') : [];
+
+    // Debugging log
+    console.log('Received itemIds:', itemIds);
+    console.log('Received shippingPickup values:', shippingPickup);
 
     try {
         if (itemIds.length > 0) {
             const productsCollection = database.db(mongodb_database).collection('listing_items');
             const items = await productsCollection.find({ _id: { $in: itemIds.map(id => new ObjectId(id)) } }).toArray();
 
+            // To get the current date and time in PST
+            const soldDate = moment().tz('America/Los_Angeles').toDate();
+            
             await productsCollection.updateMany(
                 { _id: { $in: itemIds.map(id => new ObjectId(id)) } },
-                { $set: { isSold: true } }
+                { $set: { isSold: true, soldDate: soldDate, soldTo: email } }
             );
 
-            const itemDetails = items.map(item => `${item.item_title} - $${item.item_price}`).join('\n');
+            const itemDetails = items.map((item, index) => `${item.item_title} - $${item.item_price} - ${shippingPickup[index] || 'Pickup'}`).join('\n');
             const ownerEmail = "ajgabl18@gmail.com";
 
             const orderDetails = `
-                Items:
-                ${itemDetails}
-
+                Date of purchase: ${soldDate.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' })} \n\n   
+                Items: \n${itemDetails}
                 Shipping: $${shippingTotal.toFixed(2)}
                 Insurance: $${insuranceTotal.toFixed(2)}
                 Taxes: $${taxTotal.toFixed(2)}
                 Total: $${finalTotal.toFixed(2)}
-
             `;
 
             const customerDetails = `
-                Purchaser Email: ${email}
-                Address: ${address}, ${city}, ${state}, ${zip}
+                Buyer Email: ${email}
+                Shipping Address: ${address}, ${city}, ${state}, ${zip}
             `;
 
             sendOrderConfirmationEmail(email, orderDetails);

@@ -70,7 +70,7 @@
             <div class="row g-5">
                 <div class="col-md-8 border product-card">
                     <span id="title">Products in Your Cart</span>
-                    <% items.forEach(function(item) { %>
+                    <% items.forEach(function(item, index) { %>
                         <div class="g-1 row shadow-sm bg-light text-dark border">
                             <div class="row d-flex align-items-center col-md-8">
                                 <div class="card product-img shadow-sm col-sm-5 border justify-content-center">
@@ -84,6 +84,7 @@
                                         <label><input type="checkbox" class="insurance-checkbox" data-id="<%= item._id %>" data-cost="<%= item.item_estimatedInsuranceCost %>" /> Insurance ($<%= item.item_estimatedInsuranceCost %>)</label>
                                         <label><input type="checkbox" class="shipping-checkbox" data-id="<%= item._id %>" data-cost="<%= item.item_estimatedShippingCost %>" /> Shipping ($<%= item.item_estimatedShippingCost %>)</label>
                                         <label><input type="checkbox" class="pickup-checkbox" data-id="<%= item._id %>" checked /> Pickup</label>
+                                        <input type="hidden" name="shippingPickup[]" id="shippingPickup<%= item._id %>" value="Pickup">
                                     </div>
                                 </div>
                                 <div class="col-sm-5">
@@ -142,24 +143,25 @@
                         <h5>Shipping Address</h5>
                         <div class="mb-3">
                             <label for="address" class="form-label">Address</label>
-                            <input type="text" class="form-control" id="address" name="address" required>
+                            <input type="text" class="form-control" id="address" name="address">
                         </div>
                         <div class="mb-3">
                             <label for="city" class="form-label">City</label>
-                            <input type="text" class="form-control" id="city" name="city" required>
+                            <input type="text" class="form-control" id="city" name="city">
                         </div>
                         <div class="mb-3">
                             <label for="state" class="form-label">State</label>
-                            <input type="text" class="form-control" id="state" name="state" required>
+                            <input type="text" class="form-control" id="state" name="state">
                         </div>
                         <div class="mb-3">
                             <label for="zip" class="form-label">Zip Code</label>
-                            <input type="text" class="form-control" id="zip" name="zip" required>
+                            <input type="text" class="form-control" id="zip" name="zip">
                         </div>
                     </div>
                     <form class="card p2" action="/create-checkout-session" method="POST" id="stripe-form">
-                        <% items.forEach(function(item) { %>
-                            <input type="hidden" name="productIds" value="<%= item._id.toString() %>">
+                        <% items.forEach(function(item, index) { %>
+                            <input type="hidden" name="productIds[]" value="<%= item._id.toString() %>">
+                            <input type="hidden" name="shippingPickup[]" id="shippingPickup<%= item._id %>" value="Pickup">
                         <% }); %>
                         <input type="hidden" name="insuranceTotal" id="insuranceTotalInput" value="0">
                         <input type="hidden" name="shippingTotal" id="shippingTotalInput" value="0">
@@ -171,8 +173,7 @@
                         <input type="hidden" name="state" id="stateInput">
                         <input type="hidden" name="zip" id="zipInput">
                         <button type="submit" id="checkout-button" class="btn btn-primary">Proceed to Checkout</button>
-                    </form>
-
+                    </form>               
                     <div id="paypal-button-container"></div>
                     <script src="https://www.paypal.com/sdk/js?client-id=<%= paypalClientId %>&currency=CAD"></script>
                     <script>
@@ -184,13 +185,16 @@
                                 const taxTotal = parseFloat(document.getElementById('taxTotalInput').value);
                                 const finalTotal = parseFloat(document.getElementById('finalTotalInput').value);
                                 const subtotal = parseFloat(document.getElementById('subtotal').textContent.replace('$', ''));
-                                const email = document.getElementById('email').value; // Capture email from input field
+                                const email = document.getElementById('email').value;
                                 const address = document.getElementById('address').value;
                                 const city = document.getElementById('city').value;
                                 const state = document.getElementById('state').value;
                                 const zip = document.getElementById('zip').value;
-                                const itemIds = Array.from(document.querySelectorAll('input[name="productIds"]')).map(input => input.value);
-
+                                const itemIds = Array.from(document.querySelectorAll('input[name="productIds[]"]')).map(input => input.value);
+                                const shippingPickup = Array.from(document.querySelectorAll('input[name="shippingPickup[]"]')).map(input => input.value);
+                    
+                                console.log('shippingPickup before PayPal createOrder:', shippingPickup);
+    
                                 const response = await fetch("/create-paypal-order", {
                                     method: "POST",
                                     headers: {
@@ -208,7 +212,8 @@
                                         city,
                                         state,
                                         zip,
-                                        itemIds
+                                        itemIds,
+                                        shippingPickup
                                     })
                                 });
                                 const order = await response.json();
@@ -218,8 +223,8 @@
                                 return actions.order.capture().then(async function(details) {
                                     alert('Transaction completed by ' + details.payer.name.given_name);
                                     const email = details.payer.email_address;
-
-                                    const itemIds = Array.from(document.querySelectorAll('input[name="productIds"]')).map(input => input.value);
+                    
+                                    const itemIds = Array.from(document.querySelectorAll('input[name="productIds[]"]')).map(input => input.value);
                                     const subtotal = parseFloat(document.getElementById('subtotal').textContent.replace('$', ''));
                                     const shippingTotal = parseFloat(document.getElementById('shipping-total').textContent.replace('$', ''));
                                     const insuranceTotal = parseFloat(document.getElementById('insurance-total').textContent.replace('$', ''));
@@ -229,20 +234,23 @@
                                     const city = document.getElementById('city').value;
                                     const state = document.getElementById('state').value;
                                     const zip = document.getElementById('zip').value;
-
+                                    const shippingPickup = Array.from(document.querySelectorAll('input[name="shippingPickup[]"]')).map(input => input.value);
+                    
+                                    console.log('shippingPickup before marking items sold:', shippingPickup);
+    
                                     await fetch('/mark-items-sold', {
                                         method: 'POST',
                                         headers: {
                                             'Content-Type': 'application/json',
                                         },
-                                        body: JSON.stringify({ itemIds, email, address, city, state, zip, subtotal, shippingTotal, insuranceTotal, taxTotal, finalTotal })
+                                        body: JSON.stringify({ itemIds, email, address, city, state, zip, subtotal, shippingTotal, insuranceTotal, taxTotal, finalTotal, shippingPickup })
                                     });
-
+                    
                                     window.location.href = '/';
                                 });
                             }
                         }).render('#paypal-button-container');
-                    </script>
+                    </script>                    
                 </div>
             </div>
         </div>
@@ -266,39 +274,39 @@
                     console.error('Error removing item from cart:', error);
                 });
         }
-
+    
         document.querySelectorAll('.insurance-checkbox, .shipping-checkbox, .pickup-checkbox').forEach(checkbox => {
             checkbox.addEventListener('change', updateTotals);
         });
-
+    
         function updateTotals() {
             let shippingTotal = 0;
             let insuranceTotal = 0;
             let subtotal = parseFloat(document.getElementById('subtotal').textContent.replace('$', ''));
-
+    
             document.querySelectorAll('.insurance-checkbox:checked').forEach(checkbox => {
                 insuranceTotal += parseFloat(checkbox.getAttribute('data-cost'));
             });
-
+    
             document.querySelectorAll('.shipping-checkbox:checked').forEach(checkbox => {
                 shippingTotal += parseFloat(checkbox.getAttribute('data-cost'));
             });
-
+    
             const taxRate = 0.12; // 12% GST and PST
             let total = subtotal + shippingTotal + insuranceTotal;
             let taxTotal = total * taxRate;
             let finalTotal = total + taxTotal;
-
+    
             document.getElementById('shipping-total').textContent = `$${shippingTotal.toFixed(2)}`;
             document.getElementById('insurance-total').textContent = `$${insuranceTotal.toFixed(2)}`;
             document.getElementById('tax-total').textContent = `$${taxTotal.toFixed(2)}`;
             document.getElementById('total').textContent = `$${finalTotal.toFixed(2)}`;
-
+    
             document.getElementById('insuranceTotalInput').value = insuranceTotal.toFixed(2);
             document.getElementById('shippingTotalInput').value = shippingTotal.toFixed(2);
             document.getElementById('taxTotalInput').value = taxTotal.toFixed(2);
             document.getElementById('finalTotalInput').value = finalTotal.toFixed(2);
-
+    
             // Show or hide the shipping address form based on the presence of checked shipping checkboxes
             if (shippingTotal > 0) {
                 document.getElementById('shipping-address-form').style.display = 'block';
@@ -314,29 +322,47 @@
                 document.getElementById('zip').required = false;
             }
         }
-
-        // Initial call to updateTotals when the page loads
-        window.onload = updateTotals;
-
-        document.querySelectorAll('.shipping-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', function() {
-                const itemId = this.getAttribute('data-id');
-                const pickupCheckbox = document.querySelector(`.pickup-checkbox[data-id="${itemId}"]`);
-                pickupCheckbox.checked = !this.checked;
+    
+        function updateShippingPickup() {
+            document.querySelectorAll('.shipping-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const itemId = this.getAttribute('data-id');
+                    const pickupCheckbox = document.querySelector(`.pickup-checkbox[data-id="${itemId}"]`);
+                    const shippingPickupInput = document.getElementById(`shippingPickup${itemId}`);
+                    if (this.checked) {
+                        pickupCheckbox.checked = false;
+                        shippingPickupInput.value = 'Shipping';
+                    } else {
+                        shippingPickupInput.value = 'Pickup';
+                    }
+                    console.log(`Shipping checkbox changed: Item ID ${itemId}, Value: ${shippingPickupInput.value}`);
+                    updateTotals();
+                });
             });
-        });
-
-        document.querySelectorAll('.pickup-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', function() {
-                const itemId = this.getAttribute('data-id');
-                const shippingCheckbox = document.querySelector(`.shipping-checkbox[data-id="${itemId}"]`);
-                if (!this.checked) {
-                    shippingCheckbox.checked = true;
-                }
-                updateTotals();
+    
+            document.querySelectorAll('.pickup-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const itemId = this.getAttribute('data-id');
+                    const shippingCheckbox = document.querySelector(`.shipping-checkbox[data-id="${itemId}"]`);
+                    const shippingPickupInput = document.getElementById(`shippingPickup${itemId}`);
+                    if (this.checked) {
+                        shippingCheckbox.checked = false;
+                        shippingPickupInput.value = 'Pickup';
+                    } else {
+                        shippingPickupInput.value = 'Shipping';
+                    }
+                    console.log(`Pickup checkbox changed: Item ID ${itemId}, Value: ${shippingPickupInput.value}`);
+                    updateTotals();
+                });
             });
-        });
-
+        }
+    
+        // Initial call to updateTotals and updateShippingPickup when the page loads
+        window.onload = () => {
+            updateTotals();
+            updateShippingPickup();
+        };
+    
         document.getElementById('stripe-form').addEventListener('submit', function(event) {
             document.getElementById('emailInput').value = document.getElementById('email').value;
             if (document.getElementById('shipping-address-form').style.display === 'block') {
@@ -349,8 +375,11 @@
             document.getElementById('insuranceTotalInput').value = parseFloat(document.getElementById('insurance-total').textContent.replace('$', ''));
             document.getElementById('taxTotalInput').value = parseFloat(document.getElementById('tax-total').textContent.replace('$', ''));
             document.getElementById('finalTotalInput').value = parseFloat(document.getElementById('total').textContent.replace('$', ''));
+            
+            // Debugging log
+            const shippingPickup = Array.from(document.querySelectorAll('input[name="shippingPickup[]"]')).map(input => input.value);
+            console.log('ShippingPickup values before Stripe form submit:', shippingPickup);
         });
-
-
     </script>
-</html>
+    </html>
+    
