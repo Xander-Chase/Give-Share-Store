@@ -27,7 +27,6 @@ const fetch = import('node-fetch');                             // Import node-f
 const mailchimp = require('@mailchimp/mailchimp_marketing');    // Import mailchimp_marketing module to interact with Mailchimp API
 const {RecaptchaEnterpriseServiceClient} = require('@google-cloud/recaptcha-enterprise'); // Import recaptcha-enterprise module to interact with Google Recaptcha Enterprise API
 const bodyParser = require('body-parser');                      // Import body-parser module to parse request body
-const { sendContactUsEmail, sendReferralEmail, sendOrderConfirmationEmail, sendOrderNotificationEmail } = require('./routes/mailer'); // Import mailer.js file to send emails
 const moment = require('moment-timezone');
 
 // Get most of the functions.
