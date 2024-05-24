@@ -4,6 +4,11 @@
         <style>
 
             /* Smallest */
+            @media only screen and (min-width:415px){
+                #loginModal{
+                    justify-content: center;
+                }
+            }
             @media only screen and (max-width: 853px) {
                 #hanging-icons
                 {
@@ -60,40 +65,62 @@
             {
                 height: 100%;
             }
+           .modal-content.rounded-4.shadow.login-info-box{
+            text-align: center;
+           }
+           #container-for-login-box{
+            display: flex;
+            justify-content: center;
+            align-items: center;
+           }
+           #login-box{
+            margin-top: 20vh;
+           }
+           .modal-header {
+            display: flex;
+            justify-content: center; /* Center horizontally */
+            align-items: center; /* Center vertically if needed */
+            text-align: center; /* Center text inside the header */
+            }
+            h1 {
+            margin: 0; /* Remove default margins to avoid misalignment */
+            }
+            .modal-title.heading{
+                font-size: 2rem;
+            }
+            .login-btn{
+                font-size: 1.5rem;
+            }
+            .desc{
+                font-size: 1.33rem;
+            }
         </style>
     </head>
     <div id="hanging-icons">
         <div class="modal modal-sheet position-static d-block  p-4 py-md-5" role="dialog" id="loginModal">
             <div class="modal-dialog" role="document">
-                <div class="modal-content rounded-4 shadow">
-                    <div class="modal-header border-bottom-0">
-                        <h1 class="modal-title fs-5">Welcome to the Login Portal</h1>
-                    </div>
-                    <div class="modal-body py-0">
-                        You may log in to the Vintage Garage as a user or as a moderator!
-                    </div>
-                    <div class="modal-footer flex-column align-items-stretch w-100 gap-2 pb-3 border-top-0">
-                        <a href="/adminLogIn" class="btn btn-primary">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" class="bi bi-tools" viewBox="0 0 16 16">
-                                <path d="M1 0 0 1l2.2 3.081a1 1 0 0 0 .815.419h.07a1 1 0 0 1 .708.293l2.675 2.675-2.617 2.654A3.003 3.003 0 0 0 0 13a3 3 0 1 0 5.878-.851l2.654-2.617.968.968-.305.914a1 1 0 0 0 .242 1.023l3.27 3.27a.997.997 0 0 0 1.414 0l1.586-1.586a.997.997 0 0 0 0-1.414l-3.27-3.27a1 1 0 0 0-1.023-.242L10.5 9.5l-.96-.96 2.68-2.643A3.005 3.005 0 0 0 16 3q0-.405-.102-.777l-2.14 2.141L12 4l-.364-1.757L13.777.102a3 3 0 0 0-3.675 3.68L7.462 6.46 4.793 3.793a1 1 0 0 1-.293-.707v-.071a1 1 0 0 0-.419-.814zm9.646 10.646a.5.5 0 0 1 .708 0l2.914 2.915a.5.5 0 0 1-.707.707l-2.915-2.914a.5.5 0 0 1 0-.708M3 11l.471.242.529.026.287.445.445.287.026.529L5 13l-.242.471-.026.529-.445.287-.287.445-.529.026L3 15l-.471-.242L2 14.732l-.287-.445L1.268 14l-.026-.529L1 13l.242-.471.026-.529.445-.287.287-.445.529-.026z"/>
-                            </svg>
-                            Login as Admin
-                        </a>
-                        <a href="/userLogIn" class="btn btn-primary">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" class="bi bi-person-check" viewBox="0 0 16 16">
-                                <path d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7m1.679-4.493-1.335 2.226a.75.75 0 0 1-1.174.144l-.774-.773a.5.5 0 0 1 .708-.708l.547.548 1.17-1.951a.5.5 0 1 1 .858.514M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0M8 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4"/>
-                                <path d="M8.256 14a4.5 4.5 0 0 1-.229-1.004H3c.001-.246.154-.986.832-1.664C4.484 10.68 5.711 10 8 10q.39 0 .74.025c.226-.341.496-.65.804-.918Q8.844 9.002 8 9c-5 0-6 3-6 4s1 1 1 1z"/>
-                            </svg>
-                            User Login
-                        </a>
-                        <a href="/" class="btn btn-secondary">
-                            Return as a Guest
-                        </a>
-                        <a href="/userNewLogin">Don't have an account? Register here</a>
+                <div id="container-for-login-box">
+                    <div class="modal-content rounded-4 shadow login-info-box" id="login-box">
+                        <div class="modal-header border-bottom-0">
+                         <h1 class="modal-title heading">Welcome to the Login Portal</h1>
+                        </div>
+                        <div class="modal-body py-0 desc">
+                            You may log in to the Vintage Garage as a user or as a moderator!
+                        </div>
+                        <div class="modal-footer flex-column align-items-stretch w-100 gap-2 pb-3 border-top-0">
+                            <a href="/adminLogIn" class="btn btn-primary login-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" class="bi bi-tools" viewBox="0 0 16 16">
+                                    <path d="M1 0 0 1l2.2 3.081a1 1 0 0 0 .815.419h.07a1 1 0 0 1 .708.293l2.675 2.675-2.617 2.654A3.003 3.003 0 0 0 0 13a3 3 0 1 0 5.878-.851l2.654-2.617.968.968-.305.914a1 1 0 0 0 .242 1.023l3.27 3.27a.997.997 0 0 0 1.414 0l1.586-1.586a.997.997 0 0 0 0-1.414l-3.27-3.27a1 1 0 0 0-1.023-.242L10.5 9.5l-.96-.96 2.68-2.643A3.005 3.005 0 0 0 16 3q0-.405-.102-.777l-2.14 2.141L12 4l-.364-1.757L13.777.102a3 3 0 0 0-3.675 3.68L7.462 6.46 4.793 3.793a1 1 0 0 1-.293-.707v-.071a1 1 0 0 0-.419-.814zm9.646 10.646a.5.5 0 0 1 .708 0l2.914 2.915a.5.5 0 0 1-.707.707l-2.915-2.914a.5.5 0 0 1 0-.708M3 11l.471.242.529.026.287.445.445.287.026.529L5 13l-.242.471-.026.529-.445.287-.287.445-.529.026L3 15l-.471-.242L2 14.732l-.287-.445L1.268 14l-.026-.529L1 13l.242-.471.026-.529.445-.287.287-.445.529-.026z"/>
+                                </svg>
+                                Login as Admin
+                            </a>
+                            <a href="/" class="btn btn-secondary login-btn">
+                                Return as a Guest
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
-
         </div>
     </div>
 </html>
