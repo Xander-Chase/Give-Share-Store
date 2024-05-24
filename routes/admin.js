@@ -103,6 +103,7 @@ router.get('/addListing', async (req, res) => {
 
 
 
+
 router.post('/submitListing', multerUpload, async (req, res) => {
     const photos = req.files['photo'] ? req.files['photo'].map(file => file.location) : [];
     const videos = req.files['video'] ? req.files['video'].map(file => file.location) : [];
@@ -215,6 +216,20 @@ router.post('/updateListing/:id', multerUpload, async (req, res) => {
     }
 });
 
+router.post('/deleteListing/:id', async (req, res) => {
+    try {
+        const listingCollection = database.db(mongo_database).collection('listing_items');
+        const result = await listingCollection.deleteOne({ _id: new ObjectId(req.params.id) });
+        if (result.deletedCount === 1) {
+            res.status(200).send('Category deleted successfully');
+        } else {
+            res.status(404).send('Category not found');
+        }
+    } catch (error) {
+        console.error('Failed to delete user:', error);
+        res.status(500).send('Failed to delete user');
+    }
+});
 
 // Route to handle feature video upload
 router.post('/submitFeatureVideo', featureVideoUpload.single('video'), async (req, res) => {
