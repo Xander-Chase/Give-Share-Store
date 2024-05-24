@@ -59,6 +59,17 @@
                 .catch(error => console.error('Failed to load the content:', error));
         }
 
+        function loadPostMethodContent(contentType) {
+            const contentUrl = `/${contentType}`; // this will be the URL of the content to load
+            fetch(contentUrl, {
+                method: 'POST'
+            })
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('contentArea').innerHTML = html;
+                })
+                .catch(error => console.error('Failed to load the content:', error));
+        }
         function loadSubCategories(currentElement)
         {
             fetch('/admin/load-subcategory', {
@@ -84,5 +95,6 @@
                     console.error('Error loading sub-category:', error);
                 });
         }
+
     </script>
 </html>

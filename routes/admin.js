@@ -16,6 +16,67 @@ const { getCategoriesNav } = require('../controller/htmlContent');
 const { upload, deleteFromS3, featureVideoUpload, s3 } = require("../controller/awsController");
 const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
 
+// ------------------------------------------------- FUNCTION START -------------------------------------------------
+async function renderPaginationCurrentListings(req, res)
+{
+    try {
+        /* Change this maximum value to alter how many items should be shown per page. */
+        let max = 18;
+        let pageIndexes = [];
+        let previousIndex = req.session.pageIndex - 1;
+        let nextIndex = previousIndex + 2;
+        if (previousIndex < 1)
+            previousIndex = 1;
+
+        const prices = await getPrices();
+        let numberOfPages = prices.length / max;
+
+        if (nextIndex >= numberOfPages)
+            nextIndex--;
+
+        // Assign the number indexes to display
+        for (let i = 0; i <= (numberOfPages); i++)
+            pageIndexes.push(i + 1);
+
+        const skips = max * (((req.session.pageIndex - 1) < 0) ? 0 : (req.session.pageIndex - 1));
+
+        const productsCollection = database.db(mongo_database).collection('listing_items');
+        const currentListings = await productsCollection.find(
+            {
+                isFeatureItem: false,
+                $or: [{ isSold: false }, { isSold: { $exists: false } }]
+            })
+            .skip(skips)
+            .limit(max)
+            .toArray();
+
+        req.session.pageIndex = 0;
+        res.render('currentListings', {
+            listings: currentListings,
+            paginationIndex: pageIndexes,
+            previousPage: previousIndex,
+            nextPage: nextIndex,
+        });
+    } catch (error) {
+        console.error('Failed to fetch current listings:', error);
+        res.status(500).send('Error fetching current listings');
+        // handling error case - passing empty array
+        res.render('currentListings', { listings: [] }); // rendering the page even in case of error with an empty array
+    }
+}
+// ------------------------------------------------- FUNCTION END -------------------------------------------------
+
+async function getPrices()
+{
+    const productsCollection = database.db(mongo_database).collection('listing_items');
+    const prices = await productsCollection.find(
+        {
+            isFeatureItem: false,
+            $or: [{ isSold: false }, { isSold: { $exists: false } }]
+        },
+        { projection: { item_price: 1 } }).toArray();
+    return prices.map(item => item.item_price);
+}
 
 // TODO: Done
 router.get('/LogIn', (req, res) => {
@@ -281,23 +342,17 @@ router.post('/removeFeatureVideo', async (req, res) => {
     }
 });
 
+// With each page, get its index and assign the page index to that.
+router.post('/page=:index', async (req, res) => {
+    req.session.pageIndex = req.params.index;
+    renderPaginationCurrentListings(req, res);
+})
+
 // TODO: DONE
 router.get('/currentListings', async (req, res) => {
-    try {
-        const productsCollection = database.db(mongo_database).collection('listing_items');
-        const currentListings = await productsCollection.find({
-            isFeatureItem: false,
-            $or: [{ isSold: false }, { isSold: { $exists: false } }]
-        }).toArray();
-        res.render('currentListings', { listings: currentListings });
-    } catch (error) {
-        console.error('Failed to fetch current listings:', error);
-        res.status(500).send('Error fetching current listings');
-        // handling error case - passing empty array
-        res.render('currentListings', { listings: [] }); // rendering the page even in case of error with an empty array
-    }
-});
+    renderPaginationCurrentListings(req, res);
 
+});
 
 // TODO: DONE
 // previousListings route

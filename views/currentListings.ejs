@@ -37,6 +37,28 @@
             </div>
         <% }); %>
     </div>
+    <div class="row landing-pad-bottom">
+        <div class="col d-flex justify-content-center">
+            <div class="pagination-btn">
+                <a href="#" onclick="loadPostMethodContent('admin/page=<%= previousPage %>')"> < </a>
+            </div>
+            <% paginationIndex.forEach(function(index) { %>
+                <div class="pagination-btn">
+                    <a href="#" onclick="loadPostMethodContent('admin/page=<%= index %>')"><%= index %></a>
+                </div>
+            <% }); %>
+            <div class="pagination-btn">
+                <a href="#" onclick="loadPostMethodContent('admin/page=<%= nextPage %>')"> > </a>
+            </div>
+        </div>
+    </div>
 </div>
 
 <br>
+
+<script>
+    function x()
+    {
+        window.location.reload();
+    }
+</script>
