@@ -32,7 +32,7 @@ const moment = require('moment-timezone');
 
 // Get most of the functions.
 const { getBodyFilters, getCategoriesNav } = require('./controller/htmlContent');
-const { sendContactUsEmail, sendReferralEmail, sendOrderConfirmationEmail, sendOrderNotificationEmail } = require('./routes/mailer'); // Import mailer.js file to send emails
+
 // Import Variables
 const {adminCollection, categoryCollection} = require('./database/constants');
 
@@ -288,6 +288,27 @@ async function hashExistingPasswords() {
         console.error('Error updating passwords:', err);
     }
 }
+
+
+//This function was to add a new field to all admin users in the database which was so that we could differentiate between the owner and other admins.
+
+// async function addIsOwnerField() {
+//     try {
+//         const admins = adminCollection;
+//         const cursor = await admins.find({});
+//         await cursor.forEach(async (admin) => {
+//             const result = await admins.updateOne({ _id: admin._id }, { $set: { isOwner: false } });
+//             console.log(`Updated isOwner for admin ${admin.email}: ${result.modifiedCount}`);
+
+//         });
+//         console.log("All isOwner fields have been added and updated.");
+//     }
+//     catch (err) {
+//         console.error('Error updating isOwner:', err);
+//     }
+// }
+
+// addIsOwnerField();
 
 /**
  * Fetches all the prices in the database based on the filters used.

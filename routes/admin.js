@@ -22,9 +22,9 @@ router.get('/LogIn', (req, res) => {
     res.render("adminLogIn");
 });
 
+
 // TODO: Done
 router.post('/LogInSubmit', async (req, res) => {
-
     const email = req.body.email;
     const password = req.body.password;
 
@@ -56,12 +56,14 @@ router.post('/LogInSubmit', async (req, res) => {
 
     req.session.loggedIn = true;
     req.session.isAdmin = true;
+    req.session.isOwner = user.isOwner || false;
     req.session.name = user.name;
     req.session.email = user.email;
     req.session.password = user.password;
     req.session.userId = user._id;
     res.redirect("/");
 });
+
 
 // TODO: Done
 router.get('/manage', async (req, res) => {
@@ -70,7 +72,8 @@ router.get('/manage', async (req, res) => {
         res.render("product-management", {
             isLoggedIn,
             isAdmin: req.session.isAdmin,
-            categories: await getCategoriesNav()
+            categories: await getCategoriesNav(),
+            isOwner: req.session.isOwner
         });
     }
     else {
@@ -100,12 +103,10 @@ router.post('/submitListing', upload.fields([{ name: 'photo', maxCount: 10 }, { 
         item_estimatedShippingCost: parseFloat(req.body.item_estimatedShippingCost) || 0.0,
         item_estimatedInsuranceCost: parseFloat(req.body.item_estimatedInsuranceCost) || 0.0,
         isFeatureItem: req.body.isFeatureItem === 'true',
-        item_category: Array.isArray(req.body.item_category) ? req.body.item_category.map(function(item)
-        {
+        item_category: Array.isArray(req.body.item_category) ? req.body.item_category.map(function (item) {
             return item.replace(/"/g, '');
         }) : [req.body.item_category.replace(/"/g, '')],
-        item_sub_category: Array.isArray(req.body.item_sub_category) ? req.body.item_sub_category.map(function(item)
-        {
+        item_sub_category: Array.isArray(req.body.item_sub_category) ? req.body.item_sub_category.map(function (item) {
             return item.replace(/"/g, '');
         }) : [req.body.item_sub_category.replace(/"/g, '')],
         status: 'available' // Default status when a listing is created
@@ -316,28 +317,40 @@ router.get('/mailingList', async (req, res) => {
     }
 });
 
+
 // TODO: DONE
 router.get('/adminUsers', async (req, res) => {
     try {
+        if (!req.session.isAdmin || !req.session.isOwner) {
+            return res.status(403).send('Access denied');
+        }
+
         const admins = await adminCollection.find().toArray();
-        res.render('adminUsers', { users: admins });
+        res.render('adminUsers', {
+            users: admins,
+            isOwner: req.session.isOwner // Pass isOwner to the template
+        });
     } catch (error) {
         console.error('Error fetching admin users:', error);
         res.status(500).send('Error fetching admin users');
     }
 });
 
+
+
 // TODO: DONE
 router.post('/addUser', async (req, res) => {
     const { name, email, password, userType } = req.body;
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
+        const userDocument = { name, email, password: hashedPassword, isOwner: false };
+
         if (userType === 'admin') {
-            await adminCollection.insertOne({ name, email, password: hashedPassword });
+            await adminCollection.insertOne(userDocument);
             req.session.loggedIn = true;
             res.redirect('/admin/manage');
         } else if (userType === 'user') {
-            await userCollection.insertOne({ name, email, password: hashedPassword });
+            await userCollection.insertOne(userDocument);
             req.session.loggedIn = true;
             res.redirect('/manageUser');
         } else {
@@ -348,6 +361,7 @@ router.post('/addUser', async (req, res) => {
         res.status(500).send('Failed to add new user');
     }
 });
+
 
 // TODO: DONE
 router.get('/editUser/:id', async (req, res) => {
