@@ -486,10 +486,11 @@ app.post('/create-paypal-order', async (req, res) => {
 });
 
 app.post('/mark-items-sold', async (req, res) => {
-    const { itemIds, email, address, city, state, zip, shippingTotal, insuranceTotal, taxTotal, finalTotal, shippingPickup } = req.body;
+    const { itemIds, email, address, city, state, zip, subtotal, shippingTotal, insuranceTotal, taxTotal, finalTotal } = req.body;
+    const shippingPickup = req.session.cart.map(item => item.shippingPickup);
 
     try {
-        if (itemIds && Array.isArray(itemIds) && itemIds.length > 0) {
+        if (itemIds.length > 0) {
             const productsCollection = database.db(mongodb_database).collection('listing_items');
             const items = await productsCollection.find({ _id: { $in: itemIds.map(id => new ObjectId(id)) } }).toArray();
 
@@ -501,16 +502,16 @@ app.post('/mark-items-sold', async (req, res) => {
                 { $set: { isSold: true, soldDate: soldDate, soldTo: email } }
             );
 
-            const itemDetails = items.map(item => `${item.item_title} - $${item.item_price} - ${shippingPickup[index]}`).join('\n');
+            const itemDetails = items.map((item, index) => `${item.item_title} - $${item.item_price} - ${shippingPickup[index] || 'Pickup'}`).join('\n');
             const ownerEmail = "ajgabl18@gmail.com";
 
             const orderDetails = `
-            Date of purchase: ${soldDate} \n\n   
-            Items: ${itemDetails}
-            Shipping: $${shippingTotal.toFixed(2)}
-            Insurance: $${insuranceTotal.toFixed(2)}
-            Taxes: $${taxTotal.toFixed(2)}
-            Total: $${finalTotal.toFixed(2)}
+                Date of purchase: ${soldDate.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' })} \n\n   
+                Items: \n${itemDetails}
+                Shipping: $${shippingTotal.toFixed(2)}
+                Insurance: $${insuranceTotal.toFixed(2)}
+                Taxes: $${taxTotal.toFixed(2)}
+                Total: $${finalTotal.toFixed(2)}
             `;
 
             const customerDetails = `
@@ -528,7 +529,7 @@ app.post('/mark-items-sold', async (req, res) => {
                 console.error('Error saving session:', err);
                 return res.status(500).send('Error clearing the cart');
             }
-            res.render('paypalSuccess', { message: 'Payment successful, items marked as sold.' });
+            res.render('StripeSuccess', { message: 'Payment successful, items marked as sold.' });
         });
     } catch (error) {
         console.error('Error updating items as sold:', error);
@@ -629,6 +630,28 @@ app.post('/create-checkout-session', async (req, res) => {
     }
 });
 
+app.post('/cart/update-shipping-pickup', (req, res) => {
+    const { itemId, value } = req.body;
+    const cart = req.session.cart || [];
+    
+    for (let item of cart) {
+        if (item._id.toString() === itemId) {
+            item.shippingPickup = value;
+            break;
+        }
+    }
+
+    req.session.cart = cart;
+
+    req.session.save(err => {
+        if (err) {
+            console.error('Error saving session:', err);
+            return res.status(500).json({ success: false, message: 'Error saving session' });
+        }
+        res.json({ success: true });
+    });
+});
+
 app.get('/StripeSuccess', async (req, res) => {
     const itemIds = req.query.itemIds ? req.query.itemIds.split(',') : [];
     const email = req.query.email;
@@ -640,11 +663,7 @@ app.get('/StripeSuccess', async (req, res) => {
     const insuranceTotal = parseFloat(req.query.insuranceTotal);
     const taxTotal = parseFloat(req.query.taxTotal);
     const finalTotal = parseFloat(req.query.finalTotal);
-    const shippingPickup = req.query.shippingPickup ? req.query.shippingPickup.split(',') : [];
-
-    // Debugging log
-    console.log('Received itemIds:', itemIds);
-    console.log('Received shippingPickup values:', shippingPickup);
+    const shippingPickup = req.session.cart.map(item => item.shippingPickup);
 
     try {
         if (itemIds.length > 0) {

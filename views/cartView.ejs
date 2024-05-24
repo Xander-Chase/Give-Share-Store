@@ -84,7 +84,6 @@
                                         <label><input type="checkbox" class="insurance-checkbox" data-id="<%= item._id %>" data-cost="<%= item.item_estimatedInsuranceCost %>" /> Insurance ($<%= item.item_estimatedInsuranceCost %>)</label>
                                         <label><input type="checkbox" class="shipping-checkbox" data-id="<%= item._id %>" data-cost="<%= item.item_estimatedShippingCost %>" /> Shipping ($<%= item.item_estimatedShippingCost %>)</label>
                                         <label><input type="checkbox" class="pickup-checkbox" data-id="<%= item._id %>" checked /> Pickup</label>
-                                        <input type="hidden" name="shippingPickup[]" id="shippingPickup<%= item._id %>" value="Pickup">
                                     </div>
                                 </div>
                                 <div class="col-sm-5">
@@ -161,7 +160,6 @@
                     <form class="card p2" action="/create-checkout-session" method="POST" id="stripe-form">
                         <% items.forEach(function(item, index) { %>
                             <input type="hidden" name="productIds[]" value="<%= item._id.toString() %>">
-                            <input type="hidden" name="shippingPickup[]" id="shippingPickup<%= item._id %>" value="Pickup">
                         <% }); %>
                         <input type="hidden" name="insuranceTotal" id="insuranceTotalInput" value="0">
                         <input type="hidden" name="shippingTotal" id="shippingTotalInput" value="0">
@@ -191,10 +189,7 @@
                                 const state = document.getElementById('state').value;
                                 const zip = document.getElementById('zip').value;
                                 const itemIds = Array.from(document.querySelectorAll('input[name="productIds[]"]')).map(input => input.value);
-                                const shippingPickup = Array.from(document.querySelectorAll('input[name="shippingPickup[]"]')).map(input => input.value);
                     
-                                console.log('shippingPickup before PayPal createOrder:', shippingPickup);
-    
                                 const response = await fetch("/create-paypal-order", {
                                     method: "POST",
                                     headers: {
@@ -212,8 +207,7 @@
                                         city,
                                         state,
                                         zip,
-                                        itemIds,
-                                        shippingPickup
+                                        itemIds
                                     })
                                 });
                                 const order = await response.json();
@@ -234,16 +228,13 @@
                                     const city = document.getElementById('city').value;
                                     const state = document.getElementById('state').value;
                                     const zip = document.getElementById('zip').value;
-                                    const shippingPickup = Array.from(document.querySelectorAll('input[name="shippingPickup[]"]')).map(input => input.value);
                     
-                                    console.log('shippingPickup before marking items sold:', shippingPickup);
-    
                                     await fetch('/mark-items-sold', {
                                         method: 'POST',
                                         headers: {
                                             'Content-Type': 'application/json',
                                         },
-                                        body: JSON.stringify({ itemIds, email, address, city, state, zip, subtotal, shippingTotal, insuranceTotal, taxTotal, finalTotal, shippingPickup })
+                                        body: JSON.stringify({ itemIds, email, address, city, state, zip, subtotal, shippingTotal, insuranceTotal, taxTotal, finalTotal })
                                     });
                     
                                     window.location.href = '/';
@@ -323,45 +314,53 @@
             }
         }
     
-        function updateShippingPickup() {
-            document.querySelectorAll('.shipping-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', function() {
-                    const itemId = this.getAttribute('data-id');
-                    const pickupCheckbox = document.querySelector(`.pickup-checkbox[data-id="${itemId}"]`);
-                    const shippingPickupInput = document.getElementById(`shippingPickup${itemId}`);
-                    if (this.checked) {
-                        pickupCheckbox.checked = false;
-                        shippingPickupInput.value = 'Shipping';
-                    } else {
-                        shippingPickupInput.value = 'Pickup';
+        function updateShippingPickup(itemId, value) {
+            fetch('/cart/update-shipping-pickup', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ itemId, value })
+            }).then(response => response.json())
+                .then(data => {
+                    if (!data.success) {
+                        console.error('Error updating shipping/pickup:', data.message);
                     }
-                    console.log(`Shipping checkbox changed: Item ID ${itemId}, Value: ${shippingPickupInput.value}`);
-                    updateTotals();
+                }).catch(error => {
+                    console.error('Error updating shipping/pickup:', error);
                 });
-            });
-    
-            document.querySelectorAll('.pickup-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', function() {
-                    const itemId = this.getAttribute('data-id');
-                    const shippingCheckbox = document.querySelector(`.shipping-checkbox[data-id="${itemId}"]`);
-                    const shippingPickupInput = document.getElementById(`shippingPickup${itemId}`);
-                    if (this.checked) {
-                        shippingCheckbox.checked = false;
-                        shippingPickupInput.value = 'Pickup';
-                    } else {
-                        shippingPickupInput.value = 'Shipping';
-                    }
-                    console.log(`Pickup checkbox changed: Item ID ${itemId}, Value: ${shippingPickupInput.value}`);
-                    updateTotals();
-                });
-            });
         }
     
-        // Initial call to updateTotals and updateShippingPickup when the page loads
-        window.onload = () => {
-            updateTotals();
-            updateShippingPickup();
-        };
+        document.querySelectorAll('.shipping-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const itemId = this.getAttribute('data-id');
+                const pickupCheckbox = document.querySelector(`.pickup-checkbox[data-id="${itemId}"]`);
+                if (this.checked) {
+                    pickupCheckbox.checked = false;
+                    updateShippingPickup(itemId, 'Shipping');
+                } else {
+                    updateShippingPickup(itemId, 'Pickup');
+                }
+                updateTotals();
+            });
+        });
+    
+        document.querySelectorAll('.pickup-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const itemId = this.getAttribute('data-id');
+                const shippingCheckbox = document.querySelector(`.shipping-checkbox[data-id="${itemId}"]`);
+                if (this.checked) {
+                    shippingCheckbox.checked = false;
+                    updateShippingPickup(itemId, 'Pickup');
+                } else {
+                    updateShippingPickup(itemId, 'Shipping');
+                }
+                updateTotals();
+            });
+        });
+    
+        // Initial call to updateTotals when the page loads
+        window.onload = updateTotals;
     
         document.getElementById('stripe-form').addEventListener('submit', function(event) {
             document.getElementById('emailInput').value = document.getElementById('email').value;
@@ -375,10 +374,6 @@
             document.getElementById('insuranceTotalInput').value = parseFloat(document.getElementById('insurance-total').textContent.replace('$', ''));
             document.getElementById('taxTotalInput').value = parseFloat(document.getElementById('tax-total').textContent.replace('$', ''));
             document.getElementById('finalTotalInput').value = parseFloat(document.getElementById('total').textContent.replace('$', ''));
-            
-            // Debugging log
-            const shippingPickup = Array.from(document.querySelectorAll('input[name="shippingPickup[]"]')).map(input => input.value);
-            console.log('ShippingPickup values before Stripe form submit:', shippingPickup);
         });
     </script>
     </html>
