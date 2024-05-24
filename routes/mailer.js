@@ -1,4 +1,5 @@
 // Set up variables + imports
+require('dotenv').config();                                    // Import dotenv module to read ..env file
 const formData = require('form-data');
 const Mailgun = require('mailgun.js');
 const mailgun = new Mailgun(formData);
