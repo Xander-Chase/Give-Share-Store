@@ -1,3 +1,4 @@
+// Set up variables + imports
 require('dotenv').config();
 const express = require("express");
 const {getCategoriesNav} = require("../controller/htmlContent");
@@ -7,6 +8,7 @@ const router = express.Router();
 
 const mongodb_database = process.env.MONGODB_DATABASE;
 
+// Route for navigating the cart view
 router.get('/', async (req, res) => {
     const cartItems = req.session.cart || [];
     res.render('cartView', {
@@ -18,6 +20,7 @@ router.get('/', async (req, res) => {
     });
 });
 
+// Post method on handling adding to a cart
 router.post('/add-to-cart', async (req, res) => {
     const itemId = req.body.itemId;
     try {
@@ -41,6 +44,7 @@ router.post('/add-to-cart', async (req, res) => {
     }
 });
 
+// Post method on handling removing from the cart
 router.post('/remove-from-cart', async (req, res) => {
     const itemId = req.body.itemId;
 
@@ -63,4 +67,5 @@ router.post('/remove-from-cart', async (req, res) => {
     }
 });
 
+// Export the router
 module.exports = router;

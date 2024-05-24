@@ -1,3 +1,4 @@
+// Set up variables + imports
 require('dotenv').config();                                    // Import dotenv module to read ..env file
 const AWS = require('aws-sdk');                                 // include the AWS module
 const multer = require('multer');                               // include the multer module
@@ -69,6 +70,7 @@ async function deleteFromS3(url) {
     }
 }
 
+// Exports variables + functions
 module.exports =
 {
     s3,
