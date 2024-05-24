@@ -148,7 +148,12 @@ app.get('/', async (req, res) => {
     let maximumPrice = (req.session.maxPrice > 0) ? req.session.maxPrice : 100000000;
     let categoryTab = (req.session.category == null) ? "" : `> ${req.session.category}`;
     let subCategoryTab = (req.session.subcategory == null) ? "" : `> ${req.session.subcategory}`;
-    let orderCode = (req.session.sortBy === "descending") ? -1 : 1;
+    let orderCode = (
+        {
+            "ascending": 1,
+            "descending": -1,
+        }
+    )[req.session.sortBy] || 0;
     let categoryKeyword = (req.session.category == null) ? "" : req.session.category;
     let subCategoryKeyword = (req.session.subcategory == null) ? "" : req.session.subcategory;
     let filtersHeader = [`Category ${categoryTab} ${subCategoryTab}`, "Sorting", "Price"];
@@ -202,6 +207,9 @@ app.get('/', async (req, res) => {
 
         const skips = max * (((req.session.pageIndex - 1) < 0) ? 0 : (req.session.pageIndex - 1));
 
+        let shouldPriceSort = {};
+        if (orderCode !== 0)
+            shouldPriceSort = {item_price: orderCode};
         /*
         Call its designed filters.
         Skip is based on the current page.
@@ -214,7 +222,7 @@ app.get('/', async (req, res) => {
             item_price: { $lte: Math.round(maximumPrice) },
             item_category: { $regex: categoryKeyword },
             item_sub_category: { $regex: subCategoryKeyword }
-        }).sort({ item_price: orderCode }).skip(skips)
+        }).sort(shouldPriceSort).skip(skips)
             .limit(max)
             .toArray();
 

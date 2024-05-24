@@ -68,7 +68,7 @@ router.post('/clear', (req, res) =>
     req.session.maxPrice = 0;
     req.session.keyword = null;
     ResetCategoryFilter(req);
-    req.session.sortBy = 'ascending';
+    req.session.sortBy = 'default';
     res.redirect('/');
 })
 
