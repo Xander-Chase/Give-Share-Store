@@ -73,6 +73,57 @@ async function renderPaginationCurrentListings(req, res)
 }
 
 /**
+ *
+ * Handles the duplicated code for rendering the pagination for each page in the admin sold listings.
+ * @param req the request session used to obtain.
+ * @param res the response used to render the html code.
+ * @returns No returns, just a render.
+ */
+async function renderSoldListings(req, res)
+{
+    try {
+        /* Change this maximum value to alter how many items should be shown per page. */
+        let max = 18;
+        let pageIndexes = [];
+        let previousIndex = req.session.pageIndex - 1;
+        let nextIndex = previousIndex + 2;
+        if (previousIndex < 1)
+            previousIndex = 1;
+
+        const prices = await getSoldListings();
+        let numberOfPages = Math.ceil(prices.length / max);
+
+        if (nextIndex > numberOfPages)
+            nextIndex--;
+        // Assign the number indexes to display
+        for (let i = 0; i < (numberOfPages); i++)
+            pageIndexes.push(i + 1);
+
+        const skips = max * (((req.session.pageIndex - 1) < 0) ? 0 : (req.session.pageIndex - 1));
+
+        const productsCollection = database.db(mongo_database).collection('listing_items');
+        const soldListings = await productsCollection.find({ isSold: true })
+            .skip(skips)
+            .limit(max)
+            .toArray();
+        const isLoggedIn = req.session.loggedIn;
+        const isAdmin = req.session.isAdmin || false;
+
+        res.render('previousListings', {
+            listings: soldListings,
+            isLoggedIn,
+            isAdmin,
+            categories: await getCategoriesNav(),
+            paginationIndex: pageIndexes,
+            previousPage: previousIndex,
+            nextPage: nextIndex,
+        });
+    } catch (error) {
+        console.error('Failed to fetch previous listings:', error);
+        res.status(500).send('Error fetching previous listings');
+    }
+}
+/**
  * Gets all the current listings then maps their prices.
  * @returns Prices as a list.
  */
@@ -86,6 +137,16 @@ async function getPrices()
         },
         { projection: { item_price: 1 } }).toArray();
     return prices.map(item => item.item_price);
+}
+
+/**
+ * Gets all the sold listings.
+ * @returns Prices as a list.
+ */
+async function getSoldListings()
+{
+    const productsCollection = database.db(mongo_database).collection('listing_items');
+    return await productsCollection.find({isSold: true}).toArray();
 }
 // ------------------------------------------------- FUNCTION END -------------------------------------------------
 
@@ -353,6 +414,7 @@ router.post('/removeFeatureVideo', async (req, res) => {
     }
 });
 
+// THIS IS FOR THE CURRENT LISTINGS
 // With each page, get its index and assign the page index to that.
 router.post('/page=:index', async (req, res) => {
     req.session.pageIndex = req.params.index;
@@ -364,24 +426,16 @@ router.get('/currentListings', async (req, res) => {
     await renderPaginationCurrentListings(req, res);
 });
 
+// THIS IS FOR THE PREVIOUS LISTINGS
+// With each page, get its index and assign the page index to that.
+router.post('/sold_listingspage=:index', async (req, res) => {
+    req.session.pageIndex = req.params.index;
+    await renderSoldListings(req, res);
+})
+
 // Route for loading previous listings content
 router.get('/previousListings', async (req, res) => {
-    try {
-        const productsCollection = database.db(mongo_database).collection('listing_items');
-        const soldListings = await productsCollection.find({ isSold: true }).toArray();
-        const isLoggedIn = req.session.loggedIn;
-        const isAdmin = req.session.isAdmin || false;
-
-        res.render('previousListings', {
-            listings: soldListings,
-            isLoggedIn,
-            isAdmin,
-            categories: await getCategoriesNav()
-        });
-    } catch (error) {
-        console.error('Failed to fetch previous listings:', error);
-        res.status(500).send('Error fetching previous listings');
-    }
+await renderSoldListings(req, res);
 });
 
 // Route for mailing list
