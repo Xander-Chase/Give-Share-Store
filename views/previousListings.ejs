@@ -43,7 +43,7 @@
 </head>
 <body>
     <div class="container mt-5">
-        <span class="admin-header">Previous Listings</span>
+        <span class="admin-header">Sold Listings</span>
         <br>
         <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
             <% listings.forEach(function(listing) { %>
@@ -76,6 +76,21 @@
                     </div>
                 </div>
             <% }); %>
+        </div>
+        <div class="row landing-pad-bottom">
+            <div class="col d-flex justify-content-center">
+                <div class="pagination-btn">
+                    <a href="#" onclick="loadPostMethodContent('admin/sold_listingspage=<%= previousPage %>')" class="pagination-btn"> < </a>
+                </div>
+                <% paginationIndex.forEach(function(index) { %>
+                    <div class="pagination-btn">
+                        <a href="#" onclick="loadPostMethodContent('admin/sold_listingspage=<%= index %>')" class="pagination-btn"><%= index %></a>
+                    </div>
+                <% }); %>
+                <div class="pagination-btn">
+                    <a href="#" onclick="loadPostMethodContent('admin/sold_listingspage=<%= nextPage %>')" class="pagination-btn"> > </a>
+                </div>
+            </div>
         </div>
         <% if (listings.length === 0) { %>
             <p>No previous listings found.</p>
