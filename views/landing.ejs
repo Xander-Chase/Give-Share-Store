@@ -45,6 +45,13 @@
                 padding-right: 1vw;
             }
 
+            .card-img-top {
+                border: solid;
+                border-width: 2px;
+                border-color: lightgray;
+                max-width: 20vw;
+            }
+
             @media only screen and (max-width: 767px) {
                 .card {
                     height: 35vh;
@@ -90,6 +97,12 @@
             @media only screen and (min-width: 768px) and (max-width: 992px) {
                 .product-listings-container {
                     width: 98vw;
+                }
+            }
+
+            @media only screen and (max-width: 576px) {
+                #myCarousel {
+                    height: 30rem;
                 }
             }
         </style>
@@ -201,11 +214,9 @@
                                 <div class="card shadow-sm">
                                     <div
                                         class="d-flex product-img align-items-center justify-content-center">
-                                        <img
-                                            class="bd-placeholder-img card-img-top"
-                                            src="<%= item.product_img_URL[0] %>"
-                                            alt="<%= item.item_title %>"
-                                            style="border: solid; border-width: 2px; border-color: lightgray; max-width: 20vw;" />
+                                        <a href="/product-info/<%= item._id %>">
+                                            <img class="bd-placeholder-img card-img-top" src="<%= item.product_img_URL[0] %>" alt="<%= item.item_title %>"/>
+                                        </a>
                                     </div>
                                     <div class="card-body">
                                         <h3>

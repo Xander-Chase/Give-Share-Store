@@ -18,8 +18,8 @@
     }
 
     .bi {
-        width: 16px;
-        height: 16px;
+        width: 20px;
+        height: 20px;
     }
 
     .big-text {
@@ -39,7 +39,7 @@
         font-size: 12pt;
     }
 
-    @media only screen and (max-width: 767px) {
+    @media only screen and (min-width: 576px) and (max-width: 767px) {
         .bi {
             width: 24px;
             height: 24px;
@@ -65,14 +65,40 @@
             font-size: 12pt;
         }
     }
+
+    @media only screen and (max-width: 576px) {
+        .bi {
+            width: 24px;
+            height: 24px;
+        }
+
+        .right-side-item {
+            margin-top: 3vh;
+        }
+
+        .big-text {
+            font-size: 24pt;
+        }
+
+        .medium-text {
+            font-size: 16pt;
+        }
+
+        .small-text {
+            font-size: 10pt;
+        }
+
+        .list1 {
+            font-size: 12pt;
+        }
+    }
 </style>
 <body>
     <header class="py-3 mb-3 border-bottom">
         <div class="container-fluid gap-3 align-items-center">
             <div class="row">
-                <div class="col-3">
-                    <a href="/"
-                        class="w-auto d-flex align-items-center mt-1 link-body-emphasis text-decoration-none">
+                <div class="col-sm-3">
+                    <a href="/" class="w-auto d-flex align-items-center justify-content-center mt-1 link-body-emphasis text-decoration-none">
                         <div class="col-md-4">
                             <img src="/img/landingPage/vintage_garage_logo.png"
                                 style="width: 9.5vw; height: auto;">
@@ -85,32 +111,28 @@
                     </a>
                 </div>
 
-                <div class="col-6 d-flex align-items-center justify-content-center">
+                <div class="col-sm-6 d-flex align-items-center justify-content-center">
 
-                    <form id="searchBar" method="post" class="w-75 me-3"
-                        role="search"
+                    <form id="searchBar" method="post" class="w-75" role="search"
                         onsubmit="this.action = `/filter/keyword=${document.getElementById('searchInput').value}`;">
-                        <input id="searchInput" type="search"
-                            class="form-control medium-text"
+                        <input id="searchInput" type="search" class="form-control medium-text"
                             placeholder="Search..." aria-label="Search"
                             value="<% if (locals.keyword) {%><%= locals.keyword %><% }%>">
                         <!-- value is the current search prompt-->
                     </form>
                 </div>
 
-                <div class="col-3 d-flex align-items-center container-fluid">
+                <div class="col-sm-3 d-flex align-items-center justify-content-center container-fluid">
                     <div class="row">
-                        <div class="col-md-6">
-                            <a href="/about"
-                                class="d-block link-body-emphasis text-decoration-none medium-text right-side-item">
+                        <div class="col-6">
+                            <a href="/about" class="d-block link-body-emphasis text-decoration-none medium-text right-side-item">
                                 About Us
                             </a>
                         </div>
-
+                        <div class="d-none d-sm-block d-md-none"></div>
                         <!-- In searchNavBar.ejs -->
-                        <div class="col-md-3">
-                            <a href="/cart"
-                                class="d-block link-body-emphasis text-decoration-none right-side-item">
+                        <div class="col-3">
+                            <a href="/cart" class="d-block link-body-emphasis text-decoration-none right-side-item">
                                 <svg xmlns="http://www.w3.org/2000/svg"
                                     fill="currentColor" class="bi bi-cart"
                                     viewBox="0 0 16 16">
@@ -122,13 +144,12 @@
                                     %></span>
                             </a>
                         </div>
-
+                        <div class="d-none d-sm-block d-md-none"></div>
                         <!--The next div should only be shown if the user is logged in, if they arent then it should be an admin sign in button-->
-                        <div class="col-md-3" id="userProfile">
+                        <div class="col-3" id="userProfile">
                             <% if (isLoggedIn) { %>
                             <div class="flex-shrink-0 dropdown">
-                                <a href="#"
-                                    class="d-block link-body-emphasis text-decoration-none dropdown-toggle right-side-item"
+                                <a href="#" class="d-block link-body-emphasis text-decoration-none dropdown-toggle right-side-item"
                                     data-bs-toggle="dropdown"
                                     aria-expanded="false">
                                     <span class="material-symbols-outlined">

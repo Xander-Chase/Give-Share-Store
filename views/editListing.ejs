@@ -2,13 +2,45 @@
 <%- include("searchNavBar") %>
 
 <style>
+    body {
+        padding-bottom: 3vh;
+    }
+
     .mandatory {
         color: red;
     }
 
-    .pic {
-        width: 150px;
-        height: 100px;
+    .product-img-container {
+        max-width: 15vw;
+        max-height: 25vh;
+        overflow: hidden;
+    }
+
+    .product-img {
+        max-width: 20vw;
+        max-height: 30vh;
+    }
+
+    .product-video {
+        width: 480px;
+        height: 360px;
+    }
+
+    @media only screen and (max-width: 767px) {
+        .product-img-container {
+            max-width: 20vw;
+            max-height: 20vh;
+        }
+
+        .product-img {
+            max-width: 25vw;
+            max-height: 25vh;
+        }
+
+        .product-video {
+            width: 240px;
+            height: 160px;
+        }
     }
 </style>
 
@@ -23,13 +55,13 @@
                 <label>Current Images:</label>
                 <div class="d-flex flex-wrap">
                     <% listing.product_img_URL.forEach(function(url, index) { %>
-                    <div class="pic m-2">
-                        <img src="<%= url %>"
-                            alt="Product Image <%= index + 1 %>" height="100px"
-                            width="150px">
-                        <input type="checkbox" name="remove_img_URL"
-                            value="<%= url %>"> Remove
-                    </div>
+                        <div class="m-2">
+                            <div class="product-img-container d-flex align-items-center justify-content-center">
+                                <img src="<%= url %>" alt="Product Image <%= index + 1 %>" class="product-img">
+                            </div>
+                            <input type="checkbox" name="remove_img_URL"
+                                value="<%= url %>"> Remove
+                        </div>
                     <% }); %>
                 </div>
             </div>
@@ -40,7 +72,7 @@
                     <% listing.product_video_URL.forEach(function(url, index) {
                     %>
                     <div class="m-2">
-                        <video width="150" height="100" controls>
+                        <video class="product-video" controls>
                             <source src="<%= url %>" type="video/mp4">
                             Your browser does not support the video tag.
                         </video>
