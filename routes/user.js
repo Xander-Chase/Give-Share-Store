@@ -1,3 +1,4 @@
+// Set up variables + imports
 const express = require("express");
 const Joi = require("joi");
 const bcrypt = require("bcrypt");

@@ -1,3 +1,4 @@
+// Set up variables + imports
 require('dotenv').config();
 const express = require('express');
 const Joi = require("joi");
@@ -11,12 +12,18 @@ const mailchimp_api_key = process.env.MAILCHIMP_API_KEY;
 const mailchimp_server_prefix = process.env.MAILCHIMP_SERVER_PREFIX;
 const mailchimp_list_id = process.env.MAILCHIMP_LIST_ID;
 const { adminCollection, userCollection, categoryCollection } = require('../database/constants')
-var { database } = require('../databaseConnection');
+let { database } = require('../databaseConnection');
 const { getCategoriesNav } = require('../controller/htmlContent');
 const { upload, deleteFromS3, featureVideoUpload, s3 } = require("../controller/awsController");
 const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
 
 // ------------------------------------------------- FUNCTION START -------------------------------------------------
+/**
+ * Handles the duplicated code for rendering the pagination for each page in the admin current listings.
+ * @param req the request session used to obtain.
+ * @param res the response used to render the html code.
+ * @returns No returns, just a render.
+ */
 async function renderPaginationCurrentListings(req, res)
 {
     try {
@@ -29,13 +36,12 @@ async function renderPaginationCurrentListings(req, res)
             previousIndex = 1;
 
         const prices = await getPrices();
-        let numberOfPages = prices.length / max;
+        let numberOfPages = Math.ceil(prices.length / max);
 
-        if (nextIndex >= numberOfPages)
+        if (nextIndex > numberOfPages)
             nextIndex--;
-
         // Assign the number indexes to display
-        for (let i = 0; i <= (numberOfPages); i++)
+        for (let i = 0; i < (numberOfPages); i++)
             pageIndexes.push(i + 1);
 
         const skips = max * (((req.session.pageIndex - 1) < 0) ? 0 : (req.session.pageIndex - 1));
@@ -50,7 +56,8 @@ async function renderPaginationCurrentListings(req, res)
             .limit(max)
             .toArray();
 
-        req.session.pageIndex = 0;
+        // Reset page index when reload
+        req.session.pageIndex = 1;
         res.render('currentListings', {
             listings: currentListings,
             paginationIndex: pageIndexes,
@@ -64,8 +71,62 @@ async function renderPaginationCurrentListings(req, res)
         res.render('currentListings', { listings: [] }); // rendering the page even in case of error with an empty array
     }
 }
-// ------------------------------------------------- FUNCTION END -------------------------------------------------
 
+/**
+ *
+ * Handles the duplicated code for rendering the pagination for each page in the admin sold listings.
+ * @param req the request session used to obtain.
+ * @param res the response used to render the html code.
+ * @returns No returns, just a render.
+ */
+async function renderSoldListings(req, res)
+{
+    try {
+        /* Change this maximum value to alter how many items should be shown per page. */
+        let max = 18;
+        let pageIndexes = [];
+        let previousIndex = req.session.pageIndex - 1;
+        let nextIndex = previousIndex + 2;
+        if (previousIndex < 1)
+            previousIndex = 1;
+
+        const prices = await getSoldListings();
+        let numberOfPages = Math.ceil(prices.length / max);
+
+        if (nextIndex > numberOfPages)
+            nextIndex--;
+        // Assign the number indexes to display
+        for (let i = 0; i < (numberOfPages); i++)
+            pageIndexes.push(i + 1);
+
+        const skips = max * (((req.session.pageIndex - 1) < 0) ? 0 : (req.session.pageIndex - 1));
+
+        const productsCollection = database.db(mongo_database).collection('listing_items');
+        const soldListings = await productsCollection.find({ isSold: true })
+            .skip(skips)
+            .limit(max)
+            .toArray();
+        const isLoggedIn = req.session.loggedIn;
+        const isAdmin = req.session.isAdmin || false;
+
+        res.render('previousListings', {
+            listings: soldListings,
+            isLoggedIn,
+            isAdmin,
+            categories: await getCategoriesNav(),
+            paginationIndex: pageIndexes,
+            previousPage: previousIndex,
+            nextPage: nextIndex,
+        });
+    } catch (error) {
+        console.error('Failed to fetch previous listings:', error);
+        res.status(500).send('Error fetching previous listings');
+    }
+}
+/**
+ * Gets all the current listings then maps their prices.
+ * @returns Prices as a list.
+ */
 async function getPrices()
 {
     const productsCollection = database.db(mongo_database).collection('listing_items');
@@ -78,13 +139,24 @@ async function getPrices()
     return prices.map(item => item.item_price);
 }
 
-// TODO: Done
+/**
+ * Gets all the sold listings.
+ * @returns Prices as a list.
+ */
+async function getSoldListings()
+{
+    const productsCollection = database.db(mongo_database).collection('listing_items');
+    return await productsCollection.find({isSold: true}).toArray();
+}
+// ------------------------------------------------- FUNCTION END -------------------------------------------------
+
+// Route for admin login.
 router.get('/LogIn', (req, res) => {
     res.render("adminLogIn");
 });
 
 
-// TODO: Done
+// Post method on handling submitting the login form
 router.post('/LogInSubmit', async (req, res) => {
     const email = req.body.email;
     const password = req.body.password;
@@ -125,8 +197,7 @@ router.post('/LogInSubmit', async (req, res) => {
     res.redirect("/");
 });
 
-
-// TODO: Done
+// Route for admin dashboard
 router.get('/manage', async (req, res) => {
     if (req.session.loggedIn) {
         const isLoggedIn = req.session.loggedIn;
@@ -142,13 +213,12 @@ router.get('/manage', async (req, res) => {
     }
 });
 
-
+// Route for adding a listing
 router.get('/addListing', async (req, res) => {
-
     res.render('addListing', { categories: await categoryCollection.find().toArray() });
 });
 
-
+// Post method on handling when submitting a listing
 router.post('/submitListing', upload.fields([{ name: 'photo', maxCount: 10 }, { name: 'video', maxCount: 1 }]), async (req, res) => {
     const photos = req.files['photo'] ? req.files['photo'].map(file => file.location) : [];
     const videos = req.files['video'] ? req.files['video'].map(file => file.location) : [];
@@ -182,7 +252,7 @@ router.post('/submitListing', upload.fields([{ name: 'photo', maxCount: 10 }, { 
     }
 });
 
-
+// Route for editing a listing
 router.get('/editListing/:id', async (req, res) => {
     const itemId = req.params.id;
     const isLoggedIn = req.session.loggedIn;
@@ -204,6 +274,7 @@ router.get('/editListing/:id', async (req, res) => {
     }
 });
 
+// Post method on handling updating a listing
 router.post('/updateListing/:id', upload.fields([{ name: 'photo', maxCount: 10 }, { name: 'video', maxCount: 1 }]), async (req, res) => {
     const itemId = new ObjectId(req.params.id);
     console.log("Form submission data:", req.body);
@@ -266,6 +337,7 @@ router.post('/updateListing/:id', upload.fields([{ name: 'photo', maxCount: 10 }
     }
 });
 
+// Post method on handling relisting an item
 router.post('/relist/:id', async (req, res) => {
     const itemId = new ObjectId(req.params.id);
     
@@ -288,7 +360,7 @@ router.post('/relist/:id', async (req, res) => {
     }
 });
 
-
+// Post method on handling deleting a listing
 router.post('/deleteListing/:id', async (req, res) => {
     try {
         const listingCollection = database.db(mongo_database).collection('listing_items');
@@ -304,7 +376,7 @@ router.post('/deleteListing/:id', async (req, res) => {
     }
 });
 
-// Route to handle feature video upload
+// Post method to handle submitting a feature video
 router.post('/submitFeatureVideo', featureVideoUpload.single('video'), async (req, res) => {
     if (!req.file) {
         return res.status(400).send('No video file uploaded.');
@@ -319,7 +391,7 @@ router.post('/submitFeatureVideo', featureVideoUpload.single('video'), async (re
 });
 
 
-// Route to handle feature video removal
+// Post method to handle removing a feature video
 router.post('/removeFeatureVideo', async (req, res) => {
     const featureVideoCollection = database.db(mongo_database).collection('featureVideo');
     const featureVideo = await featureVideoCollection.findOne({});
@@ -342,42 +414,31 @@ router.post('/removeFeatureVideo', async (req, res) => {
     }
 });
 
+// THIS IS FOR THE CURRENT LISTINGS
 // With each page, get its index and assign the page index to that.
 router.post('/page=:index', async (req, res) => {
     req.session.pageIndex = req.params.index;
-    renderPaginationCurrentListings(req, res);
+    await renderPaginationCurrentListings(req, res);
 })
 
-// TODO: DONE
+// Route for current listings
 router.get('/currentListings', async (req, res) => {
-    renderPaginationCurrentListings(req, res);
-
+    await renderPaginationCurrentListings(req, res);
 });
 
-// TODO: DONE
-// previousListings route
+// THIS IS FOR THE PREVIOUS LISTINGS
+// With each page, get its index and assign the page index to that.
+router.post('/sold_listingspage=:index', async (req, res) => {
+    req.session.pageIndex = req.params.index;
+    await renderSoldListings(req, res);
+})
+
+// Route for loading previous listings content
 router.get('/previousListings', async (req, res) => {
-    try {
-        const productsCollection = database.db(mongo_database).collection('listing_items');
-        const soldListings = await productsCollection.find({ isSold: true }).toArray();
-        const isLoggedIn = req.session.loggedIn;
-        const isAdmin = req.session.isAdmin || false;
-
-        res.render('previousListings', {
-            listings: soldListings,
-            isLoggedIn,
-            isAdmin,
-            categories: await getCategoriesNav()
-        });
-    } catch (error) {
-        console.error('Failed to fetch previous listings:', error);
-        res.status(500).send('Error fetching previous listings');
-    }
+await renderSoldListings(req, res);
 });
 
-
-
-// TODO: DONE
+// Route for mailing list
 router.get('/mailingList', async (req, res) => {
     try {
         mailchimp.setConfig({
@@ -401,8 +462,7 @@ router.get('/mailingList', async (req, res) => {
     }
 });
 
-
-// TODO: DONE
+// Route for admin users content
 router.get('/adminUsers', async (req, res) => {
     try {
         if (!req.session.isAdmin || !req.session.isOwner) {
@@ -420,9 +480,7 @@ router.get('/adminUsers', async (req, res) => {
     }
 });
 
-
-
-// TODO: DONE
+// Post method on handling on adding an admin user
 router.post('/addUser', async (req, res) => {
     const { name, email, password, userType } = req.body;
     try {
@@ -446,8 +504,7 @@ router.post('/addUser', async (req, res) => {
     }
 });
 
-
-// TODO: DONE
+// Route for editing an admin
 router.get('/editUser/:id', async (req, res) => {
     try {
         const user = await adminCollection.findOne({ _id: new ObjectId(req.params.id) });
@@ -464,7 +521,7 @@ router.get('/editUser/:id', async (req, res) => {
     }
 });
 
-// TODO: DONE
+// Post method for updating a user
 router.post('/updateUser/:id', async (req, res) => {
     try {
         const { name, email } = req.body;
@@ -479,7 +536,7 @@ router.post('/updateUser/:id', async (req, res) => {
     }
 });
 
-// TODO: DONE
+// Post method on handling on deleting an admin
 router.post('/deleteUser/:id', async (req, res) => {
     try {
         const result = await adminCollection.deleteOne({ _id: new ObjectId(req.params.id) });
@@ -494,7 +551,7 @@ router.post('/deleteUser/:id', async (req, res) => {
     }
 });
 
-// TODO: DONE
+// Route method for featured items navigation
 router.get('/featuredItems', async (req, res) => {
     try {
         const productsCollection = database.db(mongo_database).collection('listing_items');
@@ -510,7 +567,7 @@ router.get('/featuredItems', async (req, res) => {
     }
 });
 
-// TODO: DONE
+// Route for category management content
 router.get('/categoryManagement', async (req, res) => {
     const categoriesArray = await categoryCollection.find().toArray();
     res.render('categoryManagement', {
@@ -518,7 +575,7 @@ router.get('/categoryManagement', async (req, res) => {
     });
 })
 
-// TODO: DONE
+// Route for loading an editable category
 router.get('/editCategory/:id', async (req, res) => {
     try {
         const category = await categoryCollection.findOne({ _id: new ObjectId(req.params.id) });
@@ -530,7 +587,7 @@ router.get('/editCategory/:id', async (req, res) => {
     }
 })
 
-// TODO: DONE
+// Post method for handling updating a category
 router.post('/updateCategory/:id', async (req, res) => {
     try {
         const { name, sub_categories } = req.body;
@@ -551,7 +608,7 @@ router.post('/updateCategory/:id', async (req, res) => {
     }
 })
 
-// TODO: DONE
+// Post method for handling a deletion of a category
 router.post('/deleteCategory/:id', async (req, res) => {
     try {
         const result = await categoryCollection.deleteOne({ _id: new ObjectId(req.params.id) });
@@ -566,7 +623,7 @@ router.post('/deleteCategory/:id', async (req, res) => {
     }
 })
 
-// TODO: DONE
+// Post method on handling on adding a category
 router.post('/addCategory', async (req, res) => {
     const { category_name, sub_categories } = req.body;
     try {
@@ -579,8 +636,7 @@ router.post('/addCategory', async (req, res) => {
     }
 });
 
-
-// TODO: DONE
+// Post method on loading a sub-category based on the selected category
 router.post('/load-subcategory', async (req, res) => {
 
     const type = req.body.categoryType.replace(/"/g, '');
@@ -599,4 +655,5 @@ router.post('/load-subcategory', async (req, res) => {
     }
 })
 
+// Export the router
 module.exports = router;
