@@ -611,6 +611,19 @@ router.post('/updateCategory/:id', async (req, res) => {
 // Post method for handling a deletion of a category
 router.post('/deleteCategory/:id', async (req, res) => {
     try {
+        const productsCollection = database.db(mongo_database).collection('listing_items');
+        const category = await categoryCollection.findOne({_id: new ObjectId(req.params.id)});
+
+        // Delete the listings containing that category
+        const listingDeleteResult = await productsCollection.deleteMany({
+            item_category: {$regex: category.category_type},
+            item_sub_category: { $in: category.sub_categories}
+        });
+        if (listingDeleteResult.deletedCount > 0)
+            console.log("Items are now deleted");
+        else
+            console.log("There are no items having that category.");
+
         const result = await categoryCollection.deleteOne({ _id: new ObjectId(req.params.id) });
         if (result.deletedCount === 1) {
             res.status(200).send('Category deleted successfully');
