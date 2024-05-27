@@ -229,7 +229,6 @@ router.post('/submitListing', upload.fields([{ name: 'photo', maxCount: 10 }, { 
         product_video_URL: videos,
         item_title: req.body.item_title,
         item_price: parseFloat(req.body.item_price) || 0.00,
-        item_quantity: parseInt(req.body.item_quantity) || 0,
         item_detailed_description: req.body.item_detailed_description || '',
         item_estimatedShippingCost: parseFloat(req.body.item_estimatedShippingCost) || 0.0,
         item_estimatedInsuranceCost: parseFloat(req.body.item_estimatedInsuranceCost) || 0.0,
@@ -308,7 +307,6 @@ router.post('/updateListing/:id', upload.fields([{ name: 'photo', maxCount: 10 }
         const updateData = {
             item_title: req.body.item_title,
             item_price: parseFloat(req.body.item_price) || 0.00,
-            item_quantity: parseInt(req.body.item_quantity) || 0,
             item_detailed_description: req.body.item_detailed_description || '',
             item_estimatedShippingCost: parseFloat(req.body.item_estimatedShippingCost) || 0.0,
             item_estimatedInsuranceCost: parseFloat(req.body.item_estimatedInsuranceCost) || 0.0,
