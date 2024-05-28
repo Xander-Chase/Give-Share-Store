@@ -30,6 +30,7 @@ const {RecaptchaEnterpriseServiceClient} = require('@google-cloud/recaptcha-ente
 const bodyParser = require('body-parser');                      // Import body-parser module to parse request body
 const moment = require('moment-timezone');
 const { sendContactUsEmail, sendReferralEmail, sendOrderConfirmationEmail, sendOrderNotificationEmail } = require('./routes/mailer'); // Import mailer.js file to send emails
+const sgMail = require('@sendgrid/mail')                        // Import sendgrid/mail module to send emails
 
 // Get most of the functions.
 const { getBodyFilters, getCategoriesNav } = require('./controller/htmlContent');
@@ -599,7 +600,7 @@ app.post('/mark-items-sold', async (req, res) => {
             );
 
             const itemDetails = items.map((item, index) => `${item.item_title} - $${item.item_price} - ${shippingPickup[index] || 'Pickup'}`).join('\n');
-            const ownerEmail = "shopthevintagegarage@gmail.com";
+            const ownerEmail = process.env.EMAIL_USER
 
             const orderDetails = `
                 Date of purchase: ${soldDate.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' })} \n\n   
@@ -638,7 +639,7 @@ app.post('/mark-items-sold', async (req, res) => {
 
 // ----------------- Stripe Payment START -----------------
 
-const stripe = require('stripe')('sk_test_51OZSVHAcq23T9yD7gpE3kQS73T5AnO6UEaecXMwkzvGc9hVh1QlPNFmM3rzI9cxJ2tU2FtUAPzvcSc1obqPcrUfZ00PojCiOni');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 // Post method for creation of a checkout session
 app.post('/create-checkout-session', async (req, res) => {
@@ -778,7 +779,7 @@ app.get('/StripeSuccess', async (req, res) => {
             );
 
             const itemDetails = items.map((item, index) => `${item.item_title} - $${item.item_price} - ${shippingPickup[index] || 'Pickup'}`).join('\n');
-            const ownerEmail = "shopthevintagegarage@gmail.com";
+            const ownerEmail = process.env.EMAIL_USER
 
             const orderDetails = `
                 Date of purchase: ${soldDate.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' })} \n\n   
@@ -821,11 +822,11 @@ app.get('/StripeCancel', (req, res) => {
 
 // ----------------- Email Sending START -----------------
 
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
 // Post method on sending contact us email
 app.post('/sendContactUsEmail', async (req, res) => {
     const { name, email, message, token } = req.body;
-
-    console.log('Received contact form data:', { name, email, message, token });
 
     const score = await createAssessment({ token, recaptchaAction: 'submit' });
 
@@ -835,20 +836,17 @@ app.post('/sendContactUsEmail', async (req, res) => {
 
     sendContactUsEmail({ name, email, message })
         .then(info => {
-            console.log('Email sent:', info);
             res.json({ success: true });
         })
-        .catch(error => {
-            console.error('Error sending email:', error);
-            res.json({ success: false, message: error.message });
+        .catch((error) => {
+            console.error('Error sending email:', error.response ? error.response.body : error);
+            res.status(500).json({ success: false, message: 'Error sending email', error: error.response ? error.response.body.errors : error.message });
         });
 });
 
 // Post method for sending referral email.
 app.post('/sendReferralEmail', async (req, res) => {
     const { organisation, email, message, token } = req.body;
-
-    console.log('Received referral form data:', { organisation, email, message, token });
 
     const score = await createAssessment({ token, recaptchaAction: 'submit' });
 
@@ -858,12 +856,11 @@ app.post('/sendReferralEmail', async (req, res) => {
 
     sendReferralEmail({ organisation, email, message })
         .then(info => {
-            console.log('Referral email sent:', info);
             res.json({ success: true });
         })
-        .catch(error => {
-            console.error('Error sending referral email:', error);
-            res.json({ success: false, message: error.message });
+        .catch((error) => {
+            console.error('Error sending referral email:', error.response ? error.response.body : error);
+            res.status(500).json({ success: false, message: 'Error sending email', error: error.response ? error.response.body.errors : error.message });
         });
 });
 
