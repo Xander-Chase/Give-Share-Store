@@ -9,7 +9,7 @@ const {categoryCollection} = require('../database/constants')
  * @param subCategories a list of sub-categories depends on the current category
  * @returns a list, contained with HTML code, used to display the filters accordions on the left section in the landing page.
  */
-function getBodyFilters(maxVal, minVal, currentPrice, subCategories)
+function getBodyFilters(maxVal, minVal, currentPrice, subCategories, categories)
 {
     if (maxVal == null || minVal == null)
     {
@@ -24,20 +24,26 @@ function getBodyFilters(maxVal, minVal, currentPrice, subCategories)
     if (currentPrice > maxVal)
         currentPrice = maxCalculation / 2;
 
-    let categoriesBody =
-        "<ul class=\"list-group list-group-flush\">";
+    let categoriesBody;
+    let subcategoriesBody = categoriesBody = "<ul class=\"list-group list-group-flush\">";
 
     // for each subCategories on that array, assign it as a list element on the sub-category filter on the left
     // since some of them are spaces, we split the spaces and join them with '_'
     subCategories.forEach(function(subC) {
-        categoriesBody+="<li class=\"list-group-item\"><form method='post' action='/filter/subcategory=" + subC.split(" ").join("_") + "'><button " +
+        subcategoriesBody+="<li class=\"list-group-item\"><form method='post' action='/filter/subcategory=" + subC.split(" ").join("_") + "'><button " +
             "style='background: none; border: none'" +
             " type='submit'>" + subC + "</button></form></li>"
     })
-    categoriesBody+="</ul>";
-    return [
+    subcategoriesBody+="</ul>";
 
+    categories.forEach(function(C) {
+        categoriesBody+="<li class=\"list-group-item\"><form method='post' action='/filter/category=" + C.category_type.split(" ").join("_") + "'><button " +
+            "style='background: none; border: none'" +
+            " type='submit'>" + C.category_type + "</button></form></li>"
+    })
+    return [
         categoriesBody,
+        subcategoriesBody,
         "<ul class='list-group list-group-flush'>" +
         " <li class='list-group-item'><form method='post' action='/filter/sortby=default'><button style='background: none; border: none' type='submit'>Sort by Default</button></form></li>" +
         " <li class='list-group-item'><form method='post' action='/filter/sortby=ascending'><button style='background: none; border: none' type='submit'>Sort by Lowest Price</button></form></li>" +

@@ -146,8 +146,7 @@ app.get('/', async (req, res) => {
     const isAdmin = req.session.isAdmin || false;
     let searchKey = (req.session.keyword == null) ? "" : req.session.keyword;
     let maximumPrice = (req.session.maxPrice > 0) ? req.session.maxPrice : 100000000;
-    let categoryTab = (req.session.category == null) ? "" : `> ${req.session.category}`;
-    let subCategoryTab = (req.session.subcategory == null) ? "" : `> ${req.session.subcategory}`;
+    let categoryTab = (req.session.category == null) ? "" : `${req.session.category}`;
     let orderCode = (
         {
             "ascending": 1,
@@ -156,8 +155,8 @@ app.get('/', async (req, res) => {
     )[req.session.sortBy] || 0;
     let categoryKeyword = (req.session.category == null) ? "" : req.session.category;
     let subCategoryKeyword = (req.session.subcategory == null) ? "" : req.session.subcategory;
-    let filtersHeader = [`Category ${categoryTab} ${subCategoryTab}`, "Sorting", "Price"];
-    let filterAnchors = ["Category", "Sorting", "Price"];
+    let filtersHeader = ["Categories", `${categoryTab}`, "Sorting", "Price"];
+    let filterAnchors = ["Categories", `${categoryTab}`, "Sorting", "Price"];
     let prices = [];
 
     try {
@@ -228,15 +227,18 @@ app.get('/', async (req, res) => {
 
         // initially page index to 1 to reset when reloaded
         req.session.pageIndex = 1;
+        const categories = await categoryCollection.find().toArray();
 
+        let subCategories = [];
+        categories.forEach(function(category)
+        {
+            if (category.category_type === req.session.category)
+                subCategories = category.sub_categories;
+        })
         // Obtain Sub-Categories.
-        const subCategories = await categoryCollection.find({ category_type: req.session.category }).project({ _id: 0, sub_categories: 1 }).toArray();
         let bodyFilters;
 
-        if (subCategories.length < 1 || subCategories[0].sub_categories.length < 1)
-            bodyFilters = getBodyFilters(sortedPrices[0], sortedPrices[prices.length - 1], maximumPrice, []);
-        else
-            bodyFilters = getBodyFilters(sortedPrices[0], sortedPrices[prices.length - 1], maximumPrice, subCategories[0].sub_categories);
+        bodyFilters = getBodyFilters(sortedPrices[0], sortedPrices[prices.length - 1], maximumPrice, subCategories, categories);
 
         // Find one featured video for the bottom of the page.
         const featureVideo = await featureVideoCollection.findOne({});
@@ -248,7 +250,6 @@ app.get('/', async (req, res) => {
             filterHeaders: filtersHeader,
             filtersAnchor: filterAnchors,
             filterStuff: bodyFilters,
-            categories: await getCategoriesNav(),
             isAdmin: isAdmin,
             paginationIndex: pageIndexes,
             previousPage: previousIndex,
@@ -402,7 +403,7 @@ app.get('/product-info/:id', async (req, res) => {
             return;
         }
 
-        res.render('product-info', { item: item, isLoggedIn: req.session.loggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav() });
+        res.render('product-info', { item: item, isLoggedIn: req.session.loggedIn, isAdmin: req.session.isAdmin });
     } catch (error) {
         console.error('Failed to fetch item:', error);
         res.status(500).send('Error fetching item details');
@@ -411,19 +412,19 @@ app.get('/product-info/:id', async (req, res) => {
 
 // Route for about page
 app.get('/about', async (req, res) => {
-    res.render("about", { isLoggedIn: req.session.loggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav() });
+    res.render("about", { isLoggedIn: req.session.loggedIn, isAdmin: req.session.isAdmin });
 });
 
 // Route for contact us page
 app.get('/contact-us', async (req, res) => {
-    res.render("contact", { isLoggedIn: req.session.loggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav() });
+    res.render("contact", { isLoggedIn: req.session.loggedIn, isAdmin: req.session.isAdmin });
 });
 
 // Route for managing a user
 app.get('/manageUser', async (req, res) => {
     if (req.session.loggedIn) {
         const isLoggedIn = req.session.loggedIn;
-        res.render("user-management", { isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav() });
+        res.render("user-management", { isLoggedIn, isAdmin: req.session.isAdmin });
     }
     else {
         res.redirect('/user/LogIn');
@@ -440,7 +441,7 @@ app.get('/pastOrders', async (req, res) => {
             orders: userOrders,
             isLoggedIn,
             isAdmin: req.session.isAdmin,
-            categories: await getCategoriesNav()
+
         });
     } catch (error) {
         console.error('Error fetching past orders:', error);
@@ -454,7 +455,7 @@ app.get('/settings', async (req, res) => {
         const isLoggedIn = req.session.loggedIn;
         const user = req.session.name;
         const email = req.session.email;
-        res.render("settings", { isLoggedIn: isLoggedIn, isAdmin: req.session.isAdmin, user: user, email: email, categories: await getCategoriesNav() });
+        res.render("settings", { isLoggedIn: isLoggedIn, isAdmin: req.session.isAdmin, user: user, email: email });
     }
     else {
         res.redirect('/adminLogIn');
@@ -475,26 +476,26 @@ app.post('/changePassword', async (req, res) => {
     const validationResult = schema.validate({ currentPassword, newPassword, confirmPassword });
     if (validationResult.error) {
         console.log(validationResult.error);
-        return res.render('settings', { isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav(), user: req.session.name, email, error: validationResult.error.message });
+        return res.render('settings', { isLoggedIn, isAdmin: req.session.isAdmin, user: req.session.name, email, error: validationResult.error.message });
     }
 
     const user = await adminCollection.findOne({ email });
     if (!user) {
         console.log('User not found');
-        return res.render('settings', { isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav(), user: req.session.name, email, error: 'User not found' });
+        return res.render('settings', { isLoggedIn, isAdmin: req.session.isAdmin, user: req.session.name, email, error: 'User not found' });
     }
 
     const passwordMatch = await bcrypt.compare(currentPassword, user.password);
     if (!passwordMatch) {
         console.log('Wrong current password');
-        return res.render('settings', { isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav(), user: req.session.name, email, error: 'Incorrect current password' });
+        return res.render('settings', { isLoggedIn, isAdmin: req.session.isAdmin, user: req.session.name, email, error: 'Incorrect current password' });
     }
 
     const hashedNewPassword = await bcrypt.hash(newPassword, 10);
     await adminCollection.updateOne({ email }, { $set: { password: hashedNewPassword } });
     req.session.password = hashedNewPassword;
 
-    res.render('passwordUpdated', { isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav() });
+    res.render('passwordUpdated', { isLoggedIn, isAdmin: req.session.isAdmin });
 });
 
 // Route to render feature video management page

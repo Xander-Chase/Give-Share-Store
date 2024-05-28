@@ -113,7 +113,6 @@ async function renderSoldListings(req, res)
             listings: soldListings,
             isLoggedIn,
             isAdmin,
-            categories: await getCategoriesNav(),
             paginationIndex: pageIndexes,
             previousPage: previousIndex,
             nextPage: nextIndex,
@@ -204,7 +203,6 @@ router.get('/manage', async (req, res) => {
         res.render("product-management", {
             isLoggedIn,
             isAdmin: req.session.isAdmin,
-            categories: await getCategoriesNav(),
             isOwner: req.session.isOwner
         });
     }
@@ -266,7 +264,7 @@ router.get('/editListing/:id', async (req, res) => {
         if (!listing) {
             return res.status(404).send('Listing not found');
         }
-        res.render('editListing', { listing, isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav() });
+        res.render('editListing', { listing, isLoggedIn, isAdmin: req.session.isAdmin });
     } catch (error) {
         console.error('Failed to fetch listing:', error);
         res.status(500).send('Error fetching listing details');
@@ -511,7 +509,7 @@ router.get('/editUser/:id', async (req, res) => {
             return;
         }
         const isLoggedIn = req.session.loggedIn;
-        res.render('editUser', { user, isLoggedIn: isLoggedIn, isAdmin: req.session.isAdmin, categories: await getCategoriesNav() });
+        res.render('editUser', { user, isLoggedIn: isLoggedIn, isAdmin: req.session.isAdmin });
 
     } catch (error) {
         console.error('Error retrieving user for editing:', error);
@@ -577,7 +575,7 @@ router.get('/categoryManagement', async (req, res) => {
 router.get('/editCategory/:id', async (req, res) => {
     try {
         const category = await categoryCollection.findOne({ _id: new ObjectId(req.params.id) });
-        res.render('editCategory', { category, isAdmin: req.session.isAdmin, isLoggedIn: req.session.loggedIn, categories: await getCategoriesNav() });
+        res.render('editCategory', { category, isAdmin: req.session.isAdmin, isLoggedIn: req.session.loggedIn });
     }
     catch (error) {
         console.error('Error retrieving category for editing:', error);

@@ -92,13 +92,14 @@
             font-size: 12pt;
         }
     }
+
 </style>
 <body>
     <header class="py-3 mb-3 border-bottom">
         <div class="container-fluid gap-3 align-items-center">
             <div class="row">
                 <div class="col-sm-3">
-                    <a href="/" class="w-auto d-flex align-items-center justify-content-center mt-1 link-body-emphasis text-decoration-none">
+                    <a href="/filter/clear" class="w-auto d-flex align-items-center justify-content-center mt-1 link-body-emphasis text-decoration-none">
                         <div class="col-md-4">
                             <img src="/img/landingPage/vintage_garage_logo.png"
                                 style="width: 9.5vw; height: auto;">
@@ -196,37 +197,6 @@
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="container">
-            <header class="d-flex justify-content-center py-3">
-                <ul class="nav nav-pills">
-                    <li class="list1 nav-item" id="dashboard">
-                        <form method="POST" class="nav-link"
-                            action="/filter/category=">
-                            <button type="submit"
-                                style="border: none; background: none"
-                                aria-current="page">
-                                <span class="material-symbols-outlined">
-                                    home
-                                </span>
-                            </button>
-                        </form>
-                    </li>
-                    <% categories.forEach(function(category) { %>
-                    <li class="list1 nav-item"
-                        id="<%= category.category_type %>">
-                        <form method="POST" class="nav-link"
-                            action="/filter/category=<%= category.category_type%>">
-                            <button type="submit"
-                                style="border: none; background: none"
-                                aria-current="page">
-                                <%= category.category_type%>
-                            </button>
-                        </form>
-                    </li>
-                    <% }) %>
-                </ul>
-            </header>
         </div>
 
     </header>

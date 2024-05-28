@@ -15,7 +15,6 @@ router.get('/', async (req, res) => {
         isLoggedIn: req.session.loggedIn,
         items: cartItems,
         paypalClientId: process.env.PAYPAL_CLIENT_ID,
-        categories: await getCategoriesNav(),
         isAdmin: req.session.isAdmin || false
     });
 });
