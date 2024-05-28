@@ -52,6 +52,10 @@
                 max-width: 20vw;
             }
 
+            .itemImage
+            {
+                justify-content: center;
+            }
             @media only screen and (max-width: 767px) {
                 .card {
                     height: 35vh;
@@ -85,6 +89,27 @@
                     height: 25px;
                     width: 25px;
                 }
+                .itemImage
+                {
+                    justify-content: center;
+                }
+/*                .card
+                {
+                    background-color: rebeccapurple;
+                }*/
+
+                .itemImageCard
+                {
+
+                    max-width: 80%;
+                    width: 700rem;
+                }
+                .itemImage
+                {
+                    width: 500px;
+                    justify-content: left;
+                }
+
             }
 
             @media only screen and (max-width: 854px) {
@@ -92,15 +117,35 @@
                     width: 480px;
                     height: 360px;
                 }
+                .itemImage
+                {
+                    justify-content: center;
+                }
             }
 
             @media only screen and (min-width: 768px) and (max-width: 992px) {
                 .product-listings-container {
                     width: 98vw;
                 }
+                .itemImage
+                {
+                    justify-content: center;
+                }
             }
 
             @media only screen and (max-width: 576px) {
+
+                .itemImageCard
+                {
+
+                    max-width: 75%;
+                    width: 500rem;
+                }
+                .itemImage
+                {
+                    width: 500px;
+                    justify-content: left;
+                }
                 #myCarousel {
                     height: 30rem;
                 }
@@ -218,9 +263,9 @@
                             <div class="col-md-4 landing-pad-bottom">
                                 <div class="card shadow-sm">
                                     <div
-                                        class="d-flex product-img align-items-center justify-content-center">
+                                        class="d-flex product-img align-items-center itemImage">
                                         <a href="/product-info/<%= item._id %>">
-                                            <img class="bd-placeholder-img card-img-top" src="<%= item.product_img_URL[0] %>" alt="<%= item.item_title %>"/>
+                                            <img class="bd-placeholder-img card-img-top itemImageCard" src="<%= item.product_img_URL[0] %>" alt="<%= item.item_title %>"/>
                                         </a>
                                     </div>
                                     <div class="card-body">
