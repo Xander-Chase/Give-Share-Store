@@ -639,6 +639,13 @@ app.post('/mark-items-sold', async (req, res) => {
             const productsCollection = database.db(mongodb_database).collection('listing_items');
             const items = await productsCollection.find({ _id: { $in: itemIds.map(id => new ObjectId(id)) } }).toArray();
 
+            // Check if any item is already sold
+            const alreadySoldItems = items.filter(item => item.isSold);
+            if (alreadySoldItems.length > 0) {
+                const soldItemTitles = alreadySoldItems.map(item => item.item_title).join(', ');
+                return res.render('cartView', { message: `The following items are already sold: ${soldItemTitles}. Please remove them from your cart and try again.` });
+            }
+
             // To get the current date and time in PST
             const soldDate = moment().tz('America/Los_Angeles').toDate();
             
@@ -817,6 +824,13 @@ app.get('/StripeSuccess', async (req, res) => {
         if (itemIds.length > 0) {
             const productsCollection = database.db(mongodb_database).collection('listing_items');
             const items = await productsCollection.find({ _id: { $in: itemIds.map(id => new ObjectId(id)) } }).toArray();
+
+            // Check if any item is already sold
+            const alreadySoldItems = items.filter(item => item.isSold);
+            if (alreadySoldItems.length > 0) {
+                const soldItemTitles = alreadySoldItems.map(item => item.item_title).join(', ');
+                return res.render('cartView', { message: `The following items are already sold: ${soldItemTitles}. Please remove them from your cart and try again.` });
+            }
 
             // To get the current date and time in PST
             const soldDate = moment().tz('America/Los_Angeles').toDate();
