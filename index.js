@@ -158,6 +158,7 @@ app.get('/', async (req, res) => {
             "descending": -1,
         }
     )[req.session.sortBy] || 0;
+
     let categoryKeyword = (req.session.category == null) ? "" : req.session.category;
     let subCategoryKeyword = (req.session.subcategory == null) ? "" : req.session.subcategory;
     let filtersHeader = ["Categories", `${categoryTab}`, "Sorting", "Price"];
@@ -214,6 +215,10 @@ app.get('/', async (req, res) => {
         let shouldPriceSort = {};
         if (orderCode !== 0)
             shouldPriceSort = {item_price: orderCode};
+
+        let shouldSortByRating = {}
+        if (req.session.sortBy === "rating")
+            shouldSortByRating = {item_rating: -1};
         /*
         Call its designed filters.
         Skip is based on the current page.
@@ -226,7 +231,9 @@ app.get('/', async (req, res) => {
             item_price: { $lte: Math.round(maximumPrice) },
             item_category: { $regex: categoryKeyword },
             item_sub_category: { $regex: subCategoryKeyword }
-        }).sort(shouldPriceSort).skip(skips)
+        }).sort(shouldPriceSort)
+            .sort(shouldSortByRating)
+            .skip(skips)
             .limit(max)
             .toArray();
 
@@ -286,28 +293,13 @@ app.get('/', async (req, res) => {
 app.post('/favorite=:id', async (req, res) => {
     const _itemId = req.params.id;
     const productsCollection = database.db(mongodb_database).collection('listing_items');
-    // add
 
-/*    if (item) {
-        req.session.cart.push(item);
-        req.session.save(err => {
-            if (err) {
-                console.error('Error saving session:', err);
-            }
-            res.json({ success: true, cartItemCount: req.session.cart.length });
-        });
-    } else {
-        res.json({ success: false, message: 'Item not found' });
-
-        */
-
-        if (!req.session.favorites.includes(_itemId))
-    {
+    // add to favorites
+    if (!req.session.favorites.includes(_itemId)) {
         await productsCollection.updateOne({_id: new ObjectId(_itemId)}, {$inc: {item_rating: 1}});
         req.session.favorites.push(_itemId);
 
         const item = await productsCollection.findOne({_id: new ObjectId(_itemId)});
-
         req.session.save(err => {
             if (err)
                 console.error(`Error saving session, ${err}`);
@@ -315,17 +307,13 @@ app.post('/favorite=:id', async (req, res) => {
         })
 
     }
-    // remove
+    // remove from favorites
     else
     {
-
         req.session.favorites = req.session.favorites.filter(item => item !== _itemId);
-
-        console.log(`Unfavorite item: ${_itemId}`);
         await productsCollection.updateOne({_id: new ObjectId(_itemId)}, {$inc: {item_rating: -1}});
 
         const item = await productsCollection.findOne({_id: new ObjectId(_itemId)});
-
         req.session.save(err => {
             if (err)
                 console.error(`Error saving session, ${err}`);
