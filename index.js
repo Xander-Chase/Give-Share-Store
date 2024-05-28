@@ -121,8 +121,11 @@ app.use((req, res, next) => {
     if (!req.session.cart) {
         req.session.cart = [];
     }
+
+    req.session.favorites = [];
     res.locals.cartItemCount = req.session.cart ? req.session.cart.length : 0;
     res.locals.subCategories = [];
+
     next();
 });
 
@@ -276,6 +279,26 @@ app.get('/', async (req, res) => {
     }
 });
 
+app.post('/favorite=:id', async (req, res) => {
+    const _itemId = req.params.id;
+    const productsCollection = database.db(mongodb_database).collection('listing_items');
+    // add
+    if (!req.session.favorites.includes(_itemId))
+    {
+        req.session.favorites.push(_itemId);
+        await productsCollection.updateOne({_id: new ObjectId(_itemId)}, {$inc: {item_rating: 1}});
+    }
+    // remove
+    else
+    {
+        const index = req.session.favorites.indexOf(_itemId);
+        await productsCollection.updateOne({_id: new ObjectId(_itemId)}, {$inc: {item_rating: -1}});
+        if (delete req.session.favorites[index])
+            console.log(`Unfavorite item: ${_itemId}`);
+    }
+
+
+})
 // With each page, get its index and assign the page index to that.
 app.post('/page=:index', async (req, res) => {
     req.session.pageIndex = req.params.index;

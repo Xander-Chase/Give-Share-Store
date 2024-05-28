@@ -93,10 +93,6 @@
                 {
                     justify-content: center;
                 }
-/*                .card
-                {
-                    background-color: rebeccapurple;
-                }*/
 
                 .itemImageCard
                 {
@@ -283,6 +279,10 @@
                                                     class="btn btn-sm btn-outline-secondary product-btn"
                                                     onclick="addToCart('<%= item._id %>')">Add
                                                     to Cart</button>
+
+                                                <form method="post" action="/favorite=<%= item._id%>">
+                                                    <button type="submit">Hearts</button>
+                                                </form>
                                             </div>
                                             <strong class="text-body-primary">
                                                 CAN <%= item.item_price %>
@@ -348,6 +348,28 @@
               }).catch(error => {
                   console.error('Error adding item to cart:', error);
               });
+        }
+
+        function favoriteItem(itemId)
+        {
+            fetch(`/favorite=${itemId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }).then(response => response.json())
+                .then(data => {
+                    if (data.status)
+                    {
+                        // set to filled heart
+                    }
+                    else
+                    {
+                        // set back to empty heart
+                    }
+                }).catch(error => {
+                    console.error(`Error adding item to cart: ${error}`);
+            })
         }
     </script>
 </html>
