@@ -119,11 +119,16 @@ app.use(session({
 app.use((req, res, next) => {
     req.session = req.session || {};
 
-    if (!req.session.cart) {
+    if (!req.session.cart)
         req.session.cart = [];
-    }
+
+    if (!req.session.favorites)
+        req.session.favorites = [];
+
+    res.locals.currentItemCount = 0;
     res.locals.cartItemCount = req.session.cart ? req.session.cart.length : 0;
     res.locals.subCategories = [];
+
     next();
 });
 
@@ -154,6 +159,7 @@ app.get('/', async (req, res) => {
             "descending": -1,
         }
     )[req.session.sortBy] || 0;
+
     let categoryKeyword = (req.session.category == null) ? "" : req.session.category;
     let subCategoryKeyword = (req.session.subcategory == null) ? "" : req.session.subcategory;
     let filtersHeader = ["Categories", `${categoryTab}`, "Sorting", "Price"];
@@ -210,6 +216,10 @@ app.get('/', async (req, res) => {
         let shouldPriceSort = {};
         if (orderCode !== 0)
             shouldPriceSort = {item_price: orderCode};
+
+        let shouldSortByRating = {}
+        if (req.session.sortBy === "rating")
+            shouldSortByRating = {item_rating: -1};
         /*
         Call its designed filters.
         Skip is based on the current page.
@@ -222,7 +232,9 @@ app.get('/', async (req, res) => {
             item_price: { $lte: Math.round(maximumPrice) },
             item_category: { $regex: categoryKeyword },
             item_sub_category: { $regex: subCategoryKeyword }
-        }).sort(shouldPriceSort).skip(skips)
+        }).sort(shouldPriceSort)
+            .sort(shouldSortByRating)
+            .skip(skips)
             .limit(max)
             .toArray();
 
@@ -256,7 +268,8 @@ app.get('/', async (req, res) => {
             previousPage: previousIndex,
             nextPage: nextIndex,
             featureVideo: featureVideo,
-            featuredItems: featuredItems
+            featuredItems: featuredItems,
+            favorites: req.session.favorites
         });
     } catch (error) {
         console.error('Failed to fetch current listings:', error);
@@ -272,11 +285,46 @@ app.get('/', async (req, res) => {
             previousPage: 0,
             nextPage: 0,
             featuredItems: null,
-            featureVideo: null
+            featureVideo: null,
+            favorites: req.session.favorites
         });
     }
 });
 
+app.post('/favorite=:id', async (req, res) => {
+    const _itemId = req.params.id;
+    const productsCollection = database.db(mongodb_database).collection('listing_items');
+
+    // add to favorites
+    if (!req.session.favorites.includes(_itemId)) {
+        await productsCollection.updateOne({_id: new ObjectId(_itemId)}, {$inc: {item_rating: 1}});
+        req.session.favorites.push(_itemId);
+
+        const item = await productsCollection.findOne({_id: new ObjectId(_itemId)});
+        req.session.save(err => {
+            if (err)
+                console.error(`Error saving session, ${err}`);
+            res.json({status: true, currentItemCount: item.item_rating});
+        })
+
+    }
+    // remove from favorites
+    else
+    {
+        req.session.favorites = req.session.favorites.filter(item => item !== _itemId);
+        await productsCollection.updateOne({_id: new ObjectId(_itemId)}, {$inc: {item_rating: -1}});
+
+        const item = await productsCollection.findOne({_id: new ObjectId(_itemId)});
+        req.session.save(err => {
+            if (err)
+                console.error(`Error saving session, ${err}`);
+
+            res.json({status: false, currentItemCount: item.item_rating});
+        })
+    }
+
+
+})
 // With each page, get its index and assign the page index to that.
 app.post('/page=:index', async (req, res) => {
     req.session.pageIndex = req.params.index;

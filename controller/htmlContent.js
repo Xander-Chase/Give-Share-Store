@@ -46,6 +46,7 @@ function getBodyFilters(maxVal, minVal, currentPrice, subCategories, categories)
         subcategoriesBody,
         "<ul class='list-group list-group-flush'>" +
         " <li class='list-group-item'><form method='post' action='/filter/sortby=default'><button style='background: none; border: none' type='submit'>Sort by Default</button></form></li>" +
+        " <li class='list-group-item'><form method='post' action='/filter/sortby=rating'><button style='background: none; border: none' type='submit'>Sort by Rating</button></form></li>" +
         " <li class='list-group-item'><form method='post' action='/filter/sortby=ascending'><button style='background: none; border: none' type='submit'>Sort by Lowest Price</button></form></li>" +
         " <li class='list-group-item'><form method='post' action='/filter/sortby=descending'><button style='background: none; border: none' type='submit'>Sort by Highest Price</button></form></li>",
         "<div class=\"row col-sm\">\n" +
