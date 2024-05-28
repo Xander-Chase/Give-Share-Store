@@ -102,7 +102,9 @@ async function renderSoldListings(req, res)
         const skips = max * (((req.session.pageIndex - 1) < 0) ? 0 : (req.session.pageIndex - 1));
 
         const productsCollection = database.db(mongo_database).collection('listing_items');
+        // Fetch and sort sold listings by soldDate in descending order
         const soldListings = await productsCollection.find({ isSold: true })
+            .sort({ soldDate: -1 }) // Sort by soldDate in descending order
             .skip(skips)
             .limit(max)
             .toArray();
