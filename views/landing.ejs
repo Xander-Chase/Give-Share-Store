@@ -105,6 +105,11 @@
                     height: 30rem;
                 }
             }
+
+            .list-group-item:hover
+            {
+                background-color: #84A49A;
+            }
         </style>
     </head>
     <body>
@@ -160,6 +165,7 @@
                     <div class="container">
                         <div class="col"> <!-- TODO: Use EJS Template -->
                             <% for (i = 0; i < filterHeaders.length; i++) { %>
+                            <% if (filterHeaders[i].length < 1) continue; %>
                             <div class="col accordion w-100">
                                 <div class="accordion-item">
                                     <span class="accordion-header"

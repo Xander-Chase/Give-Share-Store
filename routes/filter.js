@@ -72,5 +72,15 @@ router.post('/clear', (req, res) =>
     res.redirect('/');
 })
 
+// Get method on clearing filters. This is used for elements that are hyperlinks, such as the logo on the search navbar.
+router.get('/clear', (req, res) =>
+{
+
+    req.session.maxPrice = 0;
+    req.session.keyword = null;
+    ResetCategoryFilter(req);
+    req.session.sortBy = 'default';
+    res.redirect('/');
+})
 // Export router
 module.exports = router;
