@@ -232,8 +232,7 @@ app.get('/', async (req, res) => {
             item_price: { $lte: Math.round(maximumPrice) },
             item_category: { $regex: categoryKeyword },
             item_sub_category: { $regex: subCategoryKeyword }
-        }).sort(shouldPriceSort)
-            .sort(shouldSortByRating)
+        }).sort(shouldPriceSort, shouldSortByRating)
             .skip(skips)
             .limit(max)
             .toArray();
