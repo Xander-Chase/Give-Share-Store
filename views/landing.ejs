@@ -7,20 +7,57 @@
                 background-color: #84A49A;
             }
 
-            .no-border
-            {
+            .category-selection-button {
+                width: 16vw;
+                background: none;
+                border: none;
+                text-align: start;
+            }
+
+            .buttons-container {
+                position: absolute;
+                bottom: 8px;
+                width: 22vw;
+            }
+
+            .view-product-btn, .add-product-btn {
+                line-height: 15px;
+                padding: 2px;
+                font-size: 10pt;
+                height: 5.5vh;
+            }
+
+            .view-product-btn {
+                width: 5vw;
+            }
+
+            .add-product-btn {
+                width: 7vw;
+            }
+
+            .no-border {
                 border: none;
                 background: none;
-                margin-top: 50px;
+                margin-top: 30px;
+                margin-bottom: 50px;
             }
 
             .product-img {
-                max-height: 25vh;
+                height: 25vh;
                 overflow: hidden;
             }
 
+            .product-title-text {
+                font-size: 18pt;
+                font-weight: bold;
+            }
+
             .card {
-                height: 40vh;
+                height: 45vh;
+            }
+
+            .card-body {
+                padding: 8px;
             }
 
             .filter-header {
@@ -49,27 +86,88 @@
                 border: solid;
                 border-width: 2px;
                 border-color: lightgray;
-                max-width: 20vw;
+                max-width: 25vw;
+                max-height: 30vh;
             }
 
-            .itemImage
+            .list-group-item:hover
             {
-                justify-content: center;
+                background-color: #84A49A;
             }
-            @media only screen and (max-width: 767px) {
+
+            .favouriteButton
+            {
+                background: none;
+                border: solid 1px white;
+                border-left: solid 1px #00000000;
+                color: red;
+                padding: 4px;
+            }
+
+            .favouriteButton:hover {
+                background-color: pink;
+                color: red;
+                border: solid 1px red;
+            }
+
+            .col-md-4.landing-pad-bottom {
+                padding-left: 0.25vw;
+                padding-right: 0.25vw;
+            }
+
+            .carousel-indicators [data-bs-target] {
+                opacity: 0.6;
+            }
+
+            .carousel-indicators [data-bs-target].active {
+                opacity: 1;
+            }
+
+            .carousel-control-next, .carousel-control-prev {
+                opacity: 0.6;
+            }
+
+            .carousel-control-next:hover, .carousel-control-prev:hover {
+                opacity: 1;
+            }
+
+            @media only screen and (min-width: 576px) and (max-width: 767px) {
                 .card {
-                    height: 35vh;
-                    width: 90vw;
+                    width: 95vw;
+                }
+
+                .category-selection-button {
+                    width: 60vw;
                 }
 
                 .product-img {
-                    max-height: 30vh;
+                    height: 30vh;
                 }
 
-                .product-btn {
-                    width: 20vw;
-                    height: 7vh;
+                .card-img-top {
+                    max-width: 35vw;
+                    max-height: 35vh;
+                }
+
+                .buttons-container {
+                    width: 90vw;
+                }
+
+                .view-product-btn, .add-product-btn {
+                    height: 6vh;
                     font-size: 12pt;
+                }
+
+                .view-product-btn {
+                    width: 15vw;
+                }
+
+                .add-product-btn {
+                    width: 20vw;
+                }
+
+                .product-title-text {
+                    font-size: 16pt;
                 }
 
                 .filter-header {
@@ -89,33 +187,19 @@
                     height: 25px;
                     width: 25px;
                 }
-                .itemImage
-                {
-                    justify-content: center;
-                }
-
-                .itemImageCard
-                {
-
-                    max-width: 80%;
-                    width: 700rem;
-                }
-                .itemImage
-                {
-                    width: 500px;
-                    justify-content: left;
-                }
-
             }
 
-            @media only screen and (max-width: 854px) {
+            @media only screen and (min-width: 500px) and (max-width: 854px) {
                 .video {
                     width: 480px;
                     height: 360px;
                 }
-                .itemImage
-                {
-                    justify-content: center;
+            }
+
+            @media only screen and (max-width: 499px) {
+                .video {
+                    width: 192px;
+                    height: 144px;
                 }
             }
 
@@ -123,39 +207,134 @@
                 .product-listings-container {
                     width: 98vw;
                 }
-                .itemImage
-                {
-                    justify-content: center;
+
+                .product-title-text {
+                    font-size: 16pt;
+                }
+
+                .product-img {
+                    height: 25vh;
+                }
+
+                .category-selection-button {
+                    width: 65vw;
+                }
+
+                .buttons-container {
+                    width: 28vw;
+                }
+
+                .add-product-btn, .view-product-btn {
+                    height: 6vh;
+                }
+
+                .view-product-btn {
+                    width: 4.5vw;
+                }
+
+                .add-product-btn {
+                    width: 9vw;
                 }
             }
 
             @media only screen and (max-width: 576px) {
-
-                .itemImageCard
-                {
-
-                    max-width: 75%;
-                    width: 500rem;
-                }
-                .itemImage
-                {
-                    width: 500px;
-                    justify-content: left;
-                }
                 #myCarousel {
                     height: 30rem;
                 }
+
+                .category-selection-button {
+                    width: 70vw;
+                }
+
+                .buttons-container {
+                    width: 90vw;
+                }
+
+                .add-product-btn, .view-product-btn {
+                    height: 5vh;
+                    font-size: 12pt;
+                }
+
+                .view-product-btn {
+                    width: 12vw;
+                }
+
+                .add-product-btn {
+                    width: 25vw;
+                }
+
+                .product-img {
+                    height: 28vh;
+                }
+
+                .card-img-top {
+                    max-width: 60vw;
+                    max-height: 50vh;
+                }
             }
 
-            .list-group-item:hover
-            {
-                background-color: #84A49A;
+            @media only screen and (max-height: 576px) and (orientation: landscape) {
+                .form-range::-webkit-slider-thumb {
+                    height: 25px;
+                    width: 25px;
+                }
+
+                .form-range::-moz-range-thumb {
+                    height: 25px;
+                    width: 25px;
+                }
+
+                .category-selection-button {
+                    width: 70vw;
+                }
+                
+                .buttons-container {
+                    width: 25vw;
+                }
+
+                .add-product-btn, .view-product-btn {
+                    height: 10vh;
+                    font-size: 12pt;
+                }
+
+                .view-product-btn {
+                    width: 5vw;
+                }
+
+                .add-product-btn {
+                    width: 10vw;
+                }
+
+                .card {
+                    height: 75vh;
+                }
+
+                .product-img {
+                    height: 35vh;
+                }
+
+                .card-img-top {
+                    max-width: 35vw;
+                    max-height: 40vh;
+                }
             }
 
-            .clearButton
-            {
-                background: none;
-                border: none;
+            @media only screen and (min-height: 576px) and (max-height: 768px) and (orientation: landscape) {
+                .view-product-btn, .add-product-btn {
+                    height: 6vh;
+                }
+                
+                .view-product-btn {
+                    width: 4vw;
+                }
+
+                .add-product-btn {
+                    width: 10vw;
+                }
+
+                .category-selection-button {
+                    width: 75vw;
+                }
             }
         </style>
     </head>
@@ -175,7 +354,7 @@
                         <% featuredItems.forEach((item, index) => { %>
                             <%- include("templates/carouselBanner", { 
                                 activeStatus: index === 0 ? 'active' : '', 
-                                product_description: item.item_detailed_description, 
+                                product_description: (item.item_detailed_description.length > 100) ? `${item.item_detailed_description.slice(0, 100)}...` : item.item_detailed_description, 
                                 product_title: item.item_title, 
                                 source: item.banner_image, // Assuming 'banner_image' is the field for background images of carousel
                                 product_img: item.product_img_URL[0],
@@ -264,29 +443,29 @@
                             <% currentListings.forEach(function(item) { %>
                             <div class="col-md-4 landing-pad-bottom">
                                 <div class="card shadow-sm">
-                                    <div
-                                        class="d-flex product-img align-items-center itemImage">
+                                    <div class="d-flex product-img align-items-center justify-content-center">
                                         <a href="/product-info/<%= item._id %>">
-                                            <img class="bd-placeholder-img card-img-top itemImageCard" src="<%= item.product_img_URL[0] %>" alt="<%= item.item_title %>"/>
+                                            <img class="bd-placeholder-img card-img-top justify-content-center" src="<%= item.product_img_URL[0] %>" alt="<%= item.item_title %>"/>
                                         </a>
                                     </div>
                                     <div class="card-body">
-                                        <h3>
+                                        <span class="product-title-text">
                                             <%= (item.item_title.length > 35) ? `${item.item_title.slice(0, 35)}...` : item.item_title %>
-                                        </h3>
-                                        <div
-                                            class="d-flex justify-content-between align-items-center">
-                                            <div class="btn-group">
+                                        </span>
+                                        <div class="d-flex justify-content-between align-items-end buttons-container">
+                                            <div class="btn-group d-flex align-items-center">
                                                 <a href="/product-info/<%= item._id %>"
-                                                class="btn btn-sm btn-outline-secondary product-btn d-flex justify-content-center align-items-center">
+                                                class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center view-product-btn">
                                                     View
                                                 </a>
+                                                
                                                 <button type="button"
-                                                    class="btn btn-sm btn-outline-secondary product-btn"
+                                                    class="btn btn-sm btn-outline-secondary add-product-btn"
                                                     onclick="addToCart('<%= item._id %>')">Add
-                                                    to Cart</button>
+                                                    to Cart
+                                                </button>
 
-                                                    <button class="clearButton btn btn-outline-danger" onclick="favoriteItem('<%= item._id %>')" id="favorite<%= item._id %>">
+                                                    <button class="favouriteButton btn" onclick="favoriteItem('<%= item._id %>')" id="favorite<%= item._id %>">
                                                         <% if (favorites.includes(item._id.toString())) {%>
                                                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-heart-fill" viewBox="0 0 16 16">
                                                                 <path fill-rule="evenodd" d="M8 1.314C12.438-3.248 23.534 4.735 8 15-7.534 4.736 3.562-3.248 8 1.314"/>
@@ -298,8 +477,6 @@
                                                         <% } %>
                                                             <span><%=(item.item_rating) ? item.item_rating : 0%></span>
                                                     </button>
-
-
                                             </div>
                                             <strong class="text-body-primary">
                                                 CAN <%= item.item_price %>
