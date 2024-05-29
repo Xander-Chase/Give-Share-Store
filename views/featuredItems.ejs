@@ -5,12 +5,12 @@
         }
 
         .card {
-            min-height: 46vh;
+            height: 46vh;
         }
 
         .product-img {
             width: 25vw;
-            height: 25vh;
+            height: 30vh;
             overflow: hidden;
             border: solid;
             border-width: 2px;
@@ -32,6 +32,46 @@
             font-size: 14pt;
             color: rgb(100, 100, 100);
             text-decoration: none;
+        }
+
+        @media only screen and (max-width: 576px) {
+            .product-img {
+                width: 65vw;
+                height: 40vh;
+            }
+        }
+
+        @media only screen and (min-width: 576px) and (max-width: 767px) {
+            .product-img {
+                width: 40vw;
+                height: 35vh;
+            }
+
+            .container {
+                max-width: 90vw;
+            }
+        }
+
+        @media only screen and (min-width: 768px) and (max-width: 992px) {
+            .card {
+                height: 40vh;
+            }
+
+            .product-img {
+                height: 25vh;
+            }
+        }
+
+        @media only screen and (min-height: 576px) and (max-height: 767px) and (orientation: landscape) {
+            .card {
+                height: 65vh;
+            }
+        }
+
+        @media only screen and (min-height: 768px) and (max-height: 992px) and (orientation: landscape) {
+            .card {
+                height: 62vh;
+            }
         }
     </style>
 </head>
@@ -55,7 +95,7 @@
                             </svg>
                         <% } %>
                         <div class="card-body">
-                            <p class="card-text"><%= (listing.item_title.length > 68) ? `${listing.item_title.slice(0, 68)}...` : listing.item_title %></p>
+                            <p class="card-text"><%= (listing.item_title.length > 42) ? `${listing.item_title.slice(0, 42)}...` : listing.item_title %></p>
                             <div class="d-flex justify-content-between align-items-center">
                                 <div class="btn-group">
                                     <a href="/product-info/<%= listing._id %>" class="btn btn-sm btn-outline-secondary">View</a>
