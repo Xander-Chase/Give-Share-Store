@@ -128,8 +128,10 @@
                                     <span class="item-title"><%= item.item_title %></span>
                                     <div>
                                         <label><input type="checkbox" class="insurance-checkbox" data-id="<%= item._id %>" data-cost="<%= item.item_estimatedInsuranceCost %>" /> Insurance ($<%= item.item_estimatedInsuranceCost %>)</label>
-                                        <label><input type="checkbox" class="shipping-checkbox" data-id="<%= item._id %>" data-cost="<%= item.item_estimatedShippingCost %>" /> Shipping ($<%= item.item_estimatedShippingCost %>)</label>
-                                        <label><input type="checkbox" class="pickup-checkbox" data-id="<%= item._id %>" checked /> Pickup</label>
+                                        <% if (parseFloat(item.item_estimatedShippingCost) > 0) { %>
+                                            <label><input type="checkbox" class="shipping-checkbox" data-id="<%= item._id %>" data-cost="<%= item.item_estimatedShippingCost %>" /> Shipping ($<%= item.item_estimatedShippingCost %>)</label>
+                                        <% } %>
+                                        <label><input type="checkbox" class="pickup-checkbox" data-id="<%= item._id %>" <% if (parseFloat(item.item_estimatedShippingCost) === 0) { %> checked <% } %> /> Pickup</label>
                                     </div>
                                 </div>
                                 <div class="col-sm-5 rem-btn">
@@ -423,5 +425,5 @@
             document.getElementById('finalTotalInput').value = parseFloat(document.getElementById('total').textContent.replace('$', ''));
         });
     </script>
-    </html>    
+    </html>     
     
