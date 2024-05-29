@@ -213,13 +213,14 @@ app.get('/', async (req, res) => {
 
         const skips = max * (((req.session.pageIndex - 1) < 0) ? 0 : (req.session.pageIndex - 1));
 
-        let shouldPriceSort = {};
+        let shouldPriceSort = null;
         if (orderCode !== 0)
             shouldPriceSort = {item_price: orderCode};
 
-        let shouldSortByRating = {}
+        let shouldSortByRating = null;
         if (req.session.sortBy === "rating")
             shouldSortByRating = {item_rating: -1};
+        const whichOption = (shouldSortByRating === null) ? shouldPriceSort : shouldSortByRating;
         /*
         Call its designed filters.
         Skip is based on the current page.
@@ -232,7 +233,7 @@ app.get('/', async (req, res) => {
             item_price: { $lte: Math.round(maximumPrice) },
             item_category: { $regex: categoryKeyword },
             item_sub_category: { $regex: subCategoryKeyword }
-        }).sort(shouldPriceSort, shouldSortByRating)
+        }).sort(whichOption)
             .skip(skips)
             .limit(max)
             .toArray();
