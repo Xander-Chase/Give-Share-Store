@@ -52,8 +52,8 @@
             z-index: 100;
             left: 20vw;
             top: 5vh;
-            animation-name: animateModal;
-            animation-duration: 0.5s;
+            animation-name: animateModal-default;
+            animation-duration: 0.8s;
         }
 
         .modal-content {
@@ -66,7 +66,7 @@
         .modal-image {
             display: block;
             margin: auto;
-            max-width: 55vw;
+            max-width: 60vw;
             max-height: 85vh;
             border: 3px solid rgba(50, 50, 50, 0.8);
         }
@@ -79,8 +79,8 @@
         }
 
         .big-btn {
-            width: 25vw;
-            height: 10vh;
+            width: 20vw;
+            height: 8vh;
             font-size: 20pt;
         }
 
@@ -89,34 +89,151 @@
             background-color: white;
         }
 
-        @media (max-width: 767px) {
+        @media only screen and (max-width: 576px) {
+            .big-btn {
+                width: 40vw;
+                height: 10vh;
+                font-size: 16pt;
+            }
+
+            .first-img {
+                max-width: 50vw;
+                max-height: 50vh;
+            }
+
+            .extra-img {
+                max-width: 25vw;
+                max-height: 25vh;
+            }
+
+            .modal {
+                width: 90vw;
+                height: 60vh;
+                left: 5vw;
+                top: 20vh;
+                animation-name: animateModal-phone;
+            }
+
+            .first-img-container {
+                max-width: 99vw;
+                max-height: 45vh;
+            }
+        }
+
+        @media only screen and (min-width: 576px) and (max-width: 767px) {
+            .first-img {
+                max-width: 30vw;
+                max-height: 35vh;
+            }
+            
             .extra-img {
                 max-width: 12vw;
                 max-height: 15vh;
             }
 
             .big-btn {
-                height: 7vh;
+                width: 25vw;
+            }
+
+            .modal {
+                width: 90vw;
+                left: 5vw;
+                height: 60vh;
+                top: 20vh;
+                animation-name: animateModal-tablet;
             }
         }
 
-        @media (max-width: 874px) {
+        @media only screen and (min-width: 768px) and (max-width: 992px) {
+            .big-btn {
+                width: 30vw;
+            }
+
+            .modal {
+                width: 80vw;
+                height: 70vh;
+                left: 10vw;
+                top: 15vh;
+                animation-name: animateModal-largeTablet;
+            }
+        }
+
+        @media only screen and (min-width: 500px) and (max-width: 874px) {
             .product-video {
                 width: 480px;
                 height: 360px;
             }
         }
 
-        @media (max-width: 632px) {
-            .big-btn {
-                width: 30vw;
-                font-size: 16pt;
+        @media only screen and (max-width: 500px) {
+            .product-video {
+                width: 192px;
+                height: 144px;;
             }
         }
 
-        @keyframes animateModal {
+        @media only screen and (max-height: 576px) and (orientation: landscape) {
+            .big-btn {
+                width: 30vw;
+                height: 20vh;
+            }
+
+            .first-img {
+                max-width: 35vw;
+                max-height: 45vh;
+            }
+
+            .first-img-container {
+                max-width: 35vw;
+                max-height: 50vh;
+            }
+
+            .extra-img {
+                max-width: 25vw;
+                max-height: 30vh;
+            }
+
+            .extra-img-container {
+                max-width: 25vw;
+                max-height: 30vh;
+            }
+
+            .modal {
+                height: 90vh;
+                top: 5vh;
+            }
+
+            .modal-image {
+                max-width: 50vw;
+                max-height: 80vh;
+            }
+        }
+
+        @media only screen and (min-height: 576px) and (max-height: 767px) and (orientation: landscape) {
+            .big-btn {
+                width: 25vw;
+                height: 10vh;
+            }
+        }
+
+        @keyframes animateModal-default {
             from {top: 0vh; opacity: 0%;}
             to {top: 5vh; opacity: 100%;}
+        }
+
+        @keyframes animateModal-phone {
+            from {top: 15vh; opacity: 0%;}
+            to {top: 20vh; opacity: 100%;}
+        }
+
+        @keyframes animateModal-tablet {
+            from {top: 15vh; opacity: 0%;}
+            to {top: 20vh; opacity: 100%;}
+        }
+
+        @keyframes animateModal-largeTablet {
+            from {top: 10vh; opacity: 0%;}
+            to {top: 15vh; opacity: 100%;}
         }
     </style>
 </head>
@@ -136,12 +253,12 @@
         <% item.product_img_URL.forEach(function(url, index) { %>
             <% if (index == 0) { %>
                 <div class="row">
-                    <div class="col-4 first-img-container d-flex align-items-center justify-content-center">
+                    <div class="col-sm-4 first-img-container d-flex align-items-center justify-content-center">
                         <button onclick="DisplayImageModal('<%= index %>')">
                             <img src="<%= url %>" alt="Product Image 1" class="first-img">
                         </button>
                     </div>
-                    <div class="col-8">
+                    <div class="col-sm-8">
                         <p class="header-text"><%= item.item_title %></p>
                         <p class="subtext">Price: $<%= item.item_price.toFixed(2) %></p>
                         <p class="subtext">Shipping Cost: $<%= item.item_estimatedShippingCost.toFixed(2) %></p>
