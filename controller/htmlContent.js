@@ -63,7 +63,7 @@ function getBodyFilters(maxVal, minVal, currentPrice, subCategories, categories)
         "               <strong>$" + maxCalculation + "</strong>" +
         "           </label>\n" +
         "        </div>\n" +
-        "        <input id=\"selectedPrice\" type=\"range\" class=\"form-range\" min=" + minCalculation + " max=" + maxCalculation + " step=5 id=\"priceRange\" oninput=\"" +
+        "        <input id=\"selectedPrice\" type=\"range\" value=" + currentPrice + " class=\"form-range\" min=" + minCalculation + " max=" + maxCalculation + " step=5 id=\"priceRange\" oninput=\"" +
         "{document.getElementById('userRange').innerHTML = `$${this.value}`;}\">\n" +
         "</div>"
     ];

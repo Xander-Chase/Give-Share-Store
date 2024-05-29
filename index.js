@@ -232,8 +232,7 @@ app.get('/', async (req, res) => {
             item_price: { $lte: Math.round(maximumPrice) },
             item_category: { $regex: categoryKeyword },
             item_sub_category: { $regex: subCategoryKeyword }
-        }).sort(shouldPriceSort)
-            .sort(shouldSortByRating)
+        }).sort(shouldPriceSort, shouldSortByRating)
             .skip(skips)
             .limit(max)
             .toArray();
@@ -256,6 +255,9 @@ app.get('/', async (req, res) => {
         // Find one featured video for the bottom of the page.
         const featureVideo = await featureVideoCollection.findOne({});
 
+        // Fetch current cart items
+        const cartItems = req.session.cart ? req.session.cart.map(item => item._id.toString()) : [];
+
         // Render landing page.
         res.render("landing", {
             isLoggedIn,
@@ -269,7 +271,8 @@ app.get('/', async (req, res) => {
             nextPage: nextIndex,
             featureVideo: featureVideo,
             featuredItems: featuredItems,
-            favorites: req.session.favorites
+            favorites: req.session.favorites,
+            cartItems: cartItems
         });
     } catch (error) {
         console.error('Failed to fetch current listings:', error);
@@ -286,7 +289,8 @@ app.get('/', async (req, res) => {
             nextPage: 0,
             featuredItems: null,
             featureVideo: null,
-            favorites: req.session.favorites
+            favorites: req.session.favorites,
+            cartItems: []
         });
     }
 });
@@ -452,7 +456,10 @@ app.get('/product-info/:id', async (req, res) => {
             return;
         }
 
-        res.render('product-info', { item: item, isLoggedIn: req.session.loggedIn, isAdmin: req.session.isAdmin });
+        // Fetch current cart items
+        const cartItems = req.session.cart ? req.session.cart.map(item => item._id.toString()) : [];
+
+        res.render('product-info', { item: item, isLoggedIn: req.session.loggedIn, isAdmin: req.session.isAdmin, cartItems: cartItems });
     } catch (error) {
         console.error('Failed to fetch item:', error);
         res.status(500).send('Error fetching item details');
@@ -639,6 +646,13 @@ app.post('/mark-items-sold', async (req, res) => {
             const productsCollection = database.db(mongodb_database).collection('listing_items');
             const items = await productsCollection.find({ _id: { $in: itemIds.map(id => new ObjectId(id)) } }).toArray();
 
+            // Check if any item is already sold
+            const alreadySoldItems = items.filter(item => item.isSold);
+            if (alreadySoldItems.length > 0) {
+                const soldItemTitles = alreadySoldItems.map(item => item.item_title).join(', ');
+                return res.render('cartView', { message: `The following items are already sold: ${soldItemTitles}. Please remove them from your cart and try again.` });
+            }
+
             // To get the current date and time in PST
             const soldDate = moment().tz('America/Los_Angeles').toDate();
             
@@ -817,6 +831,13 @@ app.get('/StripeSuccess', async (req, res) => {
         if (itemIds.length > 0) {
             const productsCollection = database.db(mongodb_database).collection('listing_items');
             const items = await productsCollection.find({ _id: { $in: itemIds.map(id => new ObjectId(id)) } }).toArray();
+
+            // Check if any item is already sold
+            const alreadySoldItems = items.filter(item => item.isSold);
+            if (alreadySoldItems.length > 0) {
+                const soldItemTitles = alreadySoldItems.map(item => item.item_title).join(', ');
+                return res.render('cartView', { message: `The following items are already sold: ${soldItemTitles}. Please remove them from your cart and try again.` });
+            }
 
             // To get the current date and time in PST
             const soldDate = moment().tz('America/Los_Angeles').toDate();

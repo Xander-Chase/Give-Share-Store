@@ -146,7 +146,7 @@
                         <p class="subtext">Price: $<%= item.item_price.toFixed(2) %></p>
                         <p class="subtext">Shipping Cost: $<%= item.item_estimatedShippingCost.toFixed(2) %></p>
                         <p class="content-text">Description: <%= item.item_detailed_description %></p>
-                        <button type="button" class="btn btn-primary big-btn">Add to cart</button>
+                        <button type="button" class="btn btn-primary big-btn add-to-cart-btn" data-id="<%= item._id %>" onclick="addToCart('<%= item._id %>')" <%= cartItems.includes(item._id.toString()) ? 'disabled' : '' %>>Add to Cart</button>
                     </div>
                 </div>
                 <div class="row"><br></div>
@@ -180,6 +180,26 @@
 <%- include("footer") %>
 <script>
     var img_modals = document.getElementsByClassName("modal");
+
+    function addToCart(itemId) {
+            fetch('/cart/add-to-cart', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ itemId: itemId })
+            }).then(response => response.json())
+              .then(data => {
+                  if (data.success) {
+                      document.getElementById('cart-item-count').innerText = data.cartItemCount;
+                      document.querySelector(`button[data-id="${itemId}"]`).disabled = true;
+                  } else {
+                      alert(data.message);
+                  }
+              }).catch(error => {
+                  console.error('Error adding item to cart:', error);
+              });
+        }
 
     function DisplayImageModal(index) {
         img_modals[index].style.display = "block";

@@ -459,11 +459,7 @@
                                                     View
                                                 </a>
                                                 
-                                                <button type="button"
-                                                    class="btn btn-sm btn-outline-secondary add-product-btn"
-                                                    onclick="addToCart('<%= item._id %>')">Add
-                                                    to Cart
-                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary add-product-btn" data-id="<%= item._id %>" onclick="addToCart('<%= item._id %>')" <%= cartItems.includes(item._id.toString()) ? 'disabled' : '' %>>Add to Cart</button>
 
                                                     <button class="favouriteButton btn" onclick="favoriteItem('<%= item._id %>')" id="favorite<%= item._id %>">
                                                         <% if (favorites.includes(item._id.toString())) {%>
@@ -479,7 +475,7 @@
                                                     </button>
                                             </div>
                                             <strong class="text-body-primary">
-                                                CAN <%= item.item_price %>
+                                                CAN $<%= item.item_price %>
                                             </strong>
                                         </div>
                                     </div>
@@ -536,6 +532,7 @@
               .then(data => {
                   if (data.success) {
                       document.getElementById('cart-item-count').innerText = data.cartItemCount;
+                      document.querySelector(`button[data-id="${itemId}"]`).disabled = true;
                   } else {
                       alert(data.message);
                   }
