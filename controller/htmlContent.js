@@ -38,7 +38,7 @@ function getBodyFilters(maxVal, minVal, currentPrice, subCategories, categories)
 
     categories.forEach(function(C) {
         categoriesBody+="<li class=\"list-group-item\"><form method='post' action='/filter/category=" + C.category_type.split(" ").join("_") + "'><button " +
-            "style='background: none; border: none'" +
+            "class=\"category-selection-button\"" +
             " type='submit'>" + C.category_type + "</button></form></li>"
     })
     return [

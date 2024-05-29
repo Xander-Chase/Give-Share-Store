@@ -8,9 +8,14 @@
             }
 
             .product-img {
-                max-width: 16vw;
-                max-height: 25vh;
+                width: 15vw;
+                height: 25vh;
                 overflow: hidden;
+            }
+
+            .card-img-med {
+                max-width: 15vw;
+                max-height: 35vh;
             }
 
             .item-title {
@@ -32,6 +37,10 @@
                 font-weight: 600;
             }
 
+            .cart-pad-bottom {
+                padding-bottom: 5vh;
+            }
+
             #title {
                 font-size: 28pt;
                 font-weight: 500;
@@ -47,10 +56,27 @@
                 margin-top: 1vh;
             }
 
-            @media only screen and (max-width: 767px) {
+            @media only screen and (max-width: 576px) {              
                 .product-img {
-                    max-width: 20vw;
-                    max-height: 15vh;
+                    width: 50vw;
+                    height: 30vh;
+                }
+
+                .card-img-med {
+                    max-width: 50vw;
+                    max-height: 35vh;
+                }
+            }
+
+            @media only screen and (min-width: 576px) and (max-width: 767px) {
+                .product-img {
+                    width: 30vw;
+                    height: 20vh;
+                }
+
+                .card-img-med {
+                    max-width: 25vw;
+                    max-height: 25vh;
                 }
 
                 .item-title {
@@ -84,7 +110,8 @@
 
                 #checkout-button {
                     margin-bottom: 3vh;
-                    height: 10vh;
+                    height: 5vh;
+                    font-size: 16pt;
                 }
 
                 #paypal-button-container {
@@ -94,6 +121,10 @@
             }
 
             @media only screen and (min-width: 768px) and (max-width: 992px) {
+                #checkout-button {
+                    height: 5vh;
+                }
+                
                 .item-title {
                     font-size: 20pt;
                 }
@@ -103,16 +134,35 @@
                 }
 
                 .product-img {
-                    min-width: 14vw;
-                    min-height: 20vh;
-                    max-width: 18vw;
-                    max-height: 26vh;
+                    width: 30vw;
+                    height: 20vh;
+                }
+
+                .card-img-med {
+                    max-width: 25vw;
+                    max-height: 25vh;
+                }
+            }
+
+            @media only screen and (max-height: 576px) and (orientation: landscape) {
+                #checkout-button {
+                    height: 15vh;
+                }
+
+                .product-img {
+                    width: 20vw;
+                    height: 40vh;
+                }
+
+                .card-img-med {
+                    max-width: 20vw;
+                    max-height: 45vh;
                 }
             }
         </style>
     </head>
     <body>
-        <div class="container">
+        <div class="container cart-pad-bottom">
             <div class="row g-5">
                 <div class="col-md-8 border product-card">
                     <span id="title">Products in Your Cart</span>

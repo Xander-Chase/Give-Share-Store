@@ -887,6 +887,10 @@ app.get('/StripeCancel', (req, res) => {
     res.render('StripeCancel');
 });
 
+app.get('/*', (req, res) => {
+    res.render('404');
+})
+
 // ----------------- Stripe Payment END -----------------
 
 // ----------------- Email Sending START -----------------
