@@ -4,10 +4,35 @@
 <head>
   <title>Checkout canceled</title>
   <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .button {
+      display: inline-block;
+      padding: 5px 10px;
+      font-size: 14px;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      outline: none;
+      color: #fff;
+      background-color: #455ad6;
+      border: none;
+      border-radius: 5px;
+      box-shadow: 0 4px #999;
+    }
+    .button:hover {
+      background-color: #45a049;
+    }
+    .button:active {
+      background-color: #3e8e41;
+      box-shadow: 0 2px #666;
+      transform: translateY(2px);
+    }
+  </style>
 </head>
 <body>
   <section>
     <p>Forgot to add something to your cart? Shop around then come back to pay!</p>
+    <p><a href="/" class="button">Continue Shopping</a></p>
   </section>
 </body>
 </html>
