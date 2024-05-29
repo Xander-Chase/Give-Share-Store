@@ -1,0 +1,40 @@
+<%- include("metadata") %>
+<head>
+    <style>
+        .text404 {
+            font-size: 48pt;
+            font-weight: bold;
+        }
+
+        .homepagelink {
+            font-size: 24pt;
+            width: 40vw;
+            height: 10vh;
+            line-height: 24pt;
+        }
+
+        .row {
+            height: 100vh;
+        }
+
+        @media only screen and (min-width: 768px) and (max-width: 1024px) {
+            .text404 {
+                font-size: 56pt;
+            }
+
+            .homepagelink {
+                font-size: 32pt;
+            }
+        }
+    </style>
+</head>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12 d-flex align-items-center justify-content-center">
+            <p class="text404">404 Page Not Found</p>
+        </div>
+        <div class="col-12 d-flex align-items-center justify-content-center">
+            <a class="homepagelink btn btn-primary" href="/">Return Home</a>
+        </div>
+    </div>
+</div>
