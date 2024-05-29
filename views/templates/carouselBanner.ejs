@@ -18,13 +18,6 @@
             font-size: 18pt;
         }
 
-        .banner-item {
-            width: 90vw;
-            padding: 5rem;
-            height: 40rem;
-            background-color: rgba(255, 255, 255, 0.7);
-            border-radius: 2%;
-        }
 
         .banner-column {
             padding-left: 1rem;
@@ -34,12 +27,15 @@
 
         .featured-product-img {
             width: 35vw;
-            height: auto;
+            height: 50vh;
+            object-fit: cover;
+            object-position: 50% 50%;
+
         }
 
         .img-container {
             max-width: 40vw;
-            max-height: 70vh;
+            max-height: 50vh;
             overflow: hidden;
             border-radius: 2%;
         }
@@ -52,6 +48,7 @@
             .featured-product-button {
                 font-size: 16pt;
             }
+
         }
 
         @media only screen and (min-width: 576px) and (max-width: 767px) {
@@ -81,13 +78,32 @@
             p.text-main {
                 margin-bottom: 0;
             }
+
+            .featured-product-img {
+                width: 80vw;
+                height: 100%;
+                object-position: 50% 32%;
+            }
+
+            .img-container {
+                max-width: 90vw;
+                max-height: 60vh;
+                overflow: hidden;
+                border-radius: 2%;
+            }
+
+            .product-itself
+            {
+                position: relative;
+                bottom: 15px;
+            }
         }
 
         @media only screen and (max-width: 576px) {
             .banner-item {
                 padding: 1rem;
                 height: 30rem;
-                max-width: 80vw;
+                max-width: 90vw;
             }
 
             .banner-column {
@@ -118,6 +134,41 @@
                 width: 80vw;
                 height: 7vh;
             }
+
+            .product-itself
+            {
+                position: relative;
+                bottom: 50px;
+            }
+
+            .featured-product-img
+            {
+                width: 150vw;
+                zoom: 0.4;
+                object-position: 50% 10%;
+            }
+
+            .img-container {
+                max-width: 150vw;
+                max-height: 60vh;
+                overflow: hidden;
+                border-radius: 2%;
+            }
+        }
+
+
+        .banner-item {
+            width: 90vw;
+            padding: 5rem;
+            background-color: rgba(132, 164, 154, 0.5);
+            backdrop-filter: blur(10px);
+
+            border-radius: 2%;
+        }
+
+        .text-main
+        {
+            color: white;
         }
     </style>
 </head>
@@ -125,9 +176,9 @@
     style="width: 100%; height: 40rem; background-image: url('<%= source %>'); background-repeat: no-repeat; background-size: cover">
 
     <div class="container-fluid banner-item">
-        <div class="row">
-            <div class="d-flex col-md-6 align-items-center justify-content-center banner-column image-column">
-                <div class="img-container d-flex align-items-center justify-content-center">
+        <div class="row product-itself">
+            <div class="d-flex col-md-6  justify-content-center banner-column image-column">
+                <div class="img-container justify-content-center">
                     <a href="/product-info/<%= product_link %>">
                         <img src="<%= product_img %>" alt="product image" class="featured-product-img">
                     </a>
@@ -137,7 +188,8 @@
                 <p class="text-main">
                     <span class="product-title"><%= product_title %></span><br><br>
                     $<%= formatAmount(product_price) %><br>
-                    <%= product_description %><br>
+
+                    <%= (product_description.length > 35) ? `${product_description.slice(0, 35)}...` : product_description %><br>
                     <br>
                     <div class="d-flex justify-content-center align-items-center">
                         <a class="btn btn-primary featured-product-button d-flex align-items-center justify-content-center"

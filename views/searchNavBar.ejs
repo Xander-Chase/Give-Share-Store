@@ -91,6 +91,11 @@
         .list1 {
             font-size: 12pt;
         }
+
+        #userProfile
+        {
+            align-self: center;
+        }
     }
 
 </style>
@@ -147,7 +152,7 @@
                         </div>
                         <div class="d-none d-sm-block d-md-none"></div>
                         <!--The next div should only be shown if the user is logged in, if they arent then it should be an admin sign in button-->
-                        <div class="col-3" id="userProfile">
+                        <div class="col-2" id="userProfile">
                             <% if (isLoggedIn) { %>
                             <div class="flex-shrink-0 dropdown">
                                 <a href="#" class="d-block link-body-emphasis text-decoration-none dropdown-toggle right-side-item"
