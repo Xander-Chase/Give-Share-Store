@@ -59,7 +59,7 @@ const adminRouter = require('./routes/admin');
 const cartRouter = require('./routes/cart');
 const userRouter = require('./routes/user');
 
-const port = process.env.PORT || 5000;                      // Set port to 5000 if not defined in ..env file
+const port = process.env.PORT || 10000;                      // Set port to 10000 if not defined in ..env file
 
 
 // secret variables located in ..env file
@@ -709,7 +709,7 @@ app.post('/create-checkout-session', async (req, res) => {
     try {
         let { productIds, insuranceTotal, shippingTotal, taxTotal, finalTotal, subtotal, email, address, city, state, zip } = req.body;
 
-        const YOUR_DOMAIN = 'http://localhost:5000'; // Replace with client's domain when finalized
+        const YOUR_DOMAIN = 'http://localhost:10000'; // Replace with client's domain when finalized
 
         if (!productIds) {
             throw new Error('Product IDs not received');
