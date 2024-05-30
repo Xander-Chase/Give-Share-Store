@@ -74,11 +74,15 @@
 
             <!-- Featured Item Checkbox -->
             <div class="mb-3 form-check">
-                <input type="hidden" name="isFeatureItem" value="false">
                 <input type="checkbox" class="form-check-input" id="featureItem"
-                    name="isFeatureItem" value="true">
+                    name="isFeatureItem" value="true" <%= disable %>>
                 <label class="form-check-label admin-content-text" for="featureItem">Featured
-                    Item?</label>
+                    Item?
+                    <br>
+                    <span class="text-danger">
+                        <%= description %>
+                    </span>
+                </label>
             </div>
 
             <!-- Category Selection -->
@@ -121,6 +125,7 @@
 
         </form>
     </div>
+
     <script>
           document.getElementById('listingForm').addEventListener('submit', function (e) {
             let valid = true;
