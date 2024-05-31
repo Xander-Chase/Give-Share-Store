@@ -215,7 +215,25 @@ router.get('/manage', async (req, res) => {
 
 // Route for adding a listing
 router.get('/addListing', async (req, res) => {
-    res.render('addListing', { categories: await categoryCollection.find().toArray() });
+    let text = "";
+    let disableNote = "";
+    {
+        const listingItemsCollection = database.db(mongo_database).collection('listing_items');
+        const featuredItems = await listingItemsCollection.find(
+            {
+                isFeatureItem: true,
+                $or: [{ isSold: false }, { isSold: { $exists: false } }],
+            }
+        ).toArray();
+
+        if (featuredItems.length >= 10)
+        {
+            text = "You have exceeded the limit of featured items (10). You may want to remove some of them to add another featured item.";
+            disableNote = "disabled";
+        }
+    }
+
+    res.render('addListing', { categories: await categoryCollection.find().toArray(), description: text, disable: disableNote});
 });
 
 // Post method on handling when submitting a listing
@@ -224,30 +242,39 @@ router.post('/submitListing', upload.fields([{ name: 'photo', maxCount: 10 }, { 
     const videos = req.files['video'] ? req.files['video'].map(file => file.location) : [];
 
     const listingItemsCollection = database.db(mongo_database).collection('listing_items');
-    const document = {
-        product_img_URL: photos,
-        product_video_URL: videos,
-        item_title: req.body.item_title,
-        item_price: parseFloat(req.body.item_price) || 0.00,
-        item_detailed_description: req.body.item_detailed_description || '',
-        item_estimatedShippingCost: parseFloat(req.body.item_estimatedShippingCost) || 0.0,
-        item_estimatedInsuranceCost: parseFloat(req.body.item_estimatedInsuranceCost) || 0.0,
-        isFeatureItem: req.body.isFeatureItem === 'true',
-        item_category: Array.isArray(req.body.item_category) ? req.body.item_category.map(function (item) {
-            return item.replace(/"/g, '');
-        }) : [req.body.item_category.replace(/"/g, '')],
-        item_sub_category: Array.isArray(req.body.item_sub_category) ? req.body.item_sub_category.map(function (item) {
-            return item.replace(/"/g, '');
-        }) : [req.body.item_sub_category.replace(/"/g, '')],
-        status: 'available' // Default status when a listing is created
-    };
+    const featuredItems = await listingItemsCollection.find(
+        {
+            isFeatureItem: true,
+            $or: [{ isSold: false }, { isSold: { $exists: false } }],
+        }
+    ).toArray();
+    if (featuredItems.length < 10)
+    {
+        const document = {
+            product_img_URL: photos,
+            product_video_URL: videos,
+            item_title: req.body.item_title,
+            item_price: parseFloat(req.body.item_price) || 0.00,
+            item_detailed_description: req.body.item_detailed_description || '',
+            item_estimatedShippingCost: parseFloat(req.body.item_estimatedShippingCost) || 0.0,
+            item_estimatedInsuranceCost: parseFloat(req.body.item_estimatedInsuranceCost) || 0.0,
+            isFeatureItem: req.body.isFeatureItem === "true",
+            item_category: Array.isArray(req.body.item_category) ? req.body.item_category.map(function (item) {
+                return item.replace(/"/g, '');
+            }) : [req.body.item_category.replace(/"/g, '')],
+            item_sub_category: Array.isArray(req.body.item_sub_category) ? req.body.item_sub_category.map(function (item) {
+                return item.replace(/"/g, '');
+            }) : [req.body.item_sub_category.replace(/"/g, '')],
+            status: 'available' // Default status when a listing is created
+        };
 
-    try {
-        await listingItemsCollection.insertOne(document);
-        res.redirect('/admin/manage');
-    } catch (error) {
-        console.error('Error submitting new listing:', error);
-        res.status(500).send('Failed to add new listing');
+        try {
+            await listingItemsCollection.insertOne(document);
+            res.redirect('/admin/manage');
+        } catch (error) {
+            console.error('Error submitting new listing:', error);
+            res.status(500).send('Failed to add new listing');
+        }
     }
 });
 
@@ -260,13 +287,30 @@ router.get('/editListing/:id', async (req, res) => {
     if (!ObjectId.isValid(itemId)) {
         return res.status(400).send('Invalid ID format');
     }
+    let text = "";
+    let disableNote = "";
+    {
+        const listingItemsCollection = database.db(mongo_database).collection('listing_items');
+        const featuredItems = await listingItemsCollection.find(
+            {
+                isFeatureItem: true,
+                $or: [{ isSold: false }, { isSold: { $exists: false } }],
+            }
+        ).toArray();
+
+        if (featuredItems.length >= 10)
+        {
+            text = "You have exceeded the limit of featured items (10). You may want to remove some of them to add another featured item.";
+            disableNote = "disabled";
+        }
+    }
 
     try {
         const listing = await database.db(mongo_database).collection('listing_items').findOne({ _id: new ObjectId(itemId) });
         if (!listing) {
             return res.status(404).send('Listing not found');
         }
-        res.render('editListing', { listing, isLoggedIn, isAdmin: req.session.isAdmin });
+        res.render('editListing', { listing, isLoggedIn, isAdmin: req.session.isAdmin, description: text, disable: disableNote });
     } catch (error) {
         console.error('Failed to fetch listing:', error);
         res.status(500).send('Error fetching listing details');

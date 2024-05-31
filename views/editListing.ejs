@@ -146,9 +146,14 @@
             <div class="mb-3 form-check">
                 <input type="checkbox" class="form-check-input" id="featureItem"
                     name="isFeatureItem" value="true" <%
-                    if(listing.isFeatureItem) { %>checked<% } %>>
+                    if(listing.isFeatureItem) { %>checked<% } %> <% if (!listing.isFeatureItem) {%> <%= disable %> <% } %>>
                 <label class="form-check-label" for="featureItem">Featured
-                    Item?</label>
+                    Item?
+                    <br>
+                    <span class="text-danger">
+                        <%= description %>
+                    </span>
+                </label>
             </div>
 
             <!-- Add a checkbox to mark the item as sold -->
