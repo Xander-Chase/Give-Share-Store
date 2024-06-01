@@ -4,6 +4,7 @@
         .text404 {
             font-size: 48pt;
             font-weight: bold;
+            text-align: center;
         }
 
         .homepagelink {
@@ -31,7 +32,7 @@
 <div class="container-fluid">
     <div class="row">
         <div class="col-12 d-flex align-items-center justify-content-center">
-            <p class="text404">404 Page Not Found</p>
+            <p class="text404"><%= STATUS_CODE %><br> <%= ERROR_MESSAGE %></p>
         </div>
         <div class="col-12 d-flex align-items-center justify-content-center">
             <a class="homepagelink btn btn-primary" href="/">Return Home</a>

@@ -453,7 +453,7 @@ app.get('/product-info/:id', async (req, res) => {
         const item = await productsCollection.findOne({ _id: new ObjectId(itemId) });
 
         if (!item) {
-            res.status(404).send('Item not found');
+            res.render('404', {STATUS_CODE: 404, ERROR_MESSAGE: "Item not found"});
             return;
         }
 
@@ -463,7 +463,8 @@ app.get('/product-info/:id', async (req, res) => {
         res.render('product-info', { item: item, isLoggedIn: req.session.loggedIn, isAdmin: req.session.isAdmin, cartItems: cartItems });
     } catch (error) {
         console.error('Failed to fetch item:', error);
-        res.status(500).send('Error fetching item details');
+        /*res.status(500).send('Error fetching item details');*/
+        res.render('404', {STATUS_CODE: 505, ERROR_MESSAGE: error.message});
     }
 });
 
@@ -787,7 +788,8 @@ app.post('/create-checkout-session', async (req, res) => {
         res.redirect(303, session.url);
     } catch (error) {
         console.error('Failed to create checkout session:', error);
-        res.status(500).send('Error creating checkout session: ' + error.message);
+        /*res.status(500).send('Error creating checkout session: ' + error.message);*/
+        res.render('404', {STATUS_CODE: 500, ERROR_MESSAGE: error.message});
     }
 });
 
@@ -889,7 +891,7 @@ app.get('/StripeCancel', (req, res) => {
 });
 
 app.get('/*', (req, res) => {
-    res.render('404');
+    res.render('404', {STATUS_CODE: 404, ERROR_MESSAGE: "Page not found"})
 })
 
 // ----------------- Stripe Payment END -----------------
