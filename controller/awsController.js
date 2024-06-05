@@ -24,7 +24,7 @@ const s3 = new S3Client({
 const upload = multer({
     storage: multerS3({
         s3: s3,
-        bucket: 'the-vintage-garage-test',
+        bucket: 'thevintagegarage',
         metadata: function (req, file, cb) {
             cb(null, {fieldName: file.fieldname});
         },
@@ -38,7 +38,7 @@ const upload = multer({
 const featureVideoUpload = multer({
     storage: multerS3({
         s3: s3,
-        bucket: 'the-vintage-garage-test',
+        bucket: 'thevintagegarage',
         metadata: function (req, file, cb) {
             cb(null, {fieldName: file.fieldname});
         },
@@ -54,7 +54,7 @@ const featureVideoUpload = multer({
 
 // Function to delete a file from S3
 async function deleteFromS3(url) {
-    const bucketName = 'the-vintage-garage-test';
+    const bucketName = 'thevintagegarage';
     const key = url.split('.com/')[1];
 
     const deleteParams = {
