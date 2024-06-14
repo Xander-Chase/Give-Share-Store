@@ -35,7 +35,7 @@ router.post('/price=:newMax', (req, res) => {
 })
 
 // Post method on choosing a category
-router.post('/category=:type',  (req, res) => {
+router.post('/category=:type(*)',  (req, res) => {
     req.session.category = req.params.type;
     req.session.subcategory = null;
     req.session.keyword = null;
@@ -50,7 +50,7 @@ router.post('/category=',  (req, res) => {
 })
 
 // Post method on choosing a sub-category
-router.post('/subcategory=:type',  (req, res) => {
+router.post('/subcategory=:type(*)',  (req, res) => {
     req.session.subcategory = req.params.type.split("_").join(" ");
     res.redirect('/');
 })
