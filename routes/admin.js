@@ -402,19 +402,41 @@ router.post('/relist/:id', async (req, res) => {
     }
 });
 
-// Post method on handling deleting a listing
+// Post method to handle deleting a listing
 router.post('/deleteListing/:id', async (req, res) => {
     try {
         const listingCollection = database.db(mongo_database).collection('listing_items');
+        const listing = await listingCollection.findOne({ _id: new ObjectId(req.params.id) });
+
+        if (!listing) {
+            return res.status(404).send('Listing not found');
+        }
+
+        // Extract URLs of images and videos
+        const s3ObjectsToDelete = [];
+        if (listing.product_img_URL) {
+            listing.product_img_URL.forEach(img => s3ObjectsToDelete.push(img));
+        }
+        if (listing.product_video_URL) {
+            listing.product_video_URL.forEach(video => s3ObjectsToDelete.push(video));
+        }
+
+        // Delete S3 objects
+        for (const url of s3ObjectsToDelete) {
+            await deleteFromS3(url);
+        }
+
+        // Delete the MongoDB listing object
         const result = await listingCollection.deleteOne({ _id: new ObjectId(req.params.id) });
+
         if (result.deletedCount === 1) {
-            res.status(200).send('Category deleted successfully');
+            res.status(200).send('Listing deleted successfully');
         } else {
-            res.status(404).send('Category not found');
+            res.status(500).send('Failed to delete listing');
         }
     } catch (error) {
-        console.error('Failed to delete user:', error);
-        res.status(500).send('Failed to delete user');
+        console.error('Failed to delete listing:', error);
+        res.status(500).send('Failed to delete listing');
     }
 });
 
@@ -440,7 +462,7 @@ router.post('/removeFeatureVideo', async (req, res) => {
     if (featureVideo && featureVideo.url) {
         const key = featureVideo.url.split('.com/')[1];
         const deleteParams = {
-            Bucket: 'the-vintage-garage-test',
+            Bucket: process.env.AWS_BUCKET_NAME,
             Key: key
         };
         try {
